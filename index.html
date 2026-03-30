@@ -53,41 +53,44 @@
   .logo-block {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 12px 0;
-    padding-right: 2rem;
+    padding: 8px 2rem 8px 0;
     border-right: 1px solid #222;
   }
 
-  /* PopUp Bagels wordmark as SVG inline */
-  .popb-logo {
-    height: 32px;
+  .popb-logo-img {
+    height: 48px;
     width: auto;
-    filter: invert(1);
+    display: block;
+    background: var(--white);
+    border-radius: 3px;
+    padding: 4px 10px;
   }
 
-  .logo-dept {
+  .sidebar-logo {
+    padding: 1rem 1.4rem 1.2rem;
+    border-bottom: 1px solid #1a1a1a;
+    margin-bottom: 1.6rem;
     display: flex;
-    flex-direction: column;
-    gap: 1px;
-    border-left: 1px solid #2a2a2a;
-    padding-left: 14px;
+    justify-content: center;
   }
 
-  .logo-dept-name {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.15rem;
-    letter-spacing: 0.2em;
-    color: var(--red);
-    line-height: 1;
+  .sidebar-logo-img {
+    width: 100%;
+    max-width: 160px;
+    height: auto;
+    display: block;
+    background: var(--white);
+    border-radius: 3px;
+    padding: 6px 10px;
   }
 
-  .logo-dept-sub {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.55rem;
-    letter-spacing: 0.3em;
-    color: #555;
-    text-transform: uppercase;
+  .footer-logo {
+    height: 36px;
+    width: auto;
+    display: block;
+    background: var(--white);
+    border-radius: 3px;
+    padding: 3px 8px;
   }
 
   .header-nav {
@@ -175,46 +178,7 @@
     flex-direction: column;
   }
 
-  /* Bagel icon decoration */
-  .sidebar-bagel {
-    text-align: center;
-    padding: 0.4rem 1.4rem 1.2rem;
-    border-bottom: 1px solid #1a1a1a;
-    margin-bottom: 1.6rem;
-  }
 
-  .bagel-ring {
-    width: 48px; height: 48px;
-    border-radius: 50%;
-    border: 5px solid #2a2a2a;
-    margin: 0 auto 6px;
-    position: relative;
-    display: flex; align-items: center; justify-content: center;
-  }
-
-  .bagel-ring::before {
-    content: '';
-    width: 16px; height: 16px;
-    border-radius: 50%;
-    background: var(--black);
-    border: 2px solid #333;
-  }
-
-  .bagel-ring::after {
-    content: '';
-    position: absolute;
-    inset: -6px;
-    border-radius: 50%;
-    border: 1px solid #1a1a1a;
-  }
-
-  .bagel-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.55rem;
-    letter-spacing: 0.22em;
-    color: #444;
-    text-transform: uppercase;
-  }
 
   .new-ticket-btn {
     margin: 0 1.4rem 1.8rem;
@@ -1070,12 +1034,6 @@
     color: #333;
   }
 
-  .footer-tagline {
-    font-family: 'Instrument Serif', serif;
-    font-style: italic;
-    font-size: 0.8rem;
-    color: #3a3a3a;
-  }
 
   .footer-dots {
     display: flex;
@@ -1097,14 +1055,7 @@
 <!-- ====== HEADER ====== -->
 <header>
   <div class="logo-block">
-    <!-- PopUp Bagels wordmark SVG (white) -->
-    <svg class="popb-logo" viewBox="0 0 167 37" xmlns="http://www.w3.org/2000/svg" fill="white">
-      <text x="0" y="30" font-family="'Bebas Neue', sans-serif" font-size="36" letter-spacing="2" fill="white">PopUp Bagels</text>
-    </svg>
-    <div class="logo-dept">
-      <div class="logo-dept-name">Legal</div>
-      <div class="logo-dept-sub">Request System</div>
-    </div>
+    <img class="popb-logo-img" src="PUB Legal Logo.png" alt="PopUp Bagels Legal Department">
   </div>
 
   <nav class="header-nav">
@@ -1133,10 +1084,8 @@
 <div class="main">
 
   <aside class="sidebar">
-    <!-- Bagel ring decoration -->
-    <div class="sidebar-bagel">
-      <div class="bagel-ring"></div>
-      <div class="bagel-label">Legal Dept.</div>
+    <div class="sidebar-logo">
+      <img class="sidebar-logo-img" src="PUB Legal Logo.png" alt="PopUp Bagels Legal Department">
     </div>
 
     <button class="new-ticket-btn" onclick="showPage('new', null)">+ Submit a Request</button>
@@ -1178,7 +1127,7 @@
     </div>
 
     <div class="sidebar-tagline">
-      Not famous but known.<br>Legal support done right.
+      Legal support done right.
     </div>
   </aside>
 
@@ -1631,7 +1580,7 @@
 <!-- ====== FOOTER ====== -->
 <div class="bagel-footer">
   <div class="footer-left">© 2026 PopUp Bagels &nbsp;·&nbsp; Legal Department &nbsp;·&nbsp; Confidential</div>
-  <div class="footer-tagline">Not famous but known.®</div>
+  <img class="footer-logo" src="PUB Legal Logo.png" alt="PopUp Bagels Legal Department">
   <div class="footer-dots">
     <div class="footer-dot"></div>
     <div class="footer-dot"></div>
