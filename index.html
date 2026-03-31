@@ -1844,7 +1844,7 @@ async function sendMessage() {
   const input = document.getElementById('msg-input');
   const val = input.value.trim();
   if (!val) return;
-  const senderName = Jordan Reeves;
+  const senderName = 'Jordan Reeves';
   if (currentTicketRecord) {
     const result = await atFetch('POST', TABLES.messages, {
       fields: {
