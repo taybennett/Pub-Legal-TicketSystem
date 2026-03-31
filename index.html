@@ -212,8 +212,23 @@ main { flex: 1; overflow-y: auto; }
 .doc-info { flex: 1; min-width: 0; }
 .doc-name { font-size: 0.82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .doc-meta { font-size: 0.68rem; color: var(--mid); }
-.doc-dl { font-size: 0.75rem; color: var(--mid); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); flex-shrink: 0; }
-.doc-dl:hover { background: var(--black); color: var(--white); }
+.doc-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
+.doc-dl, .doc-view { font-size: 0.75rem; color: var(--mid); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); cursor: pointer; background: none; font-family: inherit; }
+.doc-dl:hover, .doc-view:hover { background: var(--black); color: var(--white); }
+/* Doc viewer */
+.doc-viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); display: flex; align-items: center; justify-content: center; z-index: 200; }
+.doc-viewer-overlay.hidden { display: none; }
+.doc-viewer-modal { background: var(--white); width: 90vw; max-width: 1100px; height: 90vh; display: flex; flex-direction: column; position: relative; }
+.doc-viewer-header { display: flex; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); gap: 1rem; }
+.doc-viewer-title { flex: 1; font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-viewer-dl { font-size: 0.75rem; color: var(--mid); text-decoration: none; padding: 4px 10px; border: 1px solid var(--border); }
+.doc-viewer-dl:hover { background: var(--black); color: var(--white); }
+.doc-viewer-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--mid); padding: 0 4px; line-height: 1; }
+.doc-viewer-close:hover { color: var(--black); }
+.doc-viewer-body { flex: 1; overflow: hidden; background: #f4f4f4; }
+.doc-viewer-body iframe { width: 100%; height: 100%; border: none; display: block; }
+.doc-viewer-body img { max-width: 100%; max-height: 100%; display: block; margin: auto; object-fit: contain; padding: 1rem; }
+.doc-viewer-unsupported { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 1rem; color: var(--mid); font-size: 0.9rem; }
 
 /* Messages */
 .messages {
@@ -479,6 +494,18 @@ main { flex: 1; overflow-y: auto; }
 
 <div class="toast" id="toast"></div>
 
+<!-- Doc viewer -->
+<div class="doc-viewer-overlay hidden" id="doc-viewer-overlay" onclick="if(event.target===this)closeDocViewer()">
+  <div class="doc-viewer-modal">
+    <div class="doc-viewer-header">
+      <span class="doc-viewer-title" id="dv-title"></span>
+      <a class="doc-viewer-dl" id="dv-download" href="#" target="_blank" download>↓ Download</a>
+      <button class="doc-viewer-close" onclick="closeDocViewer()">×</button>
+    </div>
+    <div class="doc-viewer-body" id="dv-body"></div>
+  </div>
+</div>
+
 <script>
 // ── CONFIG ──
 const AIRTABLE_TOKEN = window.AIRTABLE_TOKEN || '';
@@ -714,13 +741,18 @@ async function loadDocs(ticketId) {
     const f = r.fields;
     const ext = (f['Filename']||'').split('.').pop().toUpperCase().slice(0,5) || (f['File Type']||'FILE').split('/').pop().toUpperCase().slice(0,5);
     const fileUrl = f['File']?.[0]?.url;
+    const fname = escHtml(f['Filename']||'Untitled');
+    const ftype = escHtml(f['File Type']||'');
     return `<div class="doc-item">
       <span class="doc-ext">${escHtml(ext)}</span>
       <div class="doc-info">
-        <div class="doc-name">${escHtml(f['Filename']||'Untitled')}</div>
+        <div class="doc-name">${fname}</div>
         <div class="doc-meta">${[f['Uploaded By'],f['File Size']].filter(Boolean).map(escHtml).join(' · ')}</div>
       </div>
-      ${fileUrl ? `<a class="doc-dl" href="${fileUrl}" target="_blank">↓</a>` : ''}
+      <div class="doc-actions">
+        ${fileUrl ? `<button class="doc-view" onclick="viewDoc('${fileUrl}','${fname}','${ftype}')">View</button>` : ''}
+        ${fileUrl ? `<a class="doc-dl" href="${fileUrl}" target="_blank" download>↓</a>` : ''}
+      </div>
     </div>`;
   }).join('');
 }
@@ -827,6 +859,39 @@ function fileToBase64(file) {
     reader.readAsDataURL(file);
   });
 }
+
+// ── DOC VIEWER ──
+function viewDoc(url, filename, mimeType) {
+  const overlay = document.getElementById('doc-viewer-overlay');
+  document.getElementById('dv-title').textContent = filename;
+  const dl = document.getElementById('dv-download');
+  dl.href = url;
+  dl.setAttribute('download', filename);
+  const body = document.getElementById('dv-body');
+  const type = (mimeType || '').toLowerCase();
+  if (type.startsWith('image/')) {
+    body.innerHTML = `<img src="${url}" alt="${filename}">`;
+  } else if (type === 'application/pdf' || filename.toLowerCase().endsWith('.pdf')) {
+    body.innerHTML = `<iframe src="${url}#toolbar=1" title="${filename}"></iframe>`;
+  } else if (type.startsWith('text/') || type === 'application/json') {
+    body.innerHTML = `<iframe src="${url}" title="${filename}"></iframe>`;
+  } else {
+    body.innerHTML = `<div class="doc-viewer-unsupported">
+      <div style="font-size:2.5rem">📄</div>
+      <div>${filename}</div>
+      <div style="font-size:0.8rem">This file type cannot be previewed in the browser.</div>
+      <a class="doc-viewer-dl" href="${url}" target="_blank" download="${filename}" style="margin-top:0.5rem">↓ Download to view</a>
+    </div>`;
+  }
+  overlay.classList.remove('hidden');
+  document.addEventListener('keydown', _dvEscListener);
+}
+function closeDocViewer() {
+  document.getElementById('doc-viewer-overlay').classList.add('hidden');
+  document.getElementById('dv-body').innerHTML = '';
+  document.removeEventListener('keydown', _dvEscListener);
+}
+function _dvEscListener(e) { if (e.key === 'Escape') closeDocViewer(); }
 
 // ── HELPERS ──
 function pillClass(s) {
