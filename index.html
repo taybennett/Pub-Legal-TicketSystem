@@ -1478,11 +1478,11 @@
         <div class="form-grid">
           <div class="form-field">
             <label class="form-label">Your Full Name</label>
-            <input class="form-input" type="text" placeholder="e.g. Maria Chen" />
+            <input class="form-input" id="new-name" type="text" placeholder="e.g. Maria Chen" />
           </div>
           <div class="form-field">
             <label class="form-label">Department</label>
-            <select class="form-select">
+            <select class="form-select" id="new-dept">
               <option value="">Select your department</option>
               <option>Finance</option>
               <option>Engineering</option>
@@ -1497,11 +1497,11 @@
           </div>
           <div class="form-field">
             <label class="form-label">Email Address</label>
-            <input class="form-input" type="email" placeholder="you@popupbagels.com" />
+            <input class="form-input" id="new-email" type="email" placeholder="you@popupbagels.com" />
           </div>
           <div class="form-field">
             <label class="form-label">Phone (Optional)</label>
-            <input class="form-input" type="tel" placeholder="(212) 555-0000" />
+            <input class="form-input" id="new-phone" type="tel" placeholder="(212) 555-0000" />
           </div>
         </div>
 
@@ -1510,11 +1510,11 @@
         <div class="form-grid">
           <div class="form-field full">
             <label class="form-label">Request Title</label>
-            <input class="form-input" type="text" placeholder="e.g. NDA Review for Vendor Onboarding — Acme Corp" />
+            <input class="form-input" id="new-title" type="text" placeholder="e.g. NDA Review for Vendor Onboarding — Acme Corp" />
           </div>
           <div class="form-field">
             <label class="form-label">Legal Category</label>
-            <select class="form-select">
+            <select class="form-select" id="new-category">
               <option value="">Select a category</option>
               <option>Contracts &amp; Agreements</option>
               <option>Employment / HR</option>
@@ -1529,7 +1529,7 @@
           </div>
           <div class="form-field">
             <label class="form-label">Priority Level</label>
-            <select class="form-select">
+            <select class="form-select" id="new-priority">
               <option>Standard — 5 to 7 business days</option>
               <option>Elevated — 2 to 3 business days</option>
               <option>Urgent — Same or next day (justification required)</option>
@@ -1537,19 +1537,19 @@
           </div>
           <div class="form-field">
             <label class="form-label">Deadline (if applicable)</label>
-            <input class="form-input" type="date" />
+            <input class="form-input" id="new-deadline" type="date" />
           </div>
           <div class="form-field">
             <label class="form-label">Counterparty / Third Party</label>
-            <input class="form-input" type="text" placeholder="e.g. Acme Corp, John Doe" />
+            <input class="form-input" id="new-counterparty" type="text" placeholder="e.g. Acme Corp, John Doe" />
           </div>
           <div class="form-field full">
             <label class="form-label">Description of Request</label>
-            <textarea class="form-textarea" placeholder="Describe your legal need in as much detail as possible. What's the business context? What specific questions do you need answered? Any key dates or constraints? The more detail, the faster we can get moving."></textarea>
+            <textarea class="form-textarea" id="new-description" placeholder="Describe your legal need in as much detail as possible. What's the business context? What specific questions do you need answered? Any key dates or constraints? The more detail, the faster we can get moving."></textarea>
           </div>
           <div class="form-field full">
             <label class="form-label">Confidentiality Concerns (Optional)</label>
-            <textarea class="form-textarea" style="min-height:72px" placeholder="e.g. This involves a potential acquisition — please do not share beyond the legal team."></textarea>
+            <textarea class="form-textarea" id="new-confidentiality" style="min-height:72px" placeholder="e.g. This involves a potential acquisition — please do not share beyond the legal team."></textarea>
           </div>
         </div>
 
@@ -1594,20 +1594,81 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const tickets = [
-  { id:'LR-0012', title:'Vendor SaaS Contract Review', dept:'Finance', submitter:'Maria Chen', status:'new', category:'Contracts', priority:'high', date:'Mar 30, 2026' },
-  { id:'LR-0011', title:'Logo Trademark Dispute — Urgent', dept:'Executive', submitter:'CEO Office', status:'urgent', category:'IP', priority:'high', date:'Mar 28, 2026' },
-  { id:'LR-0010', title:'Engineering Data Processing Agreement', dept:'Engineering', submitter:'Dev Kim', status:'open', category:'Privacy', priority:'med', date:'Mar 27, 2026' },
-  { id:'LR-0009', title:'NDA — Vendor Acme Corp', dept:'Finance', submitter:'Tom Walsh', status:'open', category:'Contracts', priority:'med', date:'Mar 26, 2026' },
-  { id:'LR-0008', title:'Employee Termination Review', dept:'People / HR', submitter:'Priya Nair', status:'open', category:'Employment', priority:'high', date:'Mar 25, 2026' },
-  { id:'LR-0007', title:'GDPR Compliance Audit Review', dept:'Engineering', submitter:'Dev Kim', status:'closed', category:'Compliance', priority:'med', date:'Mar 20, 2026' },
-  { id:'LR-0006', title:'Office Lease Amendment — NYC', dept:'Operations', submitter:'Felix Ramos', status:'closed', category:'Corporate', priority:'low', date:'Mar 18, 2026' },
-  { id:'LR-0005', title:'Sales Commission Agreement', dept:'Sales', submitter:'Alex Torres', status:'review', category:'Contracts', priority:'low', date:'Mar 15, 2026' },
-  { id:'LR-0004', title:'Non-Compete Clause Advisory', dept:'People / HR', submitter:'Priya Nair', status:'review', category:'Employment', priority:'med', date:'Mar 14, 2026' },
-  { id:'LR-0003', title:'Trademark Registration — New Brand', dept:'Marketing', submitter:'Sam Lee', status:'closed', category:'IP', priority:'med', date:'Mar 10, 2026' },
-  { id:'LR-0002', title:'Board Resolution — Equity Grant', dept:'Executive', submitter:'CEO Office', status:'closed', category:'Corporate', priority:'high', date:'Mar 5, 2026' },
-  { id:'LR-0001', title:'MSA with New Marketing Agency', dept:'Marketing', submitter:'Sam Lee', status:'open', category:'Contracts', priority:'low', date:'Feb 28, 2026' },
-];
+// ===== AIRTABLE CONFIG =====
+const AIRTABLE_TOKEN = '%%AIRTABLE_TOKEN%%';
+const BASE_ID = 'appUInS3SOfPul1jr';
+const TABLES = {
+  tickets:  'tblgnmXTy33sKo5jT',
+  messages: 'tbl2FBBd0ojDClvEo',
+  users:    'tblKg2Ls7eNE1nCHs',
+  docs:     'tblCvHWHKVWxPULf5'
+};
+
+// ===== AIRTABLE HELPER =====
+async function atFetch(method, path, body) {
+  const url = `https://api.airtable.com/v0/${BASE_ID}/${path}`;
+  const res = await fetch(url, {
+    method,
+    headers: {
+      'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) { const e = await res.json(); console.error('Airtable error:', e); return null; }
+  return res.json();
+}
+
+// ===== DATA =====
+let tickets = [];
+let currentTicketRecord = null;
+let currentUserName = '';
+
+function mapStatus(s) {
+  return { 'New':'new', 'In Progress':'open', 'Urgent':'urgent', 'Completed':'closed' }[s] || 'new';
+}
+function mapPriority(p) {
+  return { 'High':'high', 'Medium':'med', 'Low':'low' }[p] || 'med';
+}
+function mapPriorityUp(raw) {
+  if (raw.includes('Urgent')) return 'High';
+  if (raw.includes('Elevated')) return 'Medium';
+  return 'Low';
+}
+
+async function loadTickets() {
+  const listEl = document.getElementById('ticket-list');
+  const header = listEl.querySelector('.header');
+  listEl.innerHTML = '';
+  if (header) listEl.appendChild(header);
+  const loadingDiv = document.createElement('div');
+  loadingDiv.style.cssText = 'padding:2rem;color:var(--mid);font-size:0.8rem;font-family:"DM Mono",monospace;letter-spacing:0.08em';
+  loadingDiv.textContent = 'Loading tickets…';
+  listEl.appendChild(loadingDiv);
+
+  const data = await atFetch('GET', TABLES.tickets + '?sort%5B0%5D%5Bfield%5D=Submitted+At&sort%5B0%5D%5Bdirection%5D=desc');
+  if (!data) { showToast('Could not load tickets. Check your connection.'); return; }
+
+  tickets = (data.records || []).map(r => ({
+    recordId: r.id,
+    id: r.fields['Ticket ID'] || ('#' + (r.fields['# ID'] || '')),
+    title: r.fields['Title'] || '(Untitled)',
+    dept: r.fields['Department'] || '',
+    submitter: r.fields['Submitter Name'] || '',
+    status: mapStatus(r.fields['Status'] || 'New'),
+    category: r.fields['Category'] || '',
+    priority: mapPriority(r.fields['Priority'] || 'Medium'),
+    date: r.fields['Submitted At']
+      ? new Date(r.fields['Submitted At']).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})
+      : '',
+    description: r.fields['Description'] || '',
+    counterparty: r.fields['Counterparty'] || '',
+    deadline: r.fields['Deadline'] || '',
+    confidentiality: r.fields['Confidentiality'] || '',
+    assignedTo: r.fields['Assigned To'] || 'Jordan Reeves',
+  }));
+  renderTickets();
+}
 
 let currentFilter = 'all';
 let currentSearch = '';
@@ -1616,12 +1677,10 @@ function statusLabel(s) {
   const map = { new:'Fresh / New', open:'In the Oven', review:'Under Review', closed:'Wrapped Up', urgent:'Hot & Urgent' };
   return map[s] || s;
 }
-
 function statusClass(s) {
   const map = { new:'status-new', open:'status-open', review:'status-review', closed:'status-closed', urgent:'status-urgent' };
   return map[s] || '';
 }
-
 function priorityDot(p) {
   const cls = { high:'p-high', med:'p-med', low:'p-low' };
   const lbl = { high:'High', med:'Medium', low:'Low' };
@@ -1632,13 +1691,15 @@ function renderTickets() {
   const list = document.getElementById('ticket-list');
   const header = list.querySelector('.header');
   list.innerHTML = '';
-  list.appendChild(header);
+  if (header) list.appendChild(header);
 
   const filtered = tickets.filter(t => {
     if (currentFilter !== 'all' && t.status !== currentFilter) return false;
     if (currentSearch) {
       const q = currentSearch.toLowerCase();
-      return t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || t.submitter.toLowerCase().includes(q) || t.category.toLowerCase().includes(q) || t.dept.toLowerCase().includes(q);
+      return t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) ||
+             t.submitter.toLowerCase().includes(q) || t.category.toLowerCase().includes(q) ||
+             t.dept.toLowerCase().includes(q);
     }
     return true;
   });
@@ -1676,31 +1737,29 @@ function setFilter(btn, f) {
   currentFilter = f;
   renderTickets();
 }
-
-function searchTickets(val) {
-  currentSearch = val;
-  renderTickets();
-}
-
+function searchTickets(val) { currentSearch = val; renderTickets(); }
 function filterTickets(f) {
   currentFilter = f;
   showPage('tickets', null);
-  document.querySelectorAll('.nav-btn').forEach(b => { if (b.textContent.includes('Requests')) b.classList.add('active'); else b.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if (b.textContent.includes('Requests')) b.classList.add('active'); else b.classList.remove('active');
+  });
   renderTickets();
 }
-
 function filterCategory(c) {
-  currentFilter = 'all';
-  currentSearch = c;
+  currentFilter = 'all'; currentSearch = c;
   showPage('tickets', null);
-  document.querySelectorAll('.nav-btn').forEach(b => { if (b.textContent.includes('Requests')) b.classList.add('active'); else b.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if (b.textContent.includes('Requests')) b.classList.add('active'); else b.classList.remove('active');
+  });
   renderTickets();
 }
 
 function openTicket(id) {
   const t = tickets.find(x => x.id === id);
   if (!t) return;
-  document.getElementById('detail-id').textContent = t.id + ' \u00b7 ' + t.category.toUpperCase();
+  currentTicketRecord = t;
+  document.getElementById('detail-id').textContent = t.id + ' \u00b7 ' + (t.category || '').toUpperCase();
   document.getElementById('detail-title').textContent = t.title;
   document.getElementById('detail-meta').innerHTML = `
     <span class="status-pill ${statusClass(t.status)}">${statusLabel(t.status)}</span>
@@ -1708,6 +1767,40 @@ function openTicket(id) {
     <span style="font-size:0.72rem;color:var(--mid)">Submitted ${t.date} by ${t.submitter} &middot; ${t.dept}</span>
   `;
   showPage('detail', null);
+  loadMessages(t.recordId);
+}
+
+async function loadMessages(ticketRecordId) {
+  const body = document.getElementById('message-body');
+  body.innerHTML = '';
+  const formula = encodeURIComponent('FIND("' + ticketRecordId + '", ARRAYJOIN(Ticket))');
+  const data = await atFetch('GET', TABLES.messages + '?filterByFormula=' + formula + '&sort%5B0%5D%5Bfield%5D=Sent+At&sort%5B0%5D%5Bdirection%5D=asc');
+  if (!data || !data.records || data.records.length === 0) {
+    document.getElementById('msg-count').textContent = '0 messages';
+    return;
+  }
+  data.records.forEach(r => {
+    const role = r.fields['Sender Role'] || 'Employee';
+    const isCounsel = role === 'Counsel';
+    const name = r.fields['Sender Name'] || 'Unknown';
+    const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    const sentAt = r.fields['Sent At']
+      ? new Date(r.fields['Sent At']).toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})
+      : 'Sent';
+    const div = document.createElement('div');
+    div.className = `message-bubble ${isCounsel ? 'from-counsel' : ''}`;
+    div.innerHTML = `
+      <div class="msg-av ${isCounsel ? 'counsel' : ''}">${initials}</div>
+      <div class="msg-body">
+        <div class="msg-meta">${name} &middot; ${role} &middot; ${sentAt}</div>
+        <div class="msg-text">${r.fields['Body'] || ''}</div>
+      </div>
+    `;
+    body.appendChild(div);
+  });
+  const count = data.records.length;
+  document.getElementById('msg-count').textContent = count + ' message' + (count !== 1 ? 's' : '');
+  body.scrollTop = body.scrollHeight;
 }
 
 function showPage(page, navBtn) {
@@ -1721,17 +1814,30 @@ function showPage(page, navBtn) {
   window.scrollTo(0, 0);
 }
 
-function sendMessage() {
+async function sendMessage() {
   const input = document.getElementById('msg-input');
   const val = input.value.trim();
   if (!val) return;
+  const senderName = Jordan Reeves;
+  if (currentTicketRecord) {
+    const result = await atFetch('POST', TABLES.messages, {
+      fields: {
+        'Ticket': [currentTicketRecord.recordId],
+        'Sender Name': senderName,
+        'Sender Role': 'Counsel',
+        'Body': val
+      }
+    });
+    if (!result) { showToast('Message failed to send. Try again.'); return; }
+  }
   const body = document.getElementById('message-body');
+  const initials = senderName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'ME';
   const div = document.createElement('div');
   div.className = 'message-bubble from-counsel';
   div.innerHTML = `
-    <div class="msg-av counsel">JR</div>
+    <div class="msg-av counsel">${initials}</div>
     <div class="msg-body">
-      <div class="msg-meta">Jordan Reeves &middot; Legal &middot; Just now</div>
+      <div class="msg-meta">${senderName} &middot; Counsel &middot; Just now</div>
       <div class="msg-text">${val}</div>
     </div>
   `;
@@ -1740,7 +1846,7 @@ function sendMessage() {
   body.scrollTop = body.scrollHeight;
   const count = body.querySelectorAll('.message-bubble').length;
   document.getElementById('msg-count').textContent = count + ' message' + (count !== 1 ? 's' : '');
-  showToast('Message sent — hot off the press.');
+  showToast('Message sent \u2014 hot off the press.');
 }
 
 function simulateUpload() {
@@ -1756,7 +1862,7 @@ function simulateUpload() {
       <div class="doc-name">${f}</div>
       <div class="doc-meta">Uploaded just now &middot; ${sizes[ext] || '500 KB'}</div>
     </div>
-    <span class="doc-dl">Download ↓</span>
+    <span class="doc-dl">Download \u2193</span>
   `;
   const detailDocs = document.getElementById('detail-docs');
   const newDocs = document.getElementById('new-doc-list');
@@ -1768,10 +1874,46 @@ function simulateUpload() {
   showToast('"' + f + '" uploaded successfully.');
 }
 
-function submitTicket() {
-  const newId = 'LR-00' + (tickets.length + 1);
-  showToast(newId + ' submitted! We\u2019ll get on it \u2014 hot and fresh.');
-  setTimeout(() => showPage('tickets', null), 1400);
+async function submitTicket() {
+  const title    = document.getElementById('new-title').value.trim();
+  const name     = document.getElementById('new-name').value.trim();
+  const dept     = document.getElementById('new-dept').value;
+  const category = document.getElementById('new-category').value;
+  const priorityRaw   = document.getElementById('new-priority').value;
+  const deadline      = document.getElementById('new-deadline').value;
+  const counterparty  = document.getElementById('new-counterparty').value.trim();
+  const description   = document.getElementById('new-description').value.trim();
+  const confidentiality = document.getElementById('new-confidentiality').value.trim();
+
+  if (!title || !name || !dept) {
+    showToast('Please fill in your name, department, and request title.');
+    return;
+  }
+  currentUserName = name;
+
+  const fields = {
+    'Title': title,
+    'Submitter Name': name,
+    'Department': dept,
+    'Category': category,
+    'Priority': mapPriorityUp(priorityRaw),
+    'Description': description,
+    'Counterparty': counterparty,
+    'Confidentiality': confidentiality,
+    'Status': 'New',
+    'Assigned To': 'Jordan Reeves',
+  };
+  if (deadline) fields['Deadline'] = deadline;
+
+  const result = await atFetch('POST', TABLES.tickets, { fields });
+  if (result && result.id) {
+    const newId = result.fields?.['Ticket ID'] || ('LR-' + String(result.fields?.['# ID'] || '').padStart(4, '0'));
+    showToast(newId + ' submitted! We\u2019ll get on it \u2014 hot and fresh.');
+    await loadTickets();
+    setTimeout(() => showPage('tickets', null), 1400);
+  } else {
+    showToast('Something went wrong. Please try again.');
+  }
 }
 
 function showToast(msg) {
@@ -1781,7 +1923,7 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3200);
 }
 
-renderTickets();
+loadTickets();
 </script>
 </body>
 </html>

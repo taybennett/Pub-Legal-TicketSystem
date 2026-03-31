@@ -5,4 +5,4 @@ nixPkgs = ["nginx"]
 cmds = []
 
 [start]
-cmd = "nginx -g 'daemon off;' -c /app/nginx.conf"
+cmd = "sh /app/start.sh"
