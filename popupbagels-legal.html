@@ -1092,6 +1092,7 @@
 
   .footer-dot:nth-child(3) { background: var(--red); }
 </style>
+<script src="/config.js"></script>
 </head>
 <body>
 
@@ -1638,7 +1639,7 @@
 
 <script>
 // ===== AIRTABLE CONFIG =====
-const AIRTABLE_TOKEN = '%%AIRTABLE_TOKEN%%';
+const AIRTABLE_TOKEN = window.AIRTABLE_TOKEN || '';
 const BASE_ID = 'appUInS3SOfPul1jr';
 const TABLES = {
   tickets:  'tblgnmXTy33sKo5jT',
