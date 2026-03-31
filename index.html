@@ -744,7 +744,7 @@ async function submitTicket() {
   if (cp)   fields['Counterparty'] = cp;
   if (desc) fields['Description'] = desc;
   if (conf) fields['Confidentiality'] = conf;
-  const result = await atFetch('POST', TABLES.tickets, { fields });
+  const result = await atFetch('POST', TABLES.tickets, { fields, typecast: true });
   if (result) {
     closeNewTicket();
     showToast((result.fields?.['Ticket ID'] || 'Ticket') + ' created.');

@@ -480,7 +480,7 @@ async function submitTicket() {
   if (cp)   fields['Counterparty'] = cp;
   if (conf) fields['Confidentiality'] = conf;
 
-  const result = await atFetch('POST', TABLES.tickets, { fields });
+  const result = await atFetch('POST', TABLES.tickets, { fields, typecast: true });
   if (result) {
     // Save name for future
     if (!employeeName) {
