@@ -148,25 +148,34 @@ header {
 .extra-label { font-size: 0.65rem; font-family: 'DM Mono', monospace; color: var(--mid); letter-spacing: 0.07em; display: block; margin-bottom: 2px; }
 
 /* ── EMPLOYEE LAYOUT ── */
-.emp-layout { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.emp-layout { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 .tabs { display: flex; border-bottom: 2px solid var(--border); background: var(--white); flex-shrink: 0; padding: 0 1.5rem; }
 .tab { padding: 0.85rem 1.25rem; font-size: 0.78rem; font-family: 'DM Mono', monospace; letter-spacing: 0.07em; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; color: var(--mid); background: none; border-top: none; border-left: none; border-right: none; }
 .tab.active { color: var(--black); border-bottom-color: var(--red); font-weight: 500; }
 .tab:hover:not(.active) { color: var(--black); }
-.page { display: none; flex: 1; overflow-y: auto; }
-.page.active { display: block; }
+.page { display: none; }
+.page.active { display: flex; flex-direction: column; flex: 1; overflow-y: auto; min-height: 0; }
 .submit-wrap { max-width: 680px; margin: 0 auto; padding: 2rem 1.5rem; }
 .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 0.04em; margin-bottom: 0.3rem; }
 .page-sub { font-size: 0.82rem; color: var(--mid); margin-bottom: 2rem; }
 .form-section { margin-bottom: 1.75rem; }
 .form-section-title { font-size: 0.68rem; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mid); border-bottom: 1px solid var(--border); padding-bottom: 0.45rem; margin-bottom: 1rem; }
-.requests-wrap { padding: 1.75rem 1.5rem; max-width: 860px; margin: 0 auto; }
+.requests-wrap { padding: 1.75rem 1.5rem; max-width: 860px; margin: 0 auto; padding-bottom: 3rem; }
 .ticket-card { border: 1px solid var(--border); padding: 1rem 1.1rem; margin-bottom: 0.65rem; cursor: pointer; border-left: 3px solid transparent; transition: background 0.1s; }
 .ticket-card:hover { background: var(--cream); border-left-color: var(--red); }
 .tc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .tc-id { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--mid); letter-spacing: 0.07em; }
 .tc-title { font-size: 0.9rem; font-weight: 500; margin-bottom: 3px; }
+.tc-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
 .tc-meta { font-size: 0.72rem; color: var(--mid); }
+.tc-days { font-size: 0.68rem; font-family: 'DM Mono', monospace; color: var(--mid); letter-spacing: 0.04em; }
+.tc-days.warn { color: var(--amber); }
+.tc-days.urgent { color: var(--red); }
+/* Employee read-only status bar */
+.emp-status-bar { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; margin-bottom: 1.5rem; border: 1px solid var(--border); background: var(--cream); }
+.emp-status-label { font-size: 0.68rem; font-family: 'DM Mono', monospace; color: var(--mid); letter-spacing: 0.06em; }
+.emp-status-value { font-size: 0.8rem; font-weight: 600; font-family: 'DM Mono', monospace; letter-spacing: 0.05em; }
+.emp-status-days { font-size: 0.72rem; font-family: 'DM Mono', monospace; color: var(--mid); margin-left: auto; }
 
 /* ── SHARED FORM ── */
 .form-row { margin-bottom: 0.9rem; }
@@ -444,6 +453,11 @@ header {
         <div class="detail-id" id="rd-id"></div>
         <div class="detail-title" id="rd-title"></div>
         <div class="detail-meta" id="rd-meta"></div>
+        <div class="emp-status-bar" id="rd-status-bar">
+          <span class="emp-status-label">STATUS</span>
+          <span class="emp-status-value" id="rd-status-value">—</span>
+          <span class="emp-status-days" id="rd-status-days"></span>
+        </div>
         <div class="section">
           <div class="section-head">Description</div>
           <div class="description" id="rd-description"></div>
@@ -906,14 +920,21 @@ async function loadMyTickets() {
   el.innerHTML = myTickets.map(r => {
     const f = r.fields;
     const s = f['Status'] || 'New';
-    const date = f['Submitted At'] ? new Date(f['Submitted At']).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+    const submittedAt = f['Submitted At'] ? new Date(f['Submitted At']) : null;
+    const date = submittedAt ? submittedAt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+    const days = submittedAt ? Math.floor((Date.now() - submittedAt) / 86400000) : null;
+    const daysClass = days === null ? '' : days >= 14 ? ' urgent' : days >= 7 ? ' warn' : '';
+    const daysLabel = days !== null ? `${days}d active` : '';
     return `<div class="ticket-card" onclick="openEmpTicket('${r.id}')">
       <div class="tc-top">
         <span class="tc-id">${escHtml(f['Ticket ID']||'—')}</span>
         <span class="pill ${pillClass(s)}">${escHtml(s)}</span>
       </div>
       <div class="tc-title">${escHtml(f['Title']||'(Untitled)')}</div>
-      <div class="tc-meta">${[f['Category'],date].filter(Boolean).map(escHtml).join(' · ')}</div>
+      <div class="tc-bottom">
+        <span class="tc-meta">${[f['Category'],date].filter(Boolean).map(escHtml).join(' · ')}</span>
+        ${daysLabel ? `<span class="tc-days${daysClass}">${daysLabel}</span>` : ''}
+      </div>
     </div>`;
   }).join('');
 }
@@ -929,17 +950,29 @@ async function openEmpTicket(recordId) {
 function renderEmpDetail(rec) {
   const f = rec.fields;
   const s = f['Status'] || 'New';
-  const date = f['Submitted At'] ? new Date(f['Submitted At']).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '';
+  const submittedAt = f['Submitted At'] ? new Date(f['Submitted At']) : null;
+  const date = submittedAt ? submittedAt.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '';
+  const daysActive = submittedAt ? Math.floor((Date.now() - submittedAt) / 86400000) : null;
+
   document.getElementById('rd-id').textContent = [f['Ticket ID'], f['Category']].filter(Boolean).join(' · ').toUpperCase();
   document.getElementById('rd-title').textContent = f['Title'] || '(Untitled)';
   document.getElementById('rd-meta').innerHTML =
-    `<span class="pill ${pillClass(s)}">${escHtml(s)}</span>` +
     [f['Department'],date].filter(Boolean).map(v=>`<span class="meta-chip">${escHtml(v)}</span>`).join('');
+
+  // Status bar
+  const statusColors = { 'New':'var(--blue)', 'In Progress':'var(--amber)', 'Urgent':'var(--red)', 'Completed':'var(--green)' };
+  document.getElementById('rd-status-value').textContent = s;
+  document.getElementById('rd-status-value').style.color = statusColors[s] || 'var(--black)';
+  document.getElementById('rd-status-days').textContent = daysActive !== null
+    ? `${daysActive} day${daysActive === 1 ? '' : 's'} active`
+    : '';
+
   document.getElementById('rd-description').textContent = f['Description'] || '(No description provided.)';
   document.getElementById('rd-extras').innerHTML = [
     ['Priority',f['Priority']],['Deadline',f['Deadline']],
     ['Counterparty',f['Counterparty']],['Assigned To',f['Assigned To']]
   ].filter(([,v])=>v).map(([k,v])=>`<div class="extra-field"><span class="extra-label">${k}</span>${escHtml(v)}</div>`).join('');
+
   document.getElementById('req-list-view').classList.add('hidden');
   document.getElementById('req-detail-view').classList.remove('hidden');
   document.getElementById('rd-messages').innerHTML = '<div class="state-msg">Loading…</div>';
