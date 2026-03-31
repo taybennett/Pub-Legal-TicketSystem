@@ -399,7 +399,9 @@ main { flex: 1; overflow-y: auto; }
     <div class="form-row-2">
       <div>
         <label class="form-label">Submitter Name *</label>
-        <input class="form-input" id="f-submitter" type="text" placeholder="Full name">
+        <select class="form-select" id="f-submitter">
+          <option value="">Loading users…</option>
+        </select>
       </div>
       <div>
         <label class="form-label">Department *</label>
@@ -429,9 +431,9 @@ main { flex: 1; overflow-y: auto; }
       <div>
         <label class="form-label">Priority</label>
         <select class="form-select" id="f-priority">
-          <option value="Low">Low — 5–7 business days</option>
-          <option value="Medium">Medium — 2–3 business days</option>
-          <option value="High">High — Same/next day</option>
+          <option value="Low">21 Days</option>
+          <option value="Medium">14 Days</option>
+          <option value="High">7 Days — Urgent Only</option>
         </select>
       </div>
     </div>
@@ -452,6 +454,10 @@ main { flex: 1; overflow-y: auto; }
     <div class="form-row">
       <label class="form-label">Confidentiality Notes</label>
       <textarea class="form-textarea" id="f-confidentiality" style="min-height:60px" placeholder="Any sensitivity or sharing restrictions…"></textarea>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Attach Document (optional)</label>
+      <input class="form-input" id="f-file" type="file" style="padding:6px 10px;cursor:pointer;">
     </div>
     <button class="btn-submit" onclick="submitTicket()">Submit Request</button>
   </div>
@@ -486,6 +492,7 @@ const TABLES = {
 const DOC_FILE_FIELD = 'fldFdB4upCStlXcoR';
 
 let allTickets = [];
+let allUsers = [];
 let currentFilter = 'all';
 let currentSearch = '';
 let currentTicketId = null;
@@ -493,6 +500,7 @@ let counselName = '';
 
 // ── INIT ──
 window.addEventListener('load', () => {
+  loadUsers();
   const saved = localStorage.getItem('pubLegalCounselName');
   if (saved) {
     counselName = saved;
@@ -531,6 +539,30 @@ async function atFetch(method, path, body) {
     if (!res.ok) { const e = await res.json(); console.error('Airtable error:', e); return null; }
     return res.json();
   } catch(e) { console.error('Fetch error:', e); return null; }
+}
+
+// ── USERS ──
+async function loadUsers() {
+  const data = await atFetch('GET', `${TABLES.users}?sort%5B0%5D%5Bfield%5D=Name&sort%5B0%5D%5Bdirection%5D=asc`);
+  allUsers = data?.records || [];
+  const sel = document.getElementById('f-submitter');
+  if (!sel) return;
+  if (!allUsers.length) {
+    sel.innerHTML = '<option value="">No users found — add users to Airtable first</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">Select submitter…</option>' +
+    allUsers.map(r => {
+      const dept = r.fields['Department'] ? ` — ${r.fields['Department']}` : '';
+      return `<option value="${escHtml(r.fields['Name']||'')}" data-dept="${escHtml(r.fields['Department']||'')}">${escHtml(r.fields['Name']||'')}${dept}</option>`;
+    }).join('');
+  // Auto-fill department when submitter is selected
+  sel.addEventListener('change', () => {
+    const opt = sel.options[sel.selectedIndex];
+    const dept = opt?.dataset?.dept || '';
+    const deptEl = document.getElementById('f-dept');
+    if (deptEl && dept) deptEl.value = dept;
+  });
 }
 
 // ── TICKETS ──
@@ -746,20 +778,50 @@ async function submitTicket() {
   if (conf) fields['Confidentiality'] = conf;
   const result = await atFetch('POST', TABLES.tickets, { fields, typecast: true });
   if (result) {
+    const ticketId = result.fields?.['Ticket ID'] || 'Ticket';
+    // Upload attached document if one was selected
+    const fileInput = document.getElementById('f-file');
+    if (fileInput?.files?.length) {
+      showToast(ticketId + ' created. Uploading document…');
+      await uploadDocumentToTicket(fileInput.files[0], result.id, submitter);
+    } else {
+      showToast(ticketId + ' created.');
+    }
     closeNewTicket();
-    showToast((result.fields?.['Ticket ID'] || 'Ticket') + ' created.');
     await loadTickets();
   } else showToast('Failed to create ticket.');
 }
 function openNewTicket() { document.getElementById('new-ticket-overlay').classList.remove('hidden'); }
 function closeNewTicket() {
   document.getElementById('new-ticket-overlay').classList.add('hidden');
-  ['f-title','f-submitter','f-description','f-counterparty','f-confidentiality','f-deadline'].forEach(id => {
+  ['f-title','f-description','f-counterparty','f-confidentiality','f-deadline','f-file'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  ['f-dept','f-category','f-priority'].forEach(id => {
+  ['f-submitter','f-dept','f-category','f-priority'].forEach(id => {
     const el = document.getElementById(id); if (el) el.selectedIndex = 0;
   });
+}
+
+async function uploadDocumentToTicket(file, ticketRecordId, uploaderName) {
+  const result = await atFetch('POST', TABLES.docs, { fields: {
+    'Ticket': [ticketRecordId],
+    'Filename': file.name,
+    'File Type': file.type || 'application/octet-stream',
+    'File Size': formatSize(file.size),
+    'Uploaded By': uploaderName || counselName || 'Counsel'
+  }});
+  if (!result) return;
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('filename', file.name);
+    fd.append('contentType', file.type || 'application/octet-stream');
+    await fetch(`https://content.airtable.com/v0/${BASE_ID}/${result.id}/${DOC_FILE_FIELD}/uploadAttachment`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}` },
+      body: fd
+    });
+  } catch(e) { console.warn('File binary upload failed:', e); }
 }
 
 // ── HELPERS ──

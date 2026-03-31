@@ -302,9 +302,9 @@ header {
         <div>
           <label class="form-label">Priority</label>
           <select class="form-select" id="s-priority">
-            <option value="Low">Low — 5–7 business days</option>
-            <option value="Medium">Medium — 2–3 business days</option>
-            <option value="High">High — Same/next day</option>
+            <option value="Low">21 Days</option>
+            <option value="Medium">14 Days</option>
+            <option value="High">7 Days — Urgent Only</option>
           </select>
         </div>
       </div>
@@ -327,6 +327,10 @@ header {
         <label class="form-label">Confidentiality Notes</label>
         <textarea class="form-textarea" id="s-confidentiality" style="min-height:64px"
           placeholder="Any sensitivity, sharing restrictions, or need-to-know notes…"></textarea>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Attach Document (optional)</label>
+        <input class="form-input" id="s-file" type="file" style="padding:6px 10px;cursor:pointer;">
       </div>
     </div>
 
@@ -488,9 +492,18 @@ async function submitTicket() {
       localStorage.setItem('pubLegalEmployeeName', name);
       document.getElementById('user-pill').textContent = name + ' ▾';
     }
-    showToast((result.fields?.['Ticket ID'] || 'Request') + ' submitted! We\'ll be in touch.');
+    const ticketId = result.fields?.['Ticket ID'] || 'Request';
+    // Upload attached document if one was selected
+    const fileInput = document.getElementById('s-file');
+    if (fileInput?.files?.length) {
+      showToast(ticketId + ' submitted. Uploading document…');
+      await uploadDocumentToTicket(fileInput.files[0], result.id, name);
+      fileInput.value = '';
+    } else {
+      showToast(ticketId + ' submitted! We\'ll be in touch.');
+    }
     // Clear form
-    ['s-title','s-description','s-counterparty','s-confidentiality','s-deadline','s-email','s-phone'].forEach(id => {
+    ['s-title','s-description','s-counterparty','s-confidentiality','s-deadline','s-email','s-phone','s-file'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
     ['s-dept','s-category','s-priority'].forEach(id => {
@@ -648,6 +661,28 @@ async function uploadDocument(file) {
     showToast(up.ok ? 'Document uploaded!' : 'Metadata saved — file will need to be attached manually.');
   } catch { showToast('Metadata saved — file will need to be attached manually.'); }
   await loadDocs(currentTicketId);
+}
+
+async function uploadDocumentToTicket(file, ticketRecordId, uploaderName) {
+  const result = await atFetch('POST', TABLES.docs, { fields: {
+    'Ticket': [ticketRecordId],
+    'Filename': file.name,
+    'File Type': file.type || 'application/octet-stream',
+    'File Size': formatSize(file.size),
+    'Uploaded By': uploaderName || employeeName || 'Employee'
+  }});
+  if (!result) return;
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('filename', file.name);
+    fd.append('contentType', file.type || 'application/octet-stream');
+    await fetch(`https://content.airtable.com/v0/${BASE_ID}/${result.id}/${DOC_FILE_FIELD}/uploadAttachment`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}` },
+      body: fd
+    });
+  } catch(e) { console.warn('File binary upload failed:', e); }
 }
 
 // ── HELPERS ──
