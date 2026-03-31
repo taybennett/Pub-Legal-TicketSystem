@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PUB Legal — Counsel</title>
+<title>PUB Legal</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/config.js"></script>
 <style>
@@ -45,7 +45,7 @@ header {
 .logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.55rem; letter-spacing: 0.06em; }
 .logo span { color: var(--red); }
 .header-right { display: flex; align-items: center; gap: 0.75rem; }
-.attorney-pill {
+.user-pill {
   font-family: 'DM Mono', monospace;
   font-size: 0.7rem;
   letter-spacing: 0.07em;
@@ -54,7 +54,7 @@ header {
   padding: 3px 10px;
   cursor: pointer;
 }
-.attorney-pill:hover { border-color: var(--white); color: var(--white); }
+.user-pill:hover { border-color: var(--white); color: var(--white); }
 .btn-header {
   background: var(--red);
   color: var(--white);
@@ -68,53 +68,38 @@ header {
 }
 .btn-header:hover { background: var(--red-dark); }
 
-/* ── LAYOUT ── */
-.layout { flex: 1; display: flex; overflow: hidden; }
+/* ── ATTORNEY LAYOUT ── */
+.atty-layout { flex: 1; display: flex; overflow: hidden; }
 
 /* ── SIDEBAR ── */
 .sidebar {
-  width: 300px;
-  min-width: 300px;
+  width: 300px; min-width: 300px;
   border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--white);
+  display: flex; flex-direction: column;
+  overflow: hidden; background: var(--white);
 }
 .sidebar-top { padding: 0.9rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .search-input {
-  width: 100%;
-  padding: 7px 10px;
+  width: 100%; padding: 7px 10px;
   border: 1px solid var(--border);
   background: var(--cream);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.82rem;
-  outline: none;
-  margin-bottom: 0.6rem;
-  color: var(--black);
+  font-family: 'DM Sans', sans-serif; font-size: 0.82rem;
+  outline: none; margin-bottom: 0.6rem; color: var(--black);
 }
 .search-input:focus { border-color: var(--black); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip {
-  background: none;
-  border: 1px solid var(--border);
-  padding: 3px 9px;
-  font-size: 0.68rem;
-  font-family: 'DM Mono', monospace;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  color: var(--mid);
+  background: none; border: 1px solid var(--border);
+  padding: 3px 9px; font-size: 0.68rem;
+  font-family: 'DM Mono', monospace; letter-spacing: 0.05em;
+  cursor: pointer; color: var(--mid);
 }
 .chip.active { background: var(--black); color: var(--white); border-color: var(--black); }
 .chip:hover:not(.active) { border-color: var(--black); color: var(--black); }
-
 .ticket-list { flex: 1; overflow-y: auto; }
 .ticket-item {
-  padding: 0.8rem 1rem;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  transition: background 0.1s;
-  border-left: 3px solid transparent;
+  padding: 0.8rem 1rem; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.1s; border-left: 3px solid transparent;
 }
 .ticket-item:hover { background: var(--cream); }
 .ticket-item.active { background: var(--cream); border-left-color: var(--red); }
@@ -124,88 +109,83 @@ header {
 .ti-meta { font-size: 0.7rem; color: var(--mid); }
 
 /* ── STATUS PILLS ── */
-.pill {
-  font-size: 0.62rem;
-  font-family: 'DM Mono', monospace;
-  letter-spacing: 0.06em;
-  padding: 2px 7px;
-  font-weight: 500;
-  white-space: nowrap;
-}
+.pill { font-size: 0.62rem; font-family: 'DM Mono', monospace; letter-spacing: 0.06em; padding: 2px 7px; font-weight: 500; white-space: nowrap; }
 .pill-new    { background: #dce8f5; color: var(--blue); }
 .pill-prog   { background: #fef3dc; color: var(--amber); }
 .pill-urgent { background: #fde8e6; color: var(--red); }
 .pill-done   { background: #ddf0e7; color: var(--green); }
 
-/* ── MAIN PANEL ── */
-main { flex: 1; overflow-y: auto; }
-
-.welcome {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--border);
-  gap: 0.5rem;
-}
+/* ── ATTORNEY MAIN PANEL ── */
+.atty-main { flex: 1; overflow-y: auto; }
+.welcome { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--border); gap: 0.5rem; }
 .welcome-logo { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; letter-spacing: 0.05em; }
 .welcome-sub { font-size: 0.75rem; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; color: var(--mid); }
 
 /* ── TICKET DETAIL ── */
 .detail { padding: 1.75rem 2rem; max-width: 860px; }
 .detail-back {
-  background: none; border: none;
-  font-size: 0.7rem; color: var(--mid);
-  font-family: 'DM Mono', monospace;
-  letter-spacing: 0.06em;
-  cursor: pointer; padding: 0 0 1.25rem 0;
-  display: block;
+  background: none; border: none; font-size: 0.7rem; color: var(--mid);
+  font-family: 'DM Mono', monospace; letter-spacing: 0.06em;
+  cursor: pointer; padding: 0 0 1.25rem 0; display: block;
 }
 .detail-back:hover { color: var(--black); }
 .detail-id { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--mid); letter-spacing: 0.09em; margin-bottom: 0.35rem; }
 .detail-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.9rem; letter-spacing: 0.03em; line-height: 1.1; margin-bottom: 0.75rem; }
 .detail-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-bottom: 1.25rem; }
 .meta-chip { font-size: 0.7rem; color: var(--mid); background: var(--cream); padding: 3px 8px; }
-
-/* Status bar */
-.status-bar {
-  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
-  background: var(--cream); border: 1px solid var(--border);
-  padding: 0.6rem 0.9rem; margin-bottom: 1.5rem;
-}
+.status-bar { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; background: var(--cream); border: 1px solid var(--border); padding: 0.6rem 0.9rem; margin-bottom: 1.5rem; }
 .status-bar-label { font-size: 0.68rem; color: var(--mid); font-family: 'DM Mono', monospace; letter-spacing: 0.06em; margin-right: 4px; }
-.status-btn {
-  background: var(--white); border: 1px solid var(--border);
-  padding: 4px 12px; font-size: 0.72rem;
-  font-family: 'DM Sans', sans-serif; font-weight: 500;
-  cursor: pointer; color: var(--black);
-}
+.status-btn { background: var(--white); border: 1px solid var(--border); padding: 4px 12px; font-size: 0.72rem; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; color: var(--black); }
 .status-btn:hover { border-color: var(--black); }
 .status-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
-
-/* Sections */
 .section { margin-bottom: 1.75rem; }
-.section-head {
-  font-size: 0.68rem; font-family: 'DM Mono', monospace;
-  letter-spacing: 0.1em; color: var(--mid); text-transform: uppercase;
-  padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
-  margin-bottom: 0.85rem;
-  display: flex; justify-content: space-between; align-items: center;
-}
-.section-head button {
-  background: none; border: 1px solid var(--border);
-  padding: 2px 9px; font-size: 0.65rem; cursor: pointer;
-  font-family: 'DM Mono', monospace; letter-spacing: 0.05em; color: var(--mid);
-}
+.section-head { font-size: 0.68rem; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; color: var(--mid); text-transform: uppercase; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
+.section-head button { background: none; border: 1px solid var(--border); padding: 2px 9px; font-size: 0.65rem; cursor: pointer; font-family: 'DM Mono', monospace; letter-spacing: 0.05em; color: var(--mid); }
 .section-head button:hover { background: var(--black); color: var(--white); border-color: var(--black); }
-
 .description { font-size: 0.87rem; line-height: 1.65; white-space: pre-wrap; color: #222; }
 .extra-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.6rem; margin-top: 0.85rem; }
 .extra-field { font-size: 0.8rem; }
 .extra-label { font-size: 0.65rem; font-family: 'DM Mono', monospace; color: var(--mid); letter-spacing: 0.07em; display: block; margin-bottom: 2px; }
 
-/* Documents */
+/* ── EMPLOYEE LAYOUT ── */
+.emp-layout { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.tabs { display: flex; border-bottom: 2px solid var(--border); background: var(--white); flex-shrink: 0; padding: 0 1.5rem; }
+.tab { padding: 0.85rem 1.25rem; font-size: 0.78rem; font-family: 'DM Mono', monospace; letter-spacing: 0.07em; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; color: var(--mid); background: none; border-top: none; border-left: none; border-right: none; }
+.tab.active { color: var(--black); border-bottom-color: var(--red); font-weight: 500; }
+.tab:hover:not(.active) { color: var(--black); }
+.page { display: none; flex: 1; overflow-y: auto; }
+.page.active { display: block; }
+.submit-wrap { max-width: 680px; margin: 0 auto; padding: 2rem 1.5rem; }
+.page-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 0.04em; margin-bottom: 0.3rem; }
+.page-sub { font-size: 0.82rem; color: var(--mid); margin-bottom: 2rem; }
+.form-section { margin-bottom: 1.75rem; }
+.form-section-title { font-size: 0.68rem; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mid); border-bottom: 1px solid var(--border); padding-bottom: 0.45rem; margin-bottom: 1rem; }
+.requests-wrap { padding: 1.75rem 1.5rem; max-width: 860px; margin: 0 auto; }
+.ticket-card { border: 1px solid var(--border); padding: 1rem 1.1rem; margin-bottom: 0.65rem; cursor: pointer; border-left: 3px solid transparent; transition: background 0.1s; }
+.ticket-card:hover { background: var(--cream); border-left-color: var(--red); }
+.tc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.tc-id { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--mid); letter-spacing: 0.07em; }
+.tc-title { font-size: 0.9rem; font-weight: 500; margin-bottom: 3px; }
+.tc-meta { font-size: 0.72rem; color: var(--mid); }
+
+/* ── SHARED FORM ── */
+.form-row { margin-bottom: 0.9rem; }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem; }
+.form-label { display: block; font-size: 0.68rem; font-family: 'DM Mono', monospace; letter-spacing: 0.08em; color: var(--mid); margin-bottom: 4px; }
+.form-input, .form-select, .form-textarea {
+  width: 100%; padding: 9px 11px;
+  border: 1px solid var(--border); background: var(--white);
+  font-family: 'DM Sans', sans-serif; font-size: 0.84rem;
+  outline: none; color: var(--black);
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--black); }
+.form-textarea { resize: vertical; min-height: 100px; }
+.btn-primary { background: var(--red); color: var(--white); border: none; padding: 11px 28px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; letter-spacing: 0.04em; }
+.btn-primary:hover { background: var(--red-dark); }
+.btn-submit { width: 100%; background: var(--red); color: var(--white); border: none; padding: 10px; font-family: 'DM Sans', sans-serif; font-size: 0.84rem; font-weight: 600; cursor: pointer; margin-top: 0.25rem; }
+.btn-submit:hover { background: var(--red-dark); }
+
+/* ── DOCUMENTS ── */
 .doc-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0; border-bottom: 1px solid var(--border); }
 .doc-item:last-child { border-bottom: none; }
 .doc-ext { background: var(--black); color: var(--white); font-size: 0.58rem; font-family: 'DM Mono', monospace; padding: 3px 5px; min-width: 34px; text-align: center; }
@@ -215,7 +195,55 @@ main { flex: 1; overflow-y: auto; }
 .doc-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
 .doc-dl, .doc-view { font-size: 0.75rem; color: var(--mid); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); cursor: pointer; background: none; font-family: inherit; }
 .doc-dl:hover, .doc-view:hover { background: var(--black); color: var(--white); }
-/* Doc viewer */
+
+/* ── MESSAGES ── */
+.messages { height: 260px; overflow-y: auto; border: 1px solid var(--border); padding: 0.9rem; background: var(--cream); margin-bottom: 0.65rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.msg { display: flex; flex-direction: column; }
+.msg-counsel { align-items: flex-end; }
+.msg-employee { align-items: flex-start; }
+.msg-bubble { display: inline-block; max-width: 72%; padding: 0.45rem 0.7rem; font-size: 0.84rem; line-height: 1.45; white-space: pre-wrap; }
+.msg-counsel .msg-bubble { background: var(--black); color: var(--white); }
+.msg-employee .msg-bubble { background: var(--white); border: 1px solid var(--border); }
+.msg-meta { font-size: 0.65rem; color: var(--mid); font-family: 'DM Mono', monospace; margin-top: 3px; }
+.reply-row { display: flex; gap: 0.5rem; }
+.reply-input { flex: 1; padding: 0.55rem 0.75rem; border: 1px solid var(--border); background: var(--white); font-family: 'DM Sans', sans-serif; font-size: 0.84rem; resize: none; outline: none; }
+.reply-input:focus { border-color: var(--black); }
+.btn-send { background: var(--black); color: var(--white); border: none; padding: 0 1.2rem; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; cursor: pointer; letter-spacing: 0.03em; }
+.btn-send:hover { background: var(--red); }
+
+/* ── MODAL / OVERLAY ── */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.overlay.hidden { display: none; }
+.modal { background: var(--white); width: 540px; max-width: 96vw; max-height: 92vh; overflow-y: auto; padding: 2rem; position: relative; }
+.modal-close { position: absolute; top: 1rem; right: 1.1rem; background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--mid); line-height: 1; }
+.modal-close:hover { color: var(--black); }
+.modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; margin-bottom: 1.5rem; }
+
+/* ── LOGIN SCREEN ── */
+.login-screen {
+  position: fixed; inset: 0;
+  background: var(--black);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500;
+  flex-direction: column; gap: 0;
+}
+.login-screen.hidden { display: none; }
+.login-box {
+  background: var(--white);
+  width: 400px; max-width: 94vw;
+  padding: 2.5rem 2.25rem;
+}
+.login-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem; letter-spacing: 0.06em;
+  margin-bottom: 0.25rem;
+  text-align: center;
+}
+.login-logo span { color: var(--red); }
+.login-sub { font-size: 0.75rem; font-family: 'DM Mono', monospace; letter-spacing: 0.08em; color: var(--mid); text-align: center; margin-bottom: 2rem; }
+.login-error { font-size: 0.75rem; color: var(--red); font-family: 'DM Mono', monospace; letter-spacing: 0.06em; margin-top: 0.5rem; min-height: 1rem; }
+
+/* ── DOC VIEWER ── */
 .doc-viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); display: flex; align-items: center; justify-content: center; z-index: 200; }
 .doc-viewer-overlay.hidden { display: none; }
 .doc-viewer-modal { background: var(--white); width: 90vw; max-width: 1100px; height: 90vh; display: flex; flex-direction: column; position: relative; }
@@ -230,111 +258,49 @@ main { flex: 1; overflow-y: auto; }
 .doc-viewer-body img { max-width: 100%; max-height: 100%; display: block; margin: auto; object-fit: contain; padding: 1rem; }
 .doc-viewer-unsupported { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 1rem; color: var(--mid); font-size: 0.9rem; }
 
-/* Messages */
-.messages {
-  height: 260px; overflow-y: auto;
-  border: 1px solid var(--border); padding: 0.9rem;
-  background: var(--cream); margin-bottom: 0.65rem;
-  display: flex; flex-direction: column; gap: 0.75rem;
-}
-.msg { display: flex; flex-direction: column; }
-.msg-counsel { align-items: flex-end; }
-.msg-employee { align-items: flex-start; }
-.msg-bubble {
-  display: inline-block; max-width: 72%;
-  padding: 0.45rem 0.7rem;
-  font-size: 0.84rem; line-height: 1.45;
-  white-space: pre-wrap;
-}
-.msg-counsel .msg-bubble { background: var(--black); color: var(--white); }
-.msg-employee .msg-bubble { background: var(--white); border: 1px solid var(--border); }
-.msg-meta { font-size: 0.65rem; color: var(--mid); font-family: 'DM Mono', monospace; margin-top: 3px; }
-.reply-row { display: flex; gap: 0.5rem; }
-.reply-input {
-  flex: 1; padding: 0.55rem 0.75rem;
-  border: 1px solid var(--border); background: var(--white);
-  font-family: 'DM Sans', sans-serif; font-size: 0.84rem;
-  resize: none; outline: none;
-}
-.reply-input:focus { border-color: var(--black); }
-.btn-send {
-  background: var(--black); color: var(--white);
-  border: none; padding: 0 1.2rem;
-  font-family: 'DM Sans', sans-serif; font-size: 0.78rem;
-  font-weight: 600; cursor: pointer; letter-spacing: 0.03em;
-}
-.btn-send:hover { background: var(--red); }
-
-/* ── MODAL / OVERLAY ── */
-.overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.55);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 100;
-}
-.overlay.hidden { display: none; }
-.modal {
-  background: var(--white);
-  width: 540px; max-width: 96vw; max-height: 92vh;
-  overflow-y: auto; padding: 2rem; position: relative;
-}
-.modal-close {
-  position: absolute; top: 1rem; right: 1.1rem;
-  background: none; border: none; font-size: 1.3rem;
-  cursor: pointer; color: var(--mid); line-height: 1;
-}
-.modal-close:hover { color: var(--black); }
-.modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; margin-bottom: 1.5rem; }
-.form-row { margin-bottom: 0.9rem; }
-.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem; }
-.form-label { display: block; font-size: 0.68rem; font-family: 'DM Mono', monospace; letter-spacing: 0.08em; color: var(--mid); margin-bottom: 4px; }
-.form-input, .form-select, .form-textarea {
-  width: 100%; padding: 8px 10px;
-  border: 1px solid var(--border); background: var(--white);
-  font-family: 'DM Sans', sans-serif; font-size: 0.84rem;
-  outline: none; color: var(--black);
-}
-.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--black); }
-.form-textarea { resize: vertical; min-height: 90px; }
-.btn-submit {
-  width: 100%; background: var(--red); color: var(--white);
-  border: none; padding: 10px; font-family: 'DM Sans', sans-serif;
-  font-size: 0.84rem; font-weight: 600; cursor: pointer;
-  letter-spacing: 0.04em; margin-top: 0.25rem;
-}
-.btn-submit:hover { background: var(--red-dark); }
-
-/* Name modal */
-.modal-sm { width: 380px; }
-.name-intro { font-size: 0.82rem; color: var(--mid); margin-bottom: 1.25rem; line-height: 1.5; }
-
-/* Utilities */
+/* ── UTILITIES ── */
 .state-msg { font-size: 0.75rem; font-family: 'DM Mono', monospace; letter-spacing: 0.07em; color: var(--mid); padding: 0.75rem 0; }
 .hidden { display: none !important; }
-.toast {
-  position: fixed; bottom: 1.5rem; left: 50%;
-  transform: translateX(-50%) translateY(2rem);
-  background: var(--black); color: var(--white);
-  padding: 0.55rem 1.2rem; font-size: 0.78rem;
-  font-family: 'DM Mono', monospace; letter-spacing: 0.06em;
-  opacity: 0; transition: all 0.2s; z-index: 999; pointer-events: none;
-}
+.toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(2rem); background: var(--black); color: var(--white); padding: 0.55rem 1.2rem; font-size: 0.78rem; font-family: 'DM Mono', monospace; letter-spacing: 0.06em; opacity: 0; transition: all 0.2s; z-index: 999; pointer-events: none; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
 
-<!-- ── HEADER ── -->
-<header>
+<!-- ── LOGIN SCREEN ── -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">POPUP BAGELS <span>LEGAL</span></div>
+    <div class="login-sub">LEGAL REQUEST PORTAL</div>
+    <div class="form-row">
+      <label class="form-label">Your Name</label>
+      <select class="form-select" id="login-name">
+        <option value="">Loading users…</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">PIN</label>
+      <input class="form-input" id="login-pin" type="password" placeholder="Enter your PIN"
+        onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <button class="btn-submit" id="login-btn" onclick="doLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- ── HEADER (shown after login) ── -->
+<header id="app-header" class="hidden">
   <div class="logo">PUB <span>LEGAL</span></div>
   <div class="header-right">
-    <span class="attorney-pill" id="attorney-pill" onclick="showNameModal()">Set your name ▾</span>
-    <button class="btn-header" onclick="openNewTicket()">+ New Ticket</button>
+    <span class="user-pill" id="user-pill" onclick="doLogout()">Sign Out</span>
+    <button class="btn-header hidden" id="btn-new-ticket" onclick="openNewTicket()">+ New Ticket</button>
   </div>
 </header>
 
-<!-- ── LAYOUT ── -->
-<div class="layout">
+<!-- ══════════════════════════════════════════
+     ATTORNEY VIEW
+══════════════════════════════════════════ -->
+<div class="atty-layout hidden" id="atty-app">
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
@@ -354,21 +320,16 @@ main { flex: 1; overflow-y: auto; }
   </aside>
 
   <!-- MAIN -->
-  <main id="main">
-
-    <!-- Welcome -->
+  <main class="atty-main" id="atty-main">
     <div class="welcome" id="welcome">
       <div class="welcome-logo">PUB LEGAL</div>
       <div class="welcome-sub">Select a ticket to get started</div>
     </div>
-
-    <!-- Detail -->
     <div class="detail hidden" id="detail">
       <button class="detail-back" onclick="clearDetail()">← All Tickets</button>
       <div class="detail-id" id="d-id"></div>
       <div class="detail-title" id="d-title"></div>
       <div class="detail-meta" id="d-meta"></div>
-
       <div class="status-bar">
         <span class="status-bar-label">Status:</span>
         <button class="status-btn" data-s="New" onclick="updateStatus('New')">New</button>
@@ -376,37 +337,141 @@ main { flex: 1; overflow-y: auto; }
         <button class="status-btn" data-s="Urgent" onclick="updateStatus('Urgent')">Urgent</button>
         <button class="status-btn" data-s="Completed" onclick="updateStatus('Completed')">Completed</button>
       </div>
-
       <div class="section">
         <div class="section-head">Description</div>
         <div class="description" id="d-description"></div>
         <div class="extra-grid" id="d-extras"></div>
       </div>
-
       <div class="section">
         <div class="section-head">
           Documents
           <button onclick="document.getElementById('file-input').click()">+ Upload</button>
         </div>
-        <input type="file" id="file-input" style="display:none" onchange="uploadDocument(this.files[0])">
+        <input type="file" id="file-input" style="display:none" onchange="uploadDocument(this.files[0],'atty')">
         <div id="d-docs"><div class="state-msg">No documents attached.</div></div>
       </div>
-
       <div class="section">
         <div class="section-head">Messages</div>
         <div class="messages" id="d-messages"></div>
         <div class="reply-row">
           <textarea class="reply-input" id="reply-input" rows="2" placeholder="Type a reply…"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
-          <button class="btn-send" onclick="sendMessage()">Send</button>
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage('atty');}"></textarea>
+          <button class="btn-send" onclick="sendMessage('atty')">Send</button>
         </div>
       </div>
     </div>
-
   </main>
 </div>
 
-<!-- ── NEW TICKET MODAL ── -->
+<!-- ══════════════════════════════════════════
+     EMPLOYEE VIEW
+══════════════════════════════════════════ -->
+<div class="emp-layout hidden" id="emp-app">
+  <div class="tabs">
+    <button class="tab active" id="tab-submit" onclick="switchTab('submit')">Submit a Request</button>
+    <button class="tab" id="tab-requests" onclick="switchTab('requests')">My Requests</button>
+  </div>
+
+  <!-- SUBMIT PAGE -->
+  <div class="page active" id="page-submit">
+    <div class="submit-wrap">
+      <div class="page-title">Submit a Legal Request</div>
+      <p class="page-sub">Fill out the form below. The legal team will review and follow up directly.</p>
+      <div class="form-section">
+        <div class="form-section-title">Request Details</div>
+        <div class="form-row">
+          <label class="form-label">Request Title *</label>
+          <input class="form-input" id="s-title" type="text" placeholder="Brief summary of the legal matter">
+        </div>
+        <div class="form-row-2">
+          <div>
+            <label class="form-label">Category</label>
+            <select class="form-select" id="s-category">
+              <option value="">Select category</option>
+              <option>Contracts &amp; Agreements</option><option>Employment / HR</option>
+              <option>Compliance &amp; Regulatory</option><option>IP &amp; Licensing</option>
+              <option>Corporate Governance</option><option>Privacy &amp; Data</option>
+              <option>Disputes &amp; Litigation</option><option>Real Estate</option><option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Priority</label>
+            <select class="form-select" id="s-priority">
+              <option value="Low">21 Days</option>
+              <option value="Medium">14 Days</option>
+              <option value="High">7 Days — Urgent Only</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div>
+            <label class="form-label">Deadline</label>
+            <input class="form-input" id="s-deadline" type="date">
+          </div>
+          <div>
+            <label class="form-label">Counterparty / Other Party</label>
+            <input class="form-input" id="s-counterparty" type="text" placeholder="e.g. Acme Corp">
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Description *</label>
+          <textarea class="form-textarea" id="s-description"
+            placeholder="Describe the legal matter in detail. What's the business context, what do you need, and are there key dates or constraints?"></textarea>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Confidentiality Notes</label>
+          <textarea class="form-textarea" id="s-confidentiality" style="min-height:64px"
+            placeholder="Any sensitivity, sharing restrictions, or need-to-know notes…"></textarea>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Attach Document (optional)</label>
+          <input class="form-input" id="s-file" type="file" style="padding:6px 10px;cursor:pointer;">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="submitEmpTicket()">Submit Request</button>
+    </div>
+  </div>
+
+  <!-- MY REQUESTS PAGE -->
+  <div class="page" id="page-requests">
+    <div class="requests-wrap">
+      <div id="req-list-view">
+        <div class="page-title" style="margin-bottom:1.25rem">My Requests</div>
+        <div id="req-list"><div class="state-msg">Loading your requests…</div></div>
+      </div>
+      <div id="req-detail-view" class="hidden">
+        <button class="detail-back" onclick="showReqList()">← My Requests</button>
+        <div class="detail-id" id="rd-id"></div>
+        <div class="detail-title" id="rd-title"></div>
+        <div class="detail-meta" id="rd-meta"></div>
+        <div class="section">
+          <div class="section-head">Description</div>
+          <div class="description" id="rd-description"></div>
+          <div class="extra-grid" id="rd-extras"></div>
+        </div>
+        <div class="section">
+          <div class="section-head">
+            Documents
+            <button onclick="document.getElementById('req-file-input').click()">+ Upload</button>
+          </div>
+          <input type="file" id="req-file-input" style="display:none" onchange="uploadDocument(this.files[0],'emp')">
+          <div id="rd-docs"><div class="state-msg">No documents attached.</div></div>
+        </div>
+        <div class="section">
+          <div class="section-head">Messages</div>
+          <div class="messages" id="rd-messages"></div>
+          <div class="reply-row">
+            <textarea class="reply-input" id="rd-reply-input" rows="2" placeholder="Type a message…"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage('emp');}"></textarea>
+            <button class="btn-send" onclick="sendMessage('emp')">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── NEW TICKET MODAL (Attorney only) ── -->
 <div class="overlay hidden" id="new-ticket-overlay">
   <div class="modal">
     <button class="modal-close" onclick="closeNewTicket()">×</button>
@@ -474,21 +539,7 @@ main { flex: 1; overflow-y: auto; }
       <label class="form-label">Attach Document (optional)</label>
       <input class="form-input" id="f-file" type="file" style="padding:6px 10px;cursor:pointer;">
     </div>
-    <button class="btn-submit" onclick="submitTicket()">Submit Request</button>
-  </div>
-</div>
-
-<!-- ── ATTORNEY NAME MODAL ── -->
-<div class="overlay" id="name-overlay">
-  <div class="modal modal-sm">
-    <div class="modal-title">Welcome</div>
-    <p class="name-intro">Enter your name. This will appear on messages you send and tickets you manage.</p>
-    <div class="form-row">
-      <label class="form-label">Your Name</label>
-      <input class="form-input" id="name-input" type="text" placeholder="e.g. Alex Rivera"
-        onkeydown="if(event.key==='Enter') saveName()">
-    </div>
-    <button class="btn-submit" onclick="saveName()">Continue</button>
+    <button class="btn-submit" onclick="submitAttyTicket()">Submit Request</button>
   </div>
 </div>
 
@@ -518,37 +569,110 @@ const TABLES = {
 };
 const DOC_FILE_FIELD = 'fldw5S3VPLkxD71Ej';
 
+// ── SESSION STATE ──
+let currentUser = null;   // { name, role, recordId, dept }
 let allTickets = [];
 let allUsers = [];
+let myTickets = [];
 let currentFilter = 'all';
 let currentSearch = '';
 let currentTicketId = null;
-let counselName = '';
 
 // ── INIT ──
 window.addEventListener('load', () => {
-  loadUsers();
-  const saved = localStorage.getItem('pubLegalCounselName');
+  loadLoginUsers();
+  const saved = localStorage.getItem('pubLegalSession');
   if (saved) {
-    counselName = saved;
-    document.getElementById('attorney-pill').textContent = saved + ' ▾';
-    document.getElementById('name-overlay').classList.add('hidden');
-    loadTickets();
+    try {
+      currentUser = JSON.parse(saved);
+      launchApp();
+    } catch(e) { localStorage.removeItem('pubLegalSession'); }
   }
 });
 
-function saveName() {
-  const val = document.getElementById('name-input').value.trim();
-  if (!val) { showToast('Please enter your name.'); return; }
-  counselName = val;
-  localStorage.setItem('pubLegalCounselName', val);
-  document.getElementById('attorney-pill').textContent = val + ' ▾';
-  document.getElementById('name-overlay').classList.add('hidden');
-  loadTickets();
+// ── LOGIN ──
+async function loadLoginUsers() {
+  const data = await atFetch('GET', `${TABLES.users}?sort%5B0%5D%5Bfield%5D=Name&sort%5B0%5D%5Bdirection%5D=asc`);
+  allUsers = data?.records || [];
+  const sel = document.getElementById('login-name');
+  if (!allUsers.length) {
+    sel.innerHTML = '<option value="">No users found in Airtable</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">Select your name…</option>' +
+    allUsers.map(r => `<option value="${r.id}">${escHtml(r.fields['Name']||'')}</option>`).join('');
 }
-function showNameModal() {
-  document.getElementById('name-input').value = counselName;
-  document.getElementById('name-overlay').classList.remove('hidden');
+
+async function doLogin() {
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  errEl.textContent = '';
+  const recordId = document.getElementById('login-name').value;
+  const pin = document.getElementById('login-pin').value.trim();
+  if (!recordId) { errEl.textContent = 'Please select your name.'; return; }
+  if (!pin) { errEl.textContent = 'Please enter your PIN.'; return; }
+
+  btn.textContent = 'Signing in…';
+  btn.disabled = true;
+
+  const rec = allUsers.find(r => r.id === recordId);
+  if (!rec) { errEl.textContent = 'User not found.'; btn.textContent = 'Sign In'; btn.disabled = false; return; }
+
+  const storedPin = (rec.fields['PIN'] || '').trim();
+  const role = rec.fields['Role'] || '';
+
+  if (!storedPin) {
+    errEl.textContent = 'No PIN set for this account. Contact an administrator.';
+    btn.textContent = 'Sign In'; btn.disabled = false; return;
+  }
+  if (!role) {
+    errEl.textContent = 'No role assigned to this account. Contact an administrator.';
+    btn.textContent = 'Sign In'; btn.disabled = false; return;
+  }
+  if (storedPin !== pin) {
+    errEl.textContent = 'Incorrect PIN. Please try again.';
+    btn.textContent = 'Sign In'; btn.disabled = false; return;
+  }
+
+  currentUser = {
+    name: rec.fields['Name'] || '',
+    role: role,
+    recordId: rec.id,
+    dept: rec.fields['Department'] || ''
+  };
+  localStorage.setItem('pubLegalSession', JSON.stringify(currentUser));
+  btn.textContent = 'Sign In'; btn.disabled = false;
+  launchApp();
+}
+
+function launchApp() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-header').classList.remove('hidden');
+  document.getElementById('user-pill').textContent = currentUser.name + ' ▾';
+
+  if (currentUser.role === 'Attorney') {
+    document.getElementById('atty-app').classList.remove('hidden');
+    document.getElementById('btn-new-ticket').classList.remove('hidden');
+    loadUsers();
+    loadTickets();
+  } else {
+    document.getElementById('emp-app').classList.remove('hidden');
+    document.querySelector('.emp-layout').style.flex = '1';
+    document.querySelector('.emp-layout').style.overflow = 'hidden';
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('pubLegalSession');
+  currentUser = null;
+  allTickets = []; myTickets = []; currentTicketId = null;
+  document.getElementById('app-header').classList.add('hidden');
+  document.getElementById('atty-app').classList.add('hidden');
+  document.getElementById('emp-app').classList.add('hidden');
+  document.getElementById('btn-new-ticket').classList.add('hidden');
+  document.getElementById('login-pin').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-screen').classList.remove('hidden');
 }
 
 // ── AIRTABLE HELPER ──
@@ -557,10 +681,7 @@ async function atFetch(method, path, body) {
   try {
     const res = await fetch(url, {
       method,
-      headers: {
-        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}`, 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined
     });
     if (!res.ok) { const e = await res.json(); console.error('Airtable error:', e); return null; }
@@ -568,31 +689,27 @@ async function atFetch(method, path, body) {
   } catch(e) { console.error('Fetch error:', e); return null; }
 }
 
-// ── USERS ──
+// ══════════════════════════════════════════
+// ATTORNEY VIEW
+// ══════════════════════════════════════════
+
 async function loadUsers() {
   const data = await atFetch('GET', `${TABLES.users}?sort%5B0%5D%5Bfield%5D=Name&sort%5B0%5D%5Bdirection%5D=asc`);
   allUsers = data?.records || [];
   const sel = document.getElementById('f-submitter');
   if (!sel) return;
-  if (!allUsers.length) {
-    sel.innerHTML = '<option value="">No users found — add users to Airtable first</option>';
-    return;
-  }
   sel.innerHTML = '<option value="">Select submitter…</option>' +
     allUsers.map(r => {
       const dept = r.fields['Department'] ? ` — ${r.fields['Department']}` : '';
       return `<option value="${escHtml(r.fields['Name']||'')}" data-dept="${escHtml(r.fields['Department']||'')}">${escHtml(r.fields['Name']||'')}${dept}</option>`;
     }).join('');
-  // Auto-fill department when submitter is selected
   sel.addEventListener('change', () => {
     const opt = sel.options[sel.selectedIndex];
-    const dept = opt?.dataset?.dept || '';
     const deptEl = document.getElementById('f-dept');
-    if (deptEl && dept) deptEl.value = dept;
+    if (deptEl && opt?.dataset?.dept) deptEl.value = opt.dataset.dept;
   });
 }
 
-// ── TICKETS ──
 async function loadTickets() {
   const list = document.getElementById('ticket-list');
   list.innerHTML = '<div class="state-msg" style="padding:1rem">Loading…</div>';
@@ -609,7 +726,7 @@ function renderTickets() {
   if (currentFilter !== 'all') items = items.filter(r => (r.fields['Status'] || 'New') === currentFilter);
   if (q) items = items.filter(r => {
     const f = r.fields;
-    return [f['Title'],f['Submitter Name'],f['Ticket ID']].some(v => (v||'').toLowerCase().includes(q));
+    return [f['Title'], f['Submitter Name'], f['Ticket ID']].some(v => (v||'').toLowerCase().includes(q));
   });
   if (!items.length) { list.innerHTML = '<div class="state-msg" style="padding:1rem">No tickets found.</div>'; return; }
   list.innerHTML = items.map(r => {
@@ -635,41 +752,31 @@ function setFilter(btn) {
 }
 function filterTickets() { currentSearch = document.getElementById('search-input').value; renderTickets(); }
 
-// ── TICKET DETAIL ──
 async function openTicket(recordId) {
   currentTicketId = recordId;
   const rec = allTickets.find(r => r.id === recordId);
   if (!rec) return;
-  renderDetail(rec);
+  renderAttyDetail(rec);
   renderTickets();
-  await Promise.all([loadMessages(recordId), loadDocs(recordId)]);
+  await Promise.all([loadMessages(recordId,'atty'), loadDocs(recordId,'atty')]);
 }
 
-function renderDetail(rec) {
+function renderAttyDetail(rec) {
   const f = rec.fields;
   const s = f['Status'] || 'New';
   const date = f['Submitted At'] ? new Date(f['Submitted At']).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '';
-
   document.getElementById('d-id').textContent = [f['Ticket ID'], f['Category']].filter(Boolean).join(' · ').toUpperCase();
   document.getElementById('d-title').textContent = f['Title'] || '(Untitled)';
   document.getElementById('d-meta').innerHTML =
     `<span class="pill ${pillClass(s)}">${escHtml(s)}</span>` +
-    [f['Submitter Name'], f['Department'], date].filter(Boolean).map(v => `<span class="meta-chip">${escHtml(v)}</span>`).join('');
-
+    [f['Submitter Name'],f['Department'],date].filter(Boolean).map(v => `<span class="meta-chip">${escHtml(v)}</span>`).join('');
   document.getElementById('d-description').textContent = f['Description'] || '(No description provided.)';
-
-  const extras = [
-    ['Priority', f['Priority']],
-    ['Deadline', f['Deadline']],
-    ['Counterparty', f['Counterparty']],
-    ['Assigned To', f['Assigned To']],
-    ['Confidentiality', f['Confidentiality']]
-  ].filter(([,v]) => v);
-  document.getElementById('d-extras').innerHTML = extras.map(([k,v]) =>
-    `<div class="extra-field"><span class="extra-label">${k}</span>${escHtml(v)}</div>`).join('');
-
+  document.getElementById('d-extras').innerHTML = [
+    ['Priority',f['Priority']],['Deadline',f['Deadline']],
+    ['Counterparty',f['Counterparty']],['Assigned To',f['Assigned To']],
+    ['Confidentiality',f['Confidentiality']]
+  ].filter(([,v])=>v).map(([k,v])=>`<div class="extra-field"><span class="extra-label">${k}</span>${escHtml(v)}</div>`).join('');
   document.querySelectorAll('.status-btn').forEach(b => b.classList.toggle('active', b.dataset.s === s));
-
   document.getElementById('welcome').classList.add('hidden');
   document.getElementById('detail').classList.remove('hidden');
   document.getElementById('d-messages').innerHTML = '<div class="state-msg">Loading…</div>';
@@ -683,57 +790,215 @@ function clearDetail() {
   renderTickets();
 }
 
-// ── STATUS ──
-async function updateStatus(newStatus) {
+async function updateStatus(status) {
   if (!currentTicketId) return;
-  const result = await atFetch('PATCH', `${TABLES.tickets}/${currentTicketId}`, { fields: { 'Status': newStatus } });
-  if (result) {
+  const ok = await atFetch('PATCH', `${TABLES.tickets}/${currentTicketId}`, { fields: { 'Status': status } });
+  if (ok) {
     const rec = allTickets.find(r => r.id === currentTicketId);
-    if (rec) rec.fields['Status'] = newStatus;
-    renderDetail(rec || { fields: {} });
-    renderTickets();
-    showToast('Status updated to ' + newStatus + '.');
-  } else { showToast('Failed to update status.'); }
+    if (rec) { rec.fields['Status'] = status; renderAttyDetail(rec); renderTickets(); }
+    showToast('Status updated.');
+  } else showToast('Update failed.');
 }
 
-// ── MESSAGES ──
-async function loadMessages(ticketId) {
-  const el = document.getElementById('d-messages');
+async function submitAttyTicket() {
+  const title = document.getElementById('f-title').value.trim();
+  const submitter = document.getElementById('f-submitter').value.trim();
+  if (!title || !submitter) { showToast('Title and submitter name are required.'); return; }
+  const fields = { 'Title': title, 'Submitter Name': submitter, 'Status': 'New', 'Assigned To': currentUser?.name || '' };
+  const dept = document.getElementById('f-dept').value;
+  const cat  = document.getElementById('f-category').value;
+  const pri  = document.getElementById('f-priority').value;
+  const dl   = document.getElementById('f-deadline').value;
+  const cp   = document.getElementById('f-counterparty').value.trim();
+  const desc = document.getElementById('f-description').value.trim();
+  const conf = document.getElementById('f-confidentiality').value.trim();
+  if (dept) fields['Department'] = dept;
+  if (cat)  fields['Category'] = cat;
+  if (pri)  fields['Priority'] = pri;
+  if (dl)   fields['Deadline'] = dl;
+  if (cp)   fields['Counterparty'] = cp;
+  if (desc) fields['Description'] = desc;
+  if (conf) fields['Confidentiality'] = conf;
+  const result = await atFetch('POST', TABLES.tickets, { fields, typecast: true });
+  if (result) {
+    const ticketId = result.fields?.['Ticket ID'] || 'Ticket';
+    const fileInput = document.getElementById('f-file');
+    if (fileInput?.files?.length) {
+      showToast(ticketId + ' created. Uploading document…');
+      await uploadDocumentToTicket(fileInput.files[0], result.id, submitter);
+    } else {
+      showToast(ticketId + ' created.');
+    }
+    closeNewTicket();
+    await loadTickets();
+  } else showToast('Failed to create ticket.');
+}
+
+function openNewTicket() { document.getElementById('new-ticket-overlay').classList.remove('hidden'); }
+function closeNewTicket() {
+  document.getElementById('new-ticket-overlay').classList.add('hidden');
+  ['f-title','f-description','f-counterparty','f-confidentiality','f-deadline','f-file'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['f-submitter','f-dept','f-category','f-priority'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.selectedIndex = 0;
+  });
+}
+
+// ══════════════════════════════════════════
+// EMPLOYEE VIEW
+// ══════════════════════════════════════════
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('page-' + tab).classList.add('active');
+  if (tab === 'requests') loadMyTickets();
+}
+
+async function submitEmpTicket() {
+  const title = document.getElementById('s-title').value.trim();
+  const desc  = document.getElementById('s-description').value.trim();
+  if (!title || !desc) { showToast('Title and description are required.'); return; }
+  const name = currentUser?.name || '';
+  const fields = { 'Title': title, 'Submitter Name': name, 'Status': 'New', 'Description': desc };
+  if (currentUser?.dept) fields['Department'] = currentUser.dept;
+  const cat  = document.getElementById('s-category').value;
+  const pri  = document.getElementById('s-priority').value;
+  const dl   = document.getElementById('s-deadline').value;
+  const cp   = document.getElementById('s-counterparty').value.trim();
+  const conf = document.getElementById('s-confidentiality').value.trim();
+  if (cat)  fields['Category'] = cat;
+  if (pri)  fields['Priority'] = pri;
+  if (dl)   fields['Deadline'] = dl;
+  if (cp)   fields['Counterparty'] = cp;
+  if (conf) fields['Confidentiality'] = conf;
+  const result = await atFetch('POST', TABLES.tickets, { fields, typecast: true });
+  if (result) {
+    const ticketId = result.fields?.['Ticket ID'] || 'Request';
+    const fileInput = document.getElementById('s-file');
+    if (fileInput?.files?.length) {
+      showToast(ticketId + ' submitted. Uploading document…');
+      await uploadDocumentToTicket(fileInput.files[0], result.id, name);
+      fileInput.value = '';
+    } else {
+      showToast(ticketId + ' submitted! We\'ll be in touch.');
+    }
+    ['s-title','s-description','s-counterparty','s-confidentiality','s-deadline'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    ['s-category','s-priority'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.selectedIndex = 0;
+    });
+  } else showToast('Submission failed. Please try again.');
+}
+
+async function loadMyTickets() {
+  const el = document.getElementById('req-list');
+  el.innerHTML = '<div class="state-msg">Loading…</div>';
+  const name = currentUser?.name || '';
+  const formula = encodeURIComponent(`{Submitter Name}="${name}"`);
+  const data = await atFetch('GET', `${TABLES.tickets}?filterByFormula=${formula}&sort%5B0%5D%5Bfield%5D=Submitted%20At&sort%5B0%5D%5Bdirection%5D=desc`);
+  if (!data) { el.innerHTML = '<div class="state-msg">Could not load requests.</div>'; return; }
+  myTickets = data.records || [];
+  if (!myTickets.length) { el.innerHTML = '<div class="state-msg">No requests submitted yet.</div>'; return; }
+  el.innerHTML = myTickets.map(r => {
+    const f = r.fields;
+    const s = f['Status'] || 'New';
+    const date = f['Submitted At'] ? new Date(f['Submitted At']).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+    return `<div class="ticket-card" onclick="openEmpTicket('${r.id}')">
+      <div class="tc-top">
+        <span class="tc-id">${escHtml(f['Ticket ID']||'—')}</span>
+        <span class="pill ${pillClass(s)}">${escHtml(s)}</span>
+      </div>
+      <div class="tc-title">${escHtml(f['Title']||'(Untitled)')}</div>
+      <div class="tc-meta">${[f['Category'],date].filter(Boolean).map(escHtml).join(' · ')}</div>
+    </div>`;
+  }).join('');
+}
+
+async function openEmpTicket(recordId) {
+  currentTicketId = recordId;
+  const rec = myTickets.find(r => r.id === recordId);
+  if (!rec) return;
+  renderEmpDetail(rec);
+  await Promise.all([loadMessages(recordId,'emp'), loadDocs(recordId,'emp')]);
+}
+
+function renderEmpDetail(rec) {
+  const f = rec.fields;
+  const s = f['Status'] || 'New';
+  const date = f['Submitted At'] ? new Date(f['Submitted At']).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '';
+  document.getElementById('rd-id').textContent = [f['Ticket ID'], f['Category']].filter(Boolean).join(' · ').toUpperCase();
+  document.getElementById('rd-title').textContent = f['Title'] || '(Untitled)';
+  document.getElementById('rd-meta').innerHTML =
+    `<span class="pill ${pillClass(s)}">${escHtml(s)}</span>` +
+    [f['Department'],date].filter(Boolean).map(v=>`<span class="meta-chip">${escHtml(v)}</span>`).join('');
+  document.getElementById('rd-description').textContent = f['Description'] || '(No description provided.)';
+  document.getElementById('rd-extras').innerHTML = [
+    ['Priority',f['Priority']],['Deadline',f['Deadline']],
+    ['Counterparty',f['Counterparty']],['Assigned To',f['Assigned To']]
+  ].filter(([,v])=>v).map(([k,v])=>`<div class="extra-field"><span class="extra-label">${k}</span>${escHtml(v)}</div>`).join('');
+  document.getElementById('req-list-view').classList.add('hidden');
+  document.getElementById('req-detail-view').classList.remove('hidden');
+  document.getElementById('rd-messages').innerHTML = '<div class="state-msg">Loading…</div>';
+  document.getElementById('rd-docs').innerHTML = '<div class="state-msg">Loading…</div>';
+}
+
+function showReqList() {
+  currentTicketId = null;
+  document.getElementById('req-detail-view').classList.add('hidden');
+  document.getElementById('req-list-view').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════
+// SHARED: MESSAGES
+// ══════════════════════════════════════════
+
+async function loadMessages(ticketId, view) {
+  const elId = view === 'atty' ? 'd-messages' : 'rd-messages';
+  const el = document.getElementById(elId);
   const data = await atFetch('GET', `${TABLES.messages}?sort%5B0%5D%5Bfield%5D=Sent%20At&sort%5B0%5D%5Bdirection%5D=asc`);
   const records = (data?.records || []).filter(r => Array.isArray(r.fields['Ticket']) && r.fields['Ticket'].includes(ticketId));
   if (!records.length) { el.innerHTML = '<div class="state-msg">No messages yet.</div>'; return; }
   el.innerHTML = records.map(r => {
     const f = r.fields;
-    const counsel = f['Sender Role'] === 'Counsel';
+    const isCounsel = f['Sender Role'] === 'Counsel';
     const time = f['Sent At'] ? new Date(f['Sent At']).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
-    return `<div class="msg ${counsel?'msg-counsel':'msg-employee'}">
+    return `<div class="msg ${isCounsel?'msg-counsel':'msg-employee'}">
       <div class="msg-bubble">${escHtml(f['Body']||'')}</div>
-      <div class="msg-meta">${escHtml(f['Sender Name']||'')} · ${counsel?'Counsel':'Employee'} · ${time}</div>
+      <div class="msg-meta">${escHtml(f['Sender Name']||'')} · ${isCounsel?'Legal Team':'You'} · ${time}</div>
     </div>`;
   }).join('');
   el.scrollTop = el.scrollHeight;
 }
 
-async function sendMessage() {
-  const input = document.getElementById('reply-input');
-
+async function sendMessage(view) {
+  const inputId = view === 'atty' ? 'reply-input' : 'rd-reply-input';
+  const input = document.getElementById(inputId);
   const val = input.value.trim();
   if (!val || !currentTicketId) return;
   input.disabled = true;
+  const isAtty = view === 'atty';
   const result = await atFetch('POST', TABLES.messages, { fields: {
     'Ticket': [currentTicketId],
-    'Sender Name': counselName || 'Counsel',
-    'Sender Role': 'Counsel',
+    'Sender Name': currentUser?.name || (isAtty ? 'Counsel' : 'Employee'),
+    'Sender Role': isAtty ? 'Counsel' : 'Employee',
     'Body': val
   }});
   input.disabled = false;
-  if (result) { input.value = ''; await loadMessages(currentTicketId); }
+  if (result) { input.value = ''; await loadMessages(currentTicketId, view); }
   else showToast('Message failed. Try again.');
 }
 
-// ── DOCUMENTS ──
-async function loadDocs(ticketId) {
-  const el = document.getElementById('d-docs');
+// ══════════════════════════════════════════
+// SHARED: DOCUMENTS
+// ══════════════════════════════════════════
+
+async function loadDocs(ticketId, view) {
+  const elId = view === 'atty' ? 'd-docs' : 'rd-docs';
+  const el = document.getElementById(elId);
   const data = await atFetch('GET', `${TABLES.docs}`);
   const records = (data?.records || []).filter(r => Array.isArray(r.fields['Ticket']) && r.fields['Ticket'].includes(ticketId));
   if (!records.length) { el.innerHTML = '<div class="state-msg">No documents attached.</div>'; return; }
@@ -757,16 +1022,18 @@ async function loadDocs(ticketId) {
   }).join('');
 }
 
-async function uploadDocument(file) {
+async function uploadDocument(file, view) {
   if (!file || !currentTicketId) return;
+  const inputId = view === 'atty' ? 'file-input' : 'req-file-input';
+  document.getElementById(inputId).value = '';
   showToast('Uploading…');
-  document.getElementById('file-input').value = '';
+  const uploader = currentUser?.name || (view === 'atty' ? 'Counsel' : 'Employee');
   const result = await atFetch('POST', TABLES.docs, { fields: {
     'Ticket': [currentTicketId],
     'Filename': file.name,
     'File Type': file.type || 'application/octet-stream',
     'File Size': formatSize(file.size),
-    'Uploaded By': counselName || 'Counsel'
+    'Uploaded By': uploader
   }});
   if (!result) { showToast('Upload failed.'); return; }
   try {
@@ -778,58 +1045,7 @@ async function uploadDocument(file) {
     });
     showToast(up.ok ? 'Document uploaded!' : 'Metadata saved — attach file manually in Airtable.');
   } catch { showToast('Metadata saved — attach file manually in Airtable.'); }
-  await loadDocs(currentTicketId);
-}
-
-// ── NEW TICKET ──
-async function submitTicket() {
-  const title = document.getElementById('f-title').value.trim();
-  const submitter = document.getElementById('f-submitter').value.trim();
-  if (!title || !submitter) { showToast('Title and submitter name are required.'); return; }
-  const fields = {
-    'Title': title,
-    'Submitter Name': submitter,
-    'Status': 'New',
-    'Assigned To': counselName || ''
-  };
-  const dept = document.getElementById('f-dept').value;
-  const cat = document.getElementById('f-category').value;
-  const pri = document.getElementById('f-priority').value;
-  const dl = document.getElementById('f-deadline').value;
-  const cp = document.getElementById('f-counterparty').value.trim();
-  const desc = document.getElementById('f-description').value.trim();
-  const conf = document.getElementById('f-confidentiality').value.trim();
-  if (dept) fields['Department'] = dept;
-  if (cat)  fields['Category'] = cat;
-  if (pri)  fields['Priority'] = pri;
-  if (dl)   fields['Deadline'] = dl;
-  if (cp)   fields['Counterparty'] = cp;
-  if (desc) fields['Description'] = desc;
-  if (conf) fields['Confidentiality'] = conf;
-  const result = await atFetch('POST', TABLES.tickets, { fields, typecast: true });
-  if (result) {
-    const ticketId = result.fields?.['Ticket ID'] || 'Ticket';
-    // Upload attached document if one was selected
-    const fileInput = document.getElementById('f-file');
-    if (fileInput?.files?.length) {
-      showToast(ticketId + ' created. Uploading document…');
-      await uploadDocumentToTicket(fileInput.files[0], result.id, submitter);
-    } else {
-      showToast(ticketId + ' created.');
-    }
-    closeNewTicket();
-    await loadTickets();
-  } else showToast('Failed to create ticket.');
-}
-function openNewTicket() { document.getElementById('new-ticket-overlay').classList.remove('hidden'); }
-function closeNewTicket() {
-  document.getElementById('new-ticket-overlay').classList.add('hidden');
-  ['f-title','f-description','f-counterparty','f-confidentiality','f-deadline','f-file'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  ['f-submitter','f-dept','f-category','f-priority'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.selectedIndex = 0;
-  });
+  await loadDocs(currentTicketId, view);
 }
 
 async function uploadDocumentToTicket(file, ticketRecordId, uploaderName) {
@@ -838,7 +1054,7 @@ async function uploadDocumentToTicket(file, ticketRecordId, uploaderName) {
     'Filename': file.name,
     'File Type': file.type || 'application/octet-stream',
     'File Size': formatSize(file.size),
-    'Uploaded By': uploaderName || counselName || 'Counsel'
+    'Uploaded By': uploaderName || currentUser?.name || 'Unknown'
   }});
   if (!result) return;
   try {
@@ -862,11 +1078,9 @@ function fileToBase64(file) {
 
 // ── DOC VIEWER ──
 function viewDoc(url, filename, mimeType) {
-  const overlay = document.getElementById('doc-viewer-overlay');
   document.getElementById('dv-title').textContent = filename;
   const dl = document.getElementById('dv-download');
-  dl.href = url;
-  dl.setAttribute('download', filename);
+  dl.href = url; dl.setAttribute('download', filename);
   const body = document.getElementById('dv-body');
   const type = (mimeType || '').toLowerCase();
   if (type.startsWith('image/')) {
@@ -883,7 +1097,7 @@ function viewDoc(url, filename, mimeType) {
       <a class="doc-viewer-dl" href="${url}" target="_blank" download="${filename}" style="margin-top:0.5rem">↓ Download to view</a>
     </div>`;
   }
-  overlay.classList.remove('hidden');
+  document.getElementById('doc-viewer-overlay').classList.remove('hidden');
   document.addEventListener('keydown', _dvEscListener);
 }
 function closeDocViewer() {
@@ -908,7 +1122,7 @@ function escHtml(s) {
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  setTimeout(() => t.classList.remove('show'), 3200);
 }
 </script>
 </body>

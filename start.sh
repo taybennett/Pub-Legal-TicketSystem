@@ -2,7 +2,6 @@
 # Copy static files to writable temp dir
 mkdir -p /tmp/html
 cp /app/index.html /tmp/html/index.html
-cp /app/popupbagels-legal.html /tmp/html/popupbagels-legal.html
 
 # Generate config.js with the Airtable token from the environment variable
 echo "window.AIRTABLE_TOKEN = '${AIRTABLE_TOKEN}';" > /tmp/html/config.js
