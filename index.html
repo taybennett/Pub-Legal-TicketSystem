@@ -3,1598 +3,478 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PopUp Bagels — Legal</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --black: #0a0a0a;
-    --white: #f5f3ee;
-    --cream: #ede9e0;
-    --red: #c8392b;
-    --red-dark: #a12220;
-    --mid: #7a7268;
-    --border: #ccc8be;
-    --green: #1a6b3c;
-    --amber: #b87a0a;
-    --blue: #1a4a8a;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--white);
-    color: var(--black);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ====== HEADER ====== */
-  header {
-    background: var(--black);
-    color: var(--white);
-    padding: 0 2.2rem;
-    display: flex;
-    align-items: stretch;
-    justify-content: space-between;
-    min-height: 64px;
-    position: relative;
-  }
-
-  header::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 3px;
-    background: repeating-linear-gradient(90deg, var(--red) 0, var(--red) 18px, transparent 18px, transparent 22px);
-  }
-
-  .logo-block {
-    display: flex;
-    align-items: center;
-    padding: 8px 2rem 8px 0;
-    border-right: 1px solid #222;
-  }
-
-  .popb-logo-img {
-    height: 48px;
-    width: auto;
-    display: block;
-    background: var(--white);
-    border-radius: 3px;
-    padding: 4px 10px;
-  }
-
-  .sidebar-logo {
-    padding: 1rem 1.4rem 1.2rem;
-    border-bottom: 1px solid #1a1a1a;
-    margin-bottom: 1.6rem;
-    display: flex;
-    justify-content: center;
-  }
-
-  .sidebar-logo-img {
-    width: 100%;
-    max-width: 160px;
-    height: auto;
-    display: block;
-    background: var(--white);
-    border-radius: 3px;
-    padding: 6px 10px;
-  }
-
-  .footer-logo {
-    height: 36px;
-    width: auto;
-    display: block;
-    background: var(--white);
-    border-radius: 3px;
-    padding: 3px 8px;
-  }
-
-  .header-nav {
-    display: flex;
-    align-items: stretch;
-    margin: 0 auto;
-  }
-
-  .nav-btn {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: #666;
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
-    padding: 0 1.6rem;
-    cursor: pointer;
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-
-  .nav-btn:hover { color: var(--white); }
-  .nav-btn.active { color: var(--white); border-bottom-color: var(--red); }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding-left: 2rem;
-    border-left: 1px solid #222;
-  }
-
-  .user-info { text-align: right; }
-  .user-name { font-size: 0.78rem; font-weight: 600; color: var(--white); }
-  .user-role { font-size: 0.6rem; color: #555; font-family: 'DM Mono', monospace; letter-spacing: 0.08em; }
-
-  .user-avatar {
-    width: 34px; height: 34px;
-    border-radius: 50%;
-    background: var(--red);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 0.95rem;
-    color: white;
-    letter-spacing: 0.04em;
-    flex-shrink: 0;
-  }
-
-  /* ====== TICKER ====== */
-  .ticker {
-    background: var(--red);
-    overflow: hidden;
-    white-space: nowrap;
-    padding: 6px 0;
-  }
-
-  .ticker-inner {
-    display: inline-block;
-    animation: scroll-ticker 35s linear infinite;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.18em;
-    color: rgba(255,255,255,0.9);
-    text-transform: uppercase;
-  }
-
-  @keyframes scroll-ticker {
-    0% { transform: translateX(100vw); }
-    100% { transform: translateX(-100%); }
-  }
-
-  /* ====== MAIN ====== */
-  .main { display: flex; flex: 1; }
-
-  /* ====== SIDEBAR ====== */
-  .sidebar {
-    width: 230px;
-    min-width: 230px;
-    background: var(--black);
-    color: var(--white);
-    padding: 1.6rem 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-
-
-  .new-ticket-btn {
-    margin: 0 1.4rem 1.8rem;
-    background: var(--red);
-    color: white;
-    border: none;
-    padding: 0.8rem 1rem;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.1rem;
-    letter-spacing: 0.14em;
-    cursor: pointer;
-    border-radius: 2px;
-    width: calc(100% - 2.8rem);
-    text-align: center;
-    transition: background 0.15s;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .new-ticket-btn::after {
-    content: '→';
-    position: absolute;
-    right: 12px;
-    opacity: 0;
-    transition: all 0.2s;
-  }
-
-  .new-ticket-btn:hover { background: var(--red-dark); }
-  .new-ticket-btn:hover::after { opacity: 1; right: 10px; }
-
-  .sidebar-section { padding: 0 1.4rem; margin-bottom: 1.8rem; }
-
-  .sidebar-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.55rem;
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    color: #3a3a3a;
-    margin-bottom: 0.7rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #1a1a1a;
-  }
-
-  .sidebar-link {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.45rem 0;
-    font-size: 0.8rem;
-    color: #666;
-    cursor: pointer;
-    transition: color 0.15s;
-    background: none;
-    border: none;
-    width: 100%;
-    text-align: left;
-    font-family: 'DM Sans', sans-serif;
-  }
-
-  .sidebar-link:hover, .sidebar-link.active { color: var(--white); }
-  .sidebar-link.active { font-weight: 600; }
-
-  .badge {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.58rem;
-    background: var(--red);
-    color: white;
-    padding: 1px 7px;
-    border-radius: 20px;
-  }
-
-  .badge-green { background: var(--green); }
-
-  .stats-bottom {
-    margin: auto 1.4rem 0;
-    border-top: 1px solid #1a1a1a;
-    padding-top: 1.2rem;
-  }
-
-  .stat-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 0.25rem 0;
-  }
-
-  .stat-label { font-size: 0.7rem; color: #555; }
-  .stat-val {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.25rem;
-    letter-spacing: 0.04em;
-    color: var(--white);
-  }
-
-  /* Tagline at very bottom of sidebar */
-  .sidebar-tagline {
-    padding: 1rem 1.4rem 0;
-    font-family: 'Instrument Serif', serif;
-    font-style: italic;
-    font-size: 0.72rem;
-    color: #333;
-    line-height: 1.4;
-    text-align: center;
-  }
-
-  /* ====== CONTENT ====== */
-  .content {
-    flex: 1;
-    padding: 2rem 2.5rem;
-    overflow-y: auto;
-    background: var(--white);
-  }
-
-  .page { display: none; }
-  .page.active { display: block; }
-
-  /* ====== PAGE HEADERS ====== */
-  .page-header {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 2.5px solid var(--black);
-    gap: 1rem;
-  }
-
-  .page-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 3.5rem;
-    letter-spacing: 0.05em;
-    line-height: 1;
-    color: var(--black);
-  }
-
-  .page-sub {
-    font-family: 'Instrument Serif', serif;
-    font-style: italic;
-    font-size: 1rem;
-    color: var(--mid);
-    margin-top: 5px;
-  }
-
-  /* ====== STAT CARDS ====== */
-  .stat-cards {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-
-  .stat-card {
-    background: white;
-    border: 1.5px solid var(--black);
-    border-radius: 2px;
-    padding: 1.2rem 1.4rem 1rem;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 4px;
-  }
-
-  .stat-card.red::before { background: var(--red); }
-  .stat-card.amber::before { background: var(--amber); }
-  .stat-card.blue::before { background: var(--blue); }
-  .stat-card.green::before { background: var(--green); }
-
-  .stat-num {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 3.2rem;
-    line-height: 1;
-    color: var(--black);
-    letter-spacing: 0.02em;
-  }
-
-  .stat-title {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--mid);
-    margin-top: 5px;
-  }
-
-  .stat-note {
-    font-size: 0.7rem;
-    color: var(--mid);
-    margin-top: 6px;
-    font-family: 'Instrument Serif', serif;
-    font-style: italic;
-  }
-
-  /* ====== FILTER BAR ====== */
-  .filter-bar {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.2rem;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  .filter-chip {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.63rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    background: none;
-    border: 1px solid var(--border);
-    padding: 5px 13px;
-    border-radius: 2px;
-    cursor: pointer;
-    color: var(--mid);
-    transition: all 0.12s;
-  }
-
-  .filter-chip:hover, .filter-chip.active {
-    background: var(--black);
-    color: var(--white);
-    border-color: var(--black);
-  }
-
-  .search-input {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.72rem;
-    border: 1px solid var(--border);
-    background: white;
-    padding: 5px 12px;
-    border-radius: 2px;
-    color: var(--black);
-    width: 200px;
-    margin-left: auto;
-    outline: none;
-  }
-
-  .search-input:focus { border-color: var(--black); }
-
-  /* ====== TICKET LIST ====== */
-  .ticket-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    border: 1.5px solid var(--black);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-
-  .ticket-row {
-    display: grid;
-    grid-template-columns: 92px 1fr 120px 110px 90px 110px;
-    align-items: center;
-    gap: 0.8rem;
-    padding: 0.85rem 1.2rem;
-    background: white;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.1s;
-  }
-
-  .ticket-row:last-child { border-bottom: none; }
-  .ticket-row:hover { background: var(--cream); }
-
-  .ticket-row.header {
-    background: var(--black);
-    cursor: default;
-    padding: 0.55rem 1.2rem;
-  }
-
-  .ticket-row.header:hover { background: var(--black); }
-
-  .col-head {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.58rem;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: #555;
-  }
-
-  .ticket-id {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--red);
-    font-weight: 500;
-  }
-
-  .ticket-title { font-size: 0.84rem; font-weight: 500; color: var(--black); }
-  .ticket-dept { font-size: 0.7rem; color: var(--mid); margin-top: 2px; }
-
-  .status-pill {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.58rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 2px;
-    display: inline-block;
-    font-weight: 500;
-  }
-
-  .status-new { background: #e6f0ff; color: var(--blue); }
-  .status-open { background: #fff8e1; color: #7a5000; }
-  .status-review { background: #fff0e0; color: #8a4500; }
-  .status-closed { background: #e6f5ec; color: var(--green); }
-  .status-urgent { background: #fde8e8; color: var(--red); }
-
-  .priority-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    display: inline-block;
-    margin-right: 5px;
-  }
-
-  .p-high { background: var(--red); }
-  .p-med { background: var(--amber); }
-  .p-low { background: var(--green); }
-
-  .ticket-date {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--mid);
-  }
-
-  /* ====== DETAIL VIEW ====== */
-  .detail-back {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--mid);
-    cursor: pointer;
-    margin-bottom: 1.5rem;
-    background: none;
-    border: none;
-    transition: color 0.12s;
-  }
-
-  .detail-back:hover { color: var(--black); }
-
-  .detail-layout {
-    display: grid;
-    grid-template-columns: 1fr 270px;
-    gap: 2rem;
-  }
-
-  .detail-header {
-    border-bottom: 2px solid var(--black);
-    padding-bottom: 1.2rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .detail-id {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.68rem;
-    color: var(--red);
-    letter-spacing: 0.1em;
-    margin-bottom: 6px;
-  }
-
-  .detail-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2.5rem;
-    letter-spacing: 0.04em;
-    line-height: 1.05;
-    margin-bottom: 10px;
-  }
-
-  .detail-body {
-    font-size: 0.87rem;
-    line-height: 1.72;
-    color: #333;
-    margin-bottom: 1.8rem;
-  }
-
-  /* ====== SECTION HEADINGS ====== */
-  .section-heading {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.25rem;
-    letter-spacing: 0.1em;
-    margin-bottom: 0.8rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid var(--border);
-    color: var(--black);
-  }
-
-  /* ====== DOCS ====== */
-  .doc-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .doc-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0.65rem 1rem;
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    transition: border-color 0.12s;
-  }
-
-  .doc-row:hover { border-color: var(--black); }
-
-  .doc-icon {
-    width: 30px; height: 30px;
-    background: var(--cream);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px;
-    font-family: 'DM Mono', monospace;
-    color: var(--red);
-    font-weight: 600;
-    flex-shrink: 0;
-    letter-spacing: 0.04em;
-  }
-
-  .doc-name { font-size: 0.8rem; font-weight: 500; color: var(--black); }
-  .doc-meta { font-size: 0.66rem; color: var(--mid); margin-top: 1px; }
-  .doc-dl {
-    margin-left: auto;
-    font-size: 0.65rem;
-    color: var(--blue);
-    font-family: 'DM Mono', monospace;
-    cursor: pointer;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    flex-shrink: 0;
-  }
-
-  .upload-zone {
-    border: 2px dashed var(--border);
-    border-radius: 2px;
-    padding: 1.5rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-bottom: 1.5rem;
-    position: relative;
-  }
-
-  .upload-zone:hover { border-color: var(--black); background: var(--cream); }
-
-  .upload-bagel {
-    font-size: 1.6rem;
-    margin-bottom: 6px;
-    display: block;
-    opacity: 0.25;
-  }
-
-  .upload-zone-text { font-size: 0.82rem; color: var(--mid); font-weight: 500; }
-  .upload-zone-hint {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    color: var(--border);
-    margin-top: 4px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  /* ====== MESSAGES ====== */
-  .message-thread {
-    border: 1.5px solid var(--black);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 1.5rem;
-  }
-
-  .message-thread-header {
-    background: var(--black);
-    color: var(--white);
-    padding: 0.65rem 1.2rem;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1rem;
-    letter-spacing: 0.12em;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .msg-count {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    color: #555;
-    letter-spacing: 0.1em;
-    font-weight: 400;
-  }
-
-  .messages-body {
-    max-height: 320px;
-    overflow-y: auto;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    background: var(--cream);
-  }
-
-  .message-bubble { display: flex; gap: 10px; align-items: flex-start; }
-  .message-bubble.from-counsel { flex-direction: row-reverse; }
-
-  .msg-av {
-    width: 30px; height: 30px;
-    border-radius: 50%;
-    background: var(--black);
-    color: var(--white);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 0.78rem;
-    flex-shrink: 0;
-    letter-spacing: 0.04em;
-  }
-
-  .msg-av.counsel { background: var(--red); }
-
-  .msg-body { max-width: 78%; }
-
-  .msg-meta {
-    font-size: 0.62rem;
-    color: var(--mid);
-    margin-bottom: 3px;
-    font-family: 'DM Mono', monospace;
-    letter-spacing: 0.04em;
-  }
-
-  .from-counsel .msg-meta { text-align: right; }
-
-  .msg-text {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    padding: 0.6rem 0.9rem;
-    font-size: 0.82rem;
-    line-height: 1.55;
-    color: var(--black);
-  }
-
-  .from-counsel .msg-text {
-    background: var(--black);
-    color: var(--white);
-    border-color: var(--black);
-  }
-
-  .msg-compose {
-    display: flex;
-    border-top: 1px solid var(--border);
-    background: white;
-  }
-
-  .msg-input {
-    flex: 1;
-    border: none;
-    padding: 0.8rem 1rem;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.82rem;
-    color: var(--black);
-    background: transparent;
-    resize: none;
-    outline: none;
-  }
-
-  .msg-send {
-    background: var(--black);
-    color: var(--white);
-    border: none;
-    padding: 0 1.4rem;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1rem;
-    letter-spacing: 0.12em;
-    cursor: pointer;
-    transition: background 0.12s;
-    border-left: 1px solid #222;
-  }
-
-  .msg-send:hover { background: var(--red); }
-
-  /* ====== META SIDEBAR ====== */
-  .meta-card {
-    background: white;
-    border: 1.5px solid var(--black);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 1rem;
-  }
-
-  .meta-card-head {
-    background: var(--black);
-    color: var(--white);
-    padding: 0.5rem 1rem;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 0.95rem;
-    letter-spacing: 0.12em;
-  }
-
-  .meta-card-body { padding: 0.8rem 1rem; }
-
-  .meta-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 0.32rem 0;
-    border-bottom: 1px solid var(--cream);
-    font-size: 0.78rem;
-  }
-
-  .meta-row:last-child { border-bottom: none; }
-  .meta-key {
-    color: var(--mid);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    flex-shrink: 0;
-  }
-  .meta-val { color: var(--black); font-weight: 500; text-align: right; }
-
-  .action-btn {
-    width: 100%;
-    margin-bottom: 0.45rem;
-    padding: 0.65rem;
-    border: 1.5px solid var(--black);
-    background: none;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 0.9rem;
-    letter-spacing: 0.12em;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.12s;
-    color: var(--black);
-  }
-
-  .action-btn:hover { background: var(--black); color: var(--white); }
-  .action-btn-primary { background: var(--black); color: var(--white); }
-  .action-btn-primary:hover { background: var(--red); border-color: var(--red); }
-
-  /* ====== FORM ====== */
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.1rem;
-    margin-bottom: 1.1rem;
-  }
-
-  .form-field { display: flex; flex-direction: column; gap: 6px; }
-  .form-field.full { grid-column: 1 / -1; }
-
-  .form-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--mid);
-  }
-
-  .form-input, .form-select, .form-textarea {
-    border: 1.5px solid var(--border);
-    padding: 0.62rem 0.9rem;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.85rem;
-    color: var(--black);
-    background: white;
-    border-radius: 2px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-
-  .form-input:focus, .form-select:focus, .form-textarea:focus {
-    border-color: var(--black);
-  }
-
-  .form-textarea { resize: vertical; min-height: 120px; line-height: 1.62; }
-
-  .submit-row {
-    display: flex;
-    gap: 1rem;
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 2px solid var(--black);
-  }
-
-  .btn-primary {
-    background: var(--black);
-    color: var(--white);
-    border: 2px solid var(--black);
-    padding: 0.8rem 2.2rem;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.1rem;
-    letter-spacing: 0.14em;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.12s;
-  }
-
-  .btn-primary:hover { background: var(--red); border-color: var(--red); }
-
-  .btn-ghost {
-    background: none;
-    color: var(--mid);
-    border: 1.5px solid var(--border);
-    padding: 0.8rem 1.5rem;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.1rem;
-    letter-spacing: 0.14em;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.12s;
-  }
-
-  .btn-ghost:hover { border-color: var(--black); color: var(--black); }
-
-  /* ====== DIVIDER MARQUEE ====== */
-  .marquee-divider {
-    background: var(--black);
-    padding: 7px 0;
-    overflow: hidden;
-    white-space: nowrap;
-    margin: 2rem 0 1.5rem;
-    border-radius: 2px;
-  }
-
-  .marquee-text {
-    display: inline-block;
-    animation: scroll-ticker 22s linear infinite;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 0.95rem;
-    letter-spacing: 0.22em;
-    color: #333;
-  }
-
-  .marquee-text .dot { color: var(--red); margin: 0 1rem; }
-
-  /* ====== ACTIVITY LOG ====== */
-  .activity-log {
-    border: 1.5px solid var(--black);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-
-  .activity-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border);
-    background: white;
-  }
-
-  .activity-row:last-child { border-bottom: none; }
-  .activity-row:nth-child(even) { background: #faf9f7; }
-
-  .activity-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--black);
-    margin-top: 5px;
-    flex-shrink: 0;
-  }
-
-  .activity-text { font-size: 0.79rem; color: var(--black); line-height: 1.4; }
-  .activity-time { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--mid); margin-top: 2px; letter-spacing: 0.06em; }
-
-  /* ====== TOAST ====== */
-  .toast {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    background: var(--black);
-    color: white;
-    padding: 0.9rem 1.5rem;
-    border-left: 4px solid var(--red);
-    font-size: 0.8rem;
-    border-radius: 2px;
-    z-index: 999;
-    opacity: 0;
-    transform: translateY(14px);
-    transition: all 0.28s;
-    pointer-events: none;
-    font-family: 'DM Sans', sans-serif;
-    max-width: 320px;
-  }
-
-  .toast.show { opacity: 1; transform: translateY(0); }
-
-  /* ====== MISC ====== */
-  .empty-state {
-    text-align: center;
-    padding: 3rem 2rem;
-    color: var(--mid);
-    background: white;
-  }
-
-  .empty-big {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 5rem;
-    letter-spacing: 0.1em;
-    opacity: 0.1;
-    color: var(--black);
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
-  .empty-sub {
-    font-size: 0.9rem;
-    font-family: 'Instrument Serif', serif;
-    font-style: italic;
-  }
-
-  /* ====== PRIV NOTICE ====== */
-  .priv-notice {
-    background: var(--cream);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--black);
-    padding: 1rem 1.2rem;
-    font-size: 0.78rem;
-    line-height: 1.62;
-    color: var(--mid);
-    border-radius: 0 2px 2px 0;
-  }
-
-  .priv-notice strong {
-    color: var(--black);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    display: block;
-    margin-bottom: 4px;
-  }
-
-  /* ====== BAGEL FOOTER DECORATION ====== */
-  .bagel-footer {
-    background: var(--black);
-    padding: 0.7rem 2.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .footer-left {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.55rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: #333;
-  }
-
-
-  .footer-dots {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .footer-dot {
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: #2a2a2a;
-  }
-
-  .footer-dot:nth-child(3) { background: var(--red); }
-</style>
+<title>PUB Legal — Counsel</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/config.js"></script>
+<style>
+:root {
+  --black: #0a0a0a;
+  --white: #f5f3ee;
+  --cream: #ede9e0;
+  --red: #c8392b;
+  --red-dark: #a12220;
+  --mid: #7a7268;
+  --border: #d0ccc4;
+  --green: #1a6b3c;
+  --amber: #b87a0a;
+  --blue: #1a4a8a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--white);
+  color: var(--black);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── HEADER ── */
+header {
+  background: var(--black);
+  color: var(--white);
+  height: 56px;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  border-bottom: 3px solid var(--red);
+}
+.logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.55rem; letter-spacing: 0.06em; }
+.logo span { color: var(--red); }
+.header-right { display: flex; align-items: center; gap: 0.75rem; }
+.attorney-pill {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.07em;
+  color: #ccc;
+  border: 1px solid #444;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+.attorney-pill:hover { border-color: var(--white); color: var(--white); }
+.btn-header {
+  background: var(--red);
+  color: var(--white);
+  border: none;
+  padding: 6px 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+.btn-header:hover { background: var(--red-dark); }
+
+/* ── LAYOUT ── */
+.layout { flex: 1; display: flex; overflow: hidden; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 300px;
+  min-width: 300px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--white);
+}
+.sidebar-top { padding: 0.9rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.search-input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  background: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  outline: none;
+  margin-bottom: 0.6rem;
+  color: var(--black);
+}
+.search-input:focus { border-color: var(--black); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip {
+  background: none;
+  border: 1px solid var(--border);
+  padding: 3px 9px;
+  font-size: 0.68rem;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  color: var(--mid);
+}
+.chip.active { background: var(--black); color: var(--white); border-color: var(--black); }
+.chip:hover:not(.active) { border-color: var(--black); color: var(--black); }
+
+.ticket-list { flex: 1; overflow-y: auto; }
+.ticket-item {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+  border-left: 3px solid transparent;
+}
+.ticket-item:hover { background: var(--cream); }
+.ticket-item.active { background: var(--cream); border-left-color: var(--red); }
+.ti-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+.ti-id { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--mid); letter-spacing: 0.07em; }
+.ti-title { font-size: 0.83rem; font-weight: 500; margin-bottom: 3px; line-height: 1.3; }
+.ti-meta { font-size: 0.7rem; color: var(--mid); }
+
+/* ── STATUS PILLS ── */
+.pill {
+  font-size: 0.62rem;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pill-new    { background: #dce8f5; color: var(--blue); }
+.pill-prog   { background: #fef3dc; color: var(--amber); }
+.pill-urgent { background: #fde8e6; color: var(--red); }
+.pill-done   { background: #ddf0e7; color: var(--green); }
+
+/* ── MAIN PANEL ── */
+main { flex: 1; overflow-y: auto; }
+
+.welcome {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--border);
+  gap: 0.5rem;
+}
+.welcome-logo { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; letter-spacing: 0.05em; }
+.welcome-sub { font-size: 0.75rem; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; color: var(--mid); }
+
+/* ── TICKET DETAIL ── */
+.detail { padding: 1.75rem 2rem; max-width: 860px; }
+.detail-back {
+  background: none; border: none;
+  font-size: 0.7rem; color: var(--mid);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.06em;
+  cursor: pointer; padding: 0 0 1.25rem 0;
+  display: block;
+}
+.detail-back:hover { color: var(--black); }
+.detail-id { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--mid); letter-spacing: 0.09em; margin-bottom: 0.35rem; }
+.detail-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.9rem; letter-spacing: 0.03em; line-height: 1.1; margin-bottom: 0.75rem; }
+.detail-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-bottom: 1.25rem; }
+.meta-chip { font-size: 0.7rem; color: var(--mid); background: var(--cream); padding: 3px 8px; }
+
+/* Status bar */
+.status-bar {
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  background: var(--cream); border: 1px solid var(--border);
+  padding: 0.6rem 0.9rem; margin-bottom: 1.5rem;
+}
+.status-bar-label { font-size: 0.68rem; color: var(--mid); font-family: 'DM Mono', monospace; letter-spacing: 0.06em; margin-right: 4px; }
+.status-btn {
+  background: var(--white); border: 1px solid var(--border);
+  padding: 4px 12px; font-size: 0.72rem;
+  font-family: 'DM Sans', sans-serif; font-weight: 500;
+  cursor: pointer; color: var(--black);
+}
+.status-btn:hover { border-color: var(--black); }
+.status-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
+
+/* Sections */
+.section { margin-bottom: 1.75rem; }
+.section-head {
+  font-size: 0.68rem; font-family: 'DM Mono', monospace;
+  letter-spacing: 0.1em; color: var(--mid); text-transform: uppercase;
+  padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+  margin-bottom: 0.85rem;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.section-head button {
+  background: none; border: 1px solid var(--border);
+  padding: 2px 9px; font-size: 0.65rem; cursor: pointer;
+  font-family: 'DM Mono', monospace; letter-spacing: 0.05em; color: var(--mid);
+}
+.section-head button:hover { background: var(--black); color: var(--white); border-color: var(--black); }
+
+.description { font-size: 0.87rem; line-height: 1.65; white-space: pre-wrap; color: #222; }
+.extra-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.6rem; margin-top: 0.85rem; }
+.extra-field { font-size: 0.8rem; }
+.extra-label { font-size: 0.65rem; font-family: 'DM Mono', monospace; color: var(--mid); letter-spacing: 0.07em; display: block; margin-bottom: 2px; }
+
+/* Documents */
+.doc-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0; border-bottom: 1px solid var(--border); }
+.doc-item:last-child { border-bottom: none; }
+.doc-ext { background: var(--black); color: var(--white); font-size: 0.58rem; font-family: 'DM Mono', monospace; padding: 3px 5px; min-width: 34px; text-align: center; }
+.doc-info { flex: 1; min-width: 0; }
+.doc-name { font-size: 0.82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-meta { font-size: 0.68rem; color: var(--mid); }
+.doc-dl { font-size: 0.75rem; color: var(--mid); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); flex-shrink: 0; }
+.doc-dl:hover { background: var(--black); color: var(--white); }
+
+/* Messages */
+.messages {
+  height: 260px; overflow-y: auto;
+  border: 1px solid var(--border); padding: 0.9rem;
+  background: var(--cream); margin-bottom: 0.65rem;
+  display: flex; flex-direction: column; gap: 0.75rem;
+}
+.msg { display: flex; flex-direction: column; }
+.msg-counsel { align-items: flex-end; }
+.msg-employee { align-items: flex-start; }
+.msg-bubble {
+  display: inline-block; max-width: 72%;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.84rem; line-height: 1.45;
+  white-space: pre-wrap;
+}
+.msg-counsel .msg-bubble { background: var(--black); color: var(--white); }
+.msg-employee .msg-bubble { background: var(--white); border: 1px solid var(--border); }
+.msg-meta { font-size: 0.65rem; color: var(--mid); font-family: 'DM Mono', monospace; margin-top: 3px; }
+.reply-row { display: flex; gap: 0.5rem; }
+.reply-input {
+  flex: 1; padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border); background: var(--white);
+  font-family: 'DM Sans', sans-serif; font-size: 0.84rem;
+  resize: none; outline: none;
+}
+.reply-input:focus { border-color: var(--black); }
+.btn-send {
+  background: var(--black); color: var(--white);
+  border: none; padding: 0 1.2rem;
+  font-family: 'DM Sans', sans-serif; font-size: 0.78rem;
+  font-weight: 600; cursor: pointer; letter-spacing: 0.03em;
+}
+.btn-send:hover { background: var(--red); }
+
+/* ── MODAL / OVERLAY ── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.overlay.hidden { display: none; }
+.modal {
+  background: var(--white);
+  width: 540px; max-width: 96vw; max-height: 92vh;
+  overflow-y: auto; padding: 2rem; position: relative;
+}
+.modal-close {
+  position: absolute; top: 1rem; right: 1.1rem;
+  background: none; border: none; font-size: 1.3rem;
+  cursor: pointer; color: var(--mid); line-height: 1;
+}
+.modal-close:hover { color: var(--black); }
+.modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; margin-bottom: 1.5rem; }
+.form-row { margin-bottom: 0.9rem; }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem; }
+.form-label { display: block; font-size: 0.68rem; font-family: 'DM Mono', monospace; letter-spacing: 0.08em; color: var(--mid); margin-bottom: 4px; }
+.form-input, .form-select, .form-textarea {
+  width: 100%; padding: 8px 10px;
+  border: 1px solid var(--border); background: var(--white);
+  font-family: 'DM Sans', sans-serif; font-size: 0.84rem;
+  outline: none; color: var(--black);
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--black); }
+.form-textarea { resize: vertical; min-height: 90px; }
+.btn-submit {
+  width: 100%; background: var(--red); color: var(--white);
+  border: none; padding: 10px; font-family: 'DM Sans', sans-serif;
+  font-size: 0.84rem; font-weight: 600; cursor: pointer;
+  letter-spacing: 0.04em; margin-top: 0.25rem;
+}
+.btn-submit:hover { background: var(--red-dark); }
+
+/* Name modal */
+.modal-sm { width: 380px; }
+.name-intro { font-size: 0.82rem; color: var(--mid); margin-bottom: 1.25rem; line-height: 1.5; }
+
+/* Utilities */
+.state-msg { font-size: 0.75rem; font-family: 'DM Mono', monospace; letter-spacing: 0.07em; color: var(--mid); padding: 0.75rem 0; }
+.hidden { display: none !important; }
+.toast {
+  position: fixed; bottom: 1.5rem; left: 50%;
+  transform: translateX(-50%) translateY(2rem);
+  background: var(--black); color: var(--white);
+  padding: 0.55rem 1.2rem; font-size: 0.78rem;
+  font-family: 'DM Mono', monospace; letter-spacing: 0.06em;
+  opacity: 0; transition: all 0.2s; z-index: 999; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
 </head>
 <body>
 
-<!-- ====== HEADER ====== -->
+<!-- ── HEADER ── -->
 <header>
-  <div class="logo-block">
-    <img class="popb-logo-img" src="PUB Legal Logo.png" alt="PopUp Bagels Legal Department">
-  </div>
-
-  <nav class="header-nav">
-    <button class="nav-btn active" onclick="showPage('dashboard', this)">The Docket</button>
-    <button class="nav-btn" onclick="showPage('tickets', this)">All Requests</button>
-    <button class="nav-btn" onclick="showPage('new', this)">Submit a Request</button>
-  </nav>
-
+  <div class="logo">PUB <span>LEGAL</span></div>
   <div class="header-right">
-    <div class="user-info">
-      <div class="user-name">Jordan Reeves</div>
-      <div class="user-role">In-House Counsel</div>
-    </div>
-    <div class="user-avatar">JR</div>
+    <span class="attorney-pill" id="attorney-pill" onclick="showNameModal()">Set your name ▾</span>
+    <button class="btn-header" onclick="openNewTicket()">+ New Ticket</button>
   </div>
 </header>
 
-<!-- ====== TICKER ====== -->
-<div class="ticker">
-  <span class="ticker-inner">
-    &nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;Not your average legal department &nbsp;&bull;&nbsp; Baked fresh, handled daily &nbsp;&bull;&nbsp; Submit. Track. Resolve. &nbsp;&bull;&nbsp; All matters handled in strict confidence &nbsp;&bull;&nbsp; NDAs, Contracts, Compliance &mdash; Grip, Rip &amp; Deal&reg; &nbsp;&bull;&nbsp; Legal support: now with less waiting around &nbsp;&bull;&nbsp; Not famous but known &nbsp;&bull;&nbsp; popupbagels.com &nbsp;&bull;&nbsp; Not your average legal department &nbsp;&bull;&nbsp; Baked fresh, handled daily &nbsp;&bull;&nbsp; Submit. Track. Resolve. &nbsp;&bull;&nbsp; All matters handled in strict confidence &nbsp;&bull;&nbsp; NDAs, Contracts, Compliance &mdash; Grip, Rip &amp; Deal&reg; &nbsp;&bull;&nbsp; Legal support: now with less waiting around &nbsp;&bull;&nbsp; Not famous but known &nbsp;&bull;&nbsp; popupbagels.com &nbsp;&bull;&nbsp;&nbsp;
-  </span>
-</div>
+<!-- ── LAYOUT ── -->
+<div class="layout">
 
-<!-- ====== MAIN ====== -->
-<div class="main">
-
+  <!-- SIDEBAR -->
   <aside class="sidebar">
-    <div class="sidebar-logo">
-      <img class="sidebar-logo-img" src="PUB Legal Logo.png" alt="PopUp Bagels Legal Department">
-    </div>
-
-    <button class="new-ticket-btn" onclick="showPage('new', null)">+ Submit a Request</button>
-
-    <div class="sidebar-section">
-      <div class="sidebar-label">My Queue</div>
-      <button class="sidebar-link active" onclick="filterTickets('all')">All Tickets <span class="badge">12</span></button>
-      <button class="sidebar-link" onclick="filterTickets('new')">Fresh &mdash; New <span class="badge">3</span></button>
-      <button class="sidebar-link" onclick="filterTickets('open')">In the Oven <span class="badge">5</span></button>
-      <button class="sidebar-link" onclick="filterTickets('urgent')">Hot &amp; Urgent <span class="badge" style="background:#c8392b">2</span></button>
-      <button class="sidebar-link" onclick="filterTickets('closed')">Wrapped Up <span class="badge-green badge">4</span></button>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-label">By Category</div>
-      <button class="sidebar-link" onclick="filterCategory('contracts')">Contracts</button>
-      <button class="sidebar-link" onclick="filterCategory('employment')">Employment</button>
-      <button class="sidebar-link" onclick="filterCategory('compliance')">Compliance</button>
-      <button class="sidebar-link" onclick="filterCategory('ip')">IP &amp; Licensing</button>
-      <button class="sidebar-link" onclick="filterCategory('corporate')">Corporate</button>
-      <button class="sidebar-link" onclick="filterCategory('privacy')">Privacy / Data</button>
-      <button class="sidebar-link" onclick="filterCategory('disputes')">Disputes</button>
-    </div>
-
-    <div class="stats-bottom">
-      <div class="sidebar-label">This Month</div>
-      <div class="stat-row">
-        <span class="stat-label">Submitted</span>
-        <span class="stat-val">18</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Resolved</span>
-        <span class="stat-val">14</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Avg. Days</span>
-        <span class="stat-val">3.4</span>
+    <div class="sidebar-top">
+      <input class="search-input" type="text" id="search-input" placeholder="Search tickets…" oninput="filterTickets()">
+      <div class="chips">
+        <button class="chip active" data-status="all" onclick="setFilter(this)">All</button>
+        <button class="chip" data-status="New" onclick="setFilter(this)">New</button>
+        <button class="chip" data-status="In Progress" onclick="setFilter(this)">In Progress</button>
+        <button class="chip" data-status="Urgent" onclick="setFilter(this)">Urgent</button>
+        <button class="chip" data-status="Completed" onclick="setFilter(this)">Completed</button>
       </div>
     </div>
-
-    <div class="sidebar-tagline">
-      Legal support done right.
+    <div class="ticket-list" id="ticket-list">
+      <div class="state-msg" style="padding:1rem">Loading tickets…</div>
     </div>
   </aside>
 
-  <div class="content">
+  <!-- MAIN -->
+  <main id="main">
 
-    <!-- ========== DASHBOARD ========== -->
-    <div id="page-dashboard" class="page active">
-      <div class="page-header">
-        <div>
-          <div class="page-title">The Docket</div>
-          <div class="page-sub">Everything baking, nothing burning.</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.18em;color:var(--mid)">Monday, March 30, 2026</div>
-          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--border);letter-spacing:0.12em">PopUp Bagels · Legal</div>
-        </div>
+    <!-- Welcome -->
+    <div class="welcome" id="welcome">
+      <div class="welcome-logo">PUB LEGAL</div>
+      <div class="welcome-sub">Select a ticket to get started</div>
+    </div>
+
+    <!-- Detail -->
+    <div class="detail hidden" id="detail">
+      <button class="detail-back" onclick="clearDetail()">← All Tickets</button>
+      <div class="detail-id" id="d-id"></div>
+      <div class="detail-title" id="d-title"></div>
+      <div class="detail-meta" id="d-meta"></div>
+
+      <div class="status-bar">
+        <span class="status-bar-label">Status:</span>
+        <button class="status-btn" data-s="New" onclick="updateStatus('New')">New</button>
+        <button class="status-btn" data-s="In Progress" onclick="updateStatus('In Progress')">In Progress</button>
+        <button class="status-btn" data-s="Urgent" onclick="updateStatus('Urgent')">Urgent</button>
+        <button class="status-btn" data-s="Completed" onclick="updateStatus('Completed')">Completed</button>
       </div>
 
-      <!-- Stat Cards -->
-      <div class="stat-cards">
-        <div class="stat-card red">
-          <div class="stat-num">2</div>
-          <div class="stat-title">Hot &amp; Urgent</div>
-          <div class="stat-note">Don't let these cool down.</div>
-        </div>
-        <div class="stat-card amber">
-          <div class="stat-num">5</div>
-          <div class="stat-title">In the Oven</div>
-          <div class="stat-note">Active, being worked on.</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-num">3</div>
-          <div class="stat-title">Awaiting Info</div>
-          <div class="stat-note">Ball's in your court.</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-num">4</div>
-          <div class="stat-title">Wrapped Up</div>
-          <div class="stat-note">Closed this week.</div>
-        </div>
+      <div class="section">
+        <div class="section-head">Description</div>
+        <div class="description" id="d-description"></div>
+        <div class="extra-grid" id="d-extras"></div>
       </div>
 
-      <!-- Two-col layout -->
-      <div style="display:grid;grid-template-columns:1fr 330px;gap:2rem">
-
-        <!-- Activity -->
-        <div>
-          <div class="marquee-divider">
-            <span class="marquee-text">RECENT ACTIVITY <span class="dot">●</span> RECENT ACTIVITY <span class="dot">●</span> RECENT ACTIVITY <span class="dot">●</span> RECENT ACTIVITY <span class="dot">●</span> RECENT ACTIVITY <span class="dot">●</span> RECENT ACTIVITY <span class="dot">●</span> RECENT ACTIVITY <span class="dot">●</span> RECENT ACTIVITY <span class="dot">●</span></span>
-          </div>
-          <div class="activity-log">
-            <div class="activity-row">
-              <div class="activity-dot" style="background:var(--red)"></div>
-              <div>
-                <div class="activity-text"><strong>LR-0012</strong> — New vendor SaaS contract submitted by Maria Chen (Finance)</div>
-                <div class="activity-time">Today · 9:14 AM</div>
-              </div>
-            </div>
-            <div class="activity-row">
-              <div class="activity-dot" style="background:var(--blue)"></div>
-              <div>
-                <div class="activity-text">You replied to <strong>LR-0009</strong> — NDA for Acme Corp. Redline coming end of week.</div>
-                <div class="activity-time">Today · 8:55 AM</div>
-              </div>
-            </div>
-            <div class="activity-row">
-              <div class="activity-dot" style="background:var(--amber)"></div>
-              <div>
-                <div class="activity-text"><strong>LR-0008</strong> moved to <em>Awaiting Info</em> — Employee termination review, HR needs to upload docs.</div>
-                <div class="activity-time">Yesterday · 4:42 PM</div>
-              </div>
-            </div>
-            <div class="activity-row">
-              <div class="activity-dot" style="background:var(--green)"></div>
-              <div>
-                <div class="activity-text"><strong>LR-0007</strong> closed — GDPR compliance audit review complete. Good stuff.</div>
-                <div class="activity-time">Yesterday · 2:10 PM</div>
-              </div>
-            </div>
-            <div class="activity-row">
-              <div class="activity-dot"></div>
-              <div>
-                <div class="activity-text"><strong>LR-0010</strong> — Dev Kim (Engineering) uploaded a DPA draft for review.</div>
-                <div class="activity-time">Yesterday · 11:03 AM</div>
-              </div>
-            </div>
-            <div class="activity-row">
-              <div class="activity-dot" style="background:var(--red)"></div>
-              <div>
-                <div class="activity-text"><strong>LR-0011</strong> — Urgent IP trademark dispute raised by CEO's office. Flagged high priority.</div>
-                <div class="activity-time">Mar 28 · 3:30 PM</div>
-              </div>
-            </div>
-          </div>
+      <div class="section">
+        <div class="section-head">
+          Documents
+          <button onclick="document.getElementById('file-input').click()">+ Upload</button>
         </div>
+        <input type="file" id="file-input" style="display:none" onchange="uploadDocument(this.files[0])">
+        <div id="d-docs"><div class="state-msg">No documents attached.</div></div>
+      </div>
 
-        <!-- Right rail -->
-        <div>
-          <!-- Needs Reply -->
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.1em;margin-bottom:0.8rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border)">Needs Your Reply</div>
-          <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.8rem">
-            <div style="background:white;border:1px solid var(--border);border-left:3px solid var(--red);border-radius:2px;padding:0.8rem 1rem;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background='white'" onclick="openTicket('LR-0009')">
-              <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--red);letter-spacing:0.08em">LR-0009 · CONTRACTS</div>
-              <div style="font-size:0.82rem;font-weight:600;margin-top:3px;color:var(--black)">NDA — Acme Corp Vendor</div>
-              <div style="font-size:0.7rem;color:var(--mid);margin-top:2px">Tom Walsh asked a question 2h ago</div>
-            </div>
-            <div style="background:white;border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:2px;padding:0.8rem 1rem;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background='white'" onclick="openTicket('LR-0008')">
-              <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--amber);letter-spacing:0.08em">LR-0008 · EMPLOYMENT</div>
-              <div style="font-size:0.82rem;font-weight:600;margin-top:3px;color:var(--black)">Employee Termination Review</div>
-              <div style="font-size:0.7rem;color:var(--mid);margin-top:2px">Docs outstanding since yesterday</div>
-            </div>
-            <div style="background:white;border:1px solid var(--border);border-left:3px solid var(--red);border-radius:2px;padding:0.8rem 1rem;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background='white'" onclick="openTicket('LR-0011')">
-              <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--red);letter-spacing:0.08em">LR-0011 · IP — URGENT</div>
-              <div style="font-size:0.82rem;font-weight:600;margin-top:3px;color:var(--black)">Logo Trademark Dispute</div>
-              <div style="font-size:0.7rem;color:var(--mid);margin-top:2px">From CEO's office · 2 days ago</div>
-            </div>
-          </div>
-
-          <!-- By Category bars -->
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.1em;margin-bottom:0.8rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border)">Volume by Category</div>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;gap:10px">
-              <span style="min-width:80px">Contracts</span>
-              <div style="flex:1;height:5px;background:var(--cream);border-radius:1px;overflow:hidden"><div style="width:65%;height:100%;background:var(--black)"></div></div>
-              <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--mid);min-width:16px;text-align:right">5</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;gap:10px">
-              <span style="min-width:80px">Employment</span>
-              <div style="flex:1;height:5px;background:var(--cream);border-radius:1px;overflow:hidden"><div style="width:30%;height:100%;background:var(--black)"></div></div>
-              <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--mid);min-width:16px;text-align:right">3</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;gap:10px">
-              <span style="min-width:80px">IP</span>
-              <div style="flex:1;height:5px;background:var(--cream);border-radius:1px;overflow:hidden"><div style="width:20%;height:100%;background:var(--red)"></div></div>
-              <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--mid);min-width:16px;text-align:right">2</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;gap:10px">
-              <span style="min-width:80px">Compliance</span>
-              <div style="flex:1;height:5px;background:var(--cream);border-radius:1px;overflow:hidden"><div style="width:20%;height:100%;background:var(--black)"></div></div>
-              <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--mid);min-width:16px;text-align:right">2</span>
-            </div>
-          </div>
-
-          <!-- Little brand callout -->
-          <div style="margin-top:1.8rem;background:var(--black);padding:1rem 1.2rem;border-radius:2px;text-align:center">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:0.15em;color:var(--white);line-height:1">Grip, Rip</div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:0.15em;color:var(--red);line-height:1">&amp; Deal®</div>
-            <div style="font-family:'Instrument Serif',serif;font-style:italic;font-size:0.72rem;color:#444;margin-top:6px">Legal requests, handled hot.</div>
-          </div>
+      <div class="section">
+        <div class="section-head">Messages</div>
+        <div class="messages" id="d-messages"></div>
+        <div class="reply-row">
+          <textarea class="reply-input" id="reply-input" rows="2" placeholder="Type a reply…"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+          <button class="btn-send" onclick="sendMessage()">Send</button>
         </div>
       </div>
     </div>
 
-    <!-- ========== ALL TICKETS ========== -->
-    <div id="page-tickets" class="page">
-      <div class="page-header">
-        <div>
-          <div class="page-title">All Requests</div>
-          <div class="page-sub">Every matter. Every status. One view.</div>
-        </div>
-        <button class="btn-primary" onclick="showPage('new', null)">+ Submit New</button>
-      </div>
+  </main>
+</div>
 
-      <div class="filter-bar">
-        <button class="filter-chip active" onclick="setFilter(this,'all')">All</button>
-        <button class="filter-chip" onclick="setFilter(this,'new')">Fresh / New</button>
-        <button class="filter-chip" onclick="setFilter(this,'open')">In the Oven</button>
-        <button class="filter-chip" onclick="setFilter(this,'review')">Under Review</button>
-        <button class="filter-chip" onclick="setFilter(this,'urgent')">Urgent</button>
-        <button class="filter-chip" onclick="setFilter(this,'closed')">Wrapped Up</button>
-        <input class="search-input" type="text" placeholder="Search tickets..." oninput="searchTickets(this.value)" />
+<!-- ── NEW TICKET MODAL ── -->
+<div class="overlay hidden" id="new-ticket-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeNewTicket()">×</button>
+    <div class="modal-title">New Legal Request</div>
+    <div class="form-row-2">
+      <div>
+        <label class="form-label">Submitter Name *</label>
+        <input class="form-input" id="f-submitter" type="text" placeholder="Full name">
       </div>
-
-      <div class="ticket-list" id="ticket-list">
-        <div class="ticket-row header">
-          <span class="col-head">Ticket ID</span>
-          <span class="col-head">Request</span>
-          <span class="col-head">Status</span>
-          <span class="col-head">Category</span>
-          <span class="col-head">Priority</span>
-          <span class="col-head">Submitted</span>
-        </div>
+      <div>
+        <label class="form-label">Department *</label>
+        <select class="form-select" id="f-dept">
+          <option value="">Select department</option>
+          <option>Finance</option><option>Engineering</option><option>People / HR</option>
+          <option>Marketing</option><option>Sales</option><option>Operations</option>
+          <option>Executive</option><option>Product</option><option>Other</option>
+        </select>
       </div>
     </div>
-
-    <!-- ========== TICKET DETAIL ========== -->
-    <div id="page-detail" class="page">
-      <button class="detail-back" onclick="showPage('tickets', null)">&#8592;&nbsp; Back to All Requests</button>
-      <div class="detail-layout">
-
-        <!-- Main col -->
-        <div>
-          <div class="detail-header">
-            <div class="detail-id" id="detail-id">LR-0009 · CONTRACTS</div>
-            <div class="detail-title" id="detail-title">Non-Disclosure Agreement — Vendor Acme Corp</div>
-            <div style="display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap" id="detail-meta">
-              <span class="status-pill status-open">In the Oven</span>
-              <span style="font-size:0.72rem;color:var(--mid);font-family:'DM Mono',monospace;letter-spacing:0.06em">Contracts</span>
-              <span style="font-size:0.72rem;color:var(--mid)">Submitted Mar 26 by Tom Walsh (Finance)</span>
-            </div>
-          </div>
-
-          <div class="detail-body" id="detail-body">
-            We are onboarding Acme Corp as a new software vendor. Before sharing any proprietary information during the evaluation phase, we need a mutual NDA in place. The agreement should cover standard confidentiality terms for 3 years, include a carve-out for previously known information, and allow for disclosure required by law. Acme Corp is based in Delaware. I've attached their standard NDA draft for your review — please redline where necessary.
-          </div>
-
-          <div class="section-heading">Attached Documents</div>
-          <div class="doc-list" id="detail-docs">
-            <div class="doc-row">
-              <div class="doc-icon">PDF</div>
-              <div>
-                <div class="doc-name">Acme_Corp_NDA_Draft_v1.pdf</div>
-                <div class="doc-meta">Tom Walsh · Mar 26 · 1.2 MB</div>
-              </div>
-              <span class="doc-dl">Download ↓</span>
-            </div>
-            <div class="doc-row">
-              <div class="doc-icon">DOC</div>
-              <div>
-                <div class="doc-name">Vendor_Onboarding_Checklist.docx</div>
-                <div class="doc-meta">Tom Walsh · Mar 26 · 320 KB</div>
-              </div>
-              <span class="doc-dl">Download ↓</span>
-            </div>
-          </div>
-
-          <div class="upload-zone" onclick="simulateUpload()">
-            <span class="upload-bagel">⬤</span>
-            <div class="upload-zone-text">Drop files here or click to upload</div>
-            <div class="upload-zone-hint">PDF · DOCX · XLSX · PNG &mdash; max 25MB</div>
-          </div>
-
-          <!-- MESSAGE THREAD -->
-          <div class="message-thread">
-            <div class="message-thread-header">
-              Message Thread
-              <span class="msg-count" id="msg-count">3 messages</span>
-            </div>
-            <div class="messages-body" id="message-body">
-              <div class="message-bubble">
-                <div class="msg-av">TW</div>
-                <div class="msg-body">
-                  <div class="msg-meta">Tom Walsh (Finance) · Mar 26, 10:02 AM</div>
-                  <div class="msg-text">Hi Jordan — attaching the NDA draft Acme sent over. Their lawyer seems reasonable but the term is 5 years which feels long. Can you advise?</div>
-                </div>
-              </div>
-              <div class="message-bubble from-counsel">
-                <div class="msg-av counsel">JR</div>
-                <div class="msg-body">
-                  <div class="msg-meta">Jordan Reeves · Legal · Mar 26, 2:15 PM</div>
-                  <div class="msg-text">Hi Tom — agree on the term, I'll push to 2 years. Also flagging their IP ownership clause in Section 4 which needs revision. I'll get you a redlined version by end of week.</div>
-                </div>
-              </div>
-              <div class="message-bubble">
-                <div class="msg-av">TW</div>
-                <div class="msg-body">
-                  <div class="msg-meta">Tom Walsh (Finance) · Mar 27, 9:42 AM</div>
-                  <div class="msg-text">Perfect, thank you! One more thing — do we need to loop in the parent company or just the US subsidiary?</div>
-                </div>
-              </div>
-            </div>
-            <div class="msg-compose">
-              <textarea class="msg-input" id="msg-input" rows="2" placeholder="Type your reply..."></textarea>
-              <button class="msg-send" onclick="sendMessage()">Send</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Meta sidebar -->
-        <div>
-          <div class="meta-card">
-            <div class="meta-card-head">Ticket Details</div>
-            <div class="meta-card-body" id="detail-meta-card">
-              <div class="meta-row">
-                <span class="meta-key">Status</span>
-                <span class="meta-val"><span class="status-pill status-open">In the Oven</span></span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Priority</span>
-                <span class="meta-val"><span class="priority-dot p-med"></span>Medium</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Category</span>
-                <span class="meta-val">Contracts</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Requestor</span>
-                <span class="meta-val">Tom Walsh</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Department</span>
-                <span class="meta-val">Finance</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Submitted</span>
-                <span class="meta-val">Mar 26, 2026</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Last Updated</span>
-                <span class="meta-val">Mar 27, 2026</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Assigned To</span>
-                <span class="meta-val">Jordan Reeves</span>
-              </div>
-            </div>
-          </div>
-
-          <button class="action-btn action-btn-primary" onclick="updateTicketStatus('In Progress')">Mark In Progress</button>
-          <button class="action-btn" onclick="updateTicketStatus('Completed')">Close Ticket</button>
-          <button class="action-btn" onclick="updateTicketStatus('Urgent')">Flag as Urgent</button>
-
-          <div class="meta-card" style="margin-top:1rem">
-            <div class="meta-card-head">History</div>
-            <div class="meta-card-body" style="padding:0.65rem 0.9rem">
-              <div style="display:flex;flex-direction:column;gap:0.6rem">
-                <div style="font-size:0.74rem;color:var(--black)">
-                  <span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--mid);display:block;letter-spacing:0.06em">Mar 27, 2026</span>
-                  Status changed → In the Oven
-                </div>
-                <div style="font-size:0.74rem;color:var(--black)">
-                  <span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--mid);display:block;letter-spacing:0.06em">Mar 26, 2026</span>
-                  Ticket created by Tom Walsh
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Brand blurb -->
-          <div style="margin-top:1rem;text-align:center;padding:0.8rem">
-            <div style="font-family:'Instrument Serif',serif;font-style:italic;font-size:0.78rem;color:var(--mid);line-height:1.5">"Handled hot. Every time."<br><span style="font-family:'DM Mono',monospace;font-style:normal;font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--border)">PopUp Bagels Legal</span></div>
-          </div>
-        </div>
+    <div class="form-row">
+      <label class="form-label">Request Title *</label>
+      <input class="form-input" id="f-title" type="text" placeholder="Brief description of the legal matter">
+    </div>
+    <div class="form-row-2">
+      <div>
+        <label class="form-label">Category</label>
+        <select class="form-select" id="f-category">
+          <option value="">Select category</option>
+          <option>Contracts &amp; Agreements</option><option>Employment / HR</option>
+          <option>Compliance &amp; Regulatory</option><option>IP &amp; Licensing</option>
+          <option>Corporate Governance</option><option>Privacy &amp; Data</option>
+          <option>Disputes &amp; Litigation</option><option>Real Estate</option><option>Other</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Priority</label>
+        <select class="form-select" id="f-priority">
+          <option value="Low">Low — 5–7 business days</option>
+          <option value="Medium">Medium — 2–3 business days</option>
+          <option value="High">High — Same/next day</option>
+        </select>
       </div>
     </div>
-
-    <!-- ========== NEW TICKET ========== -->
-    <div id="page-new" class="page">
-      <div class="page-header">
-        <div>
-          <div class="page-title">Submit a Request</div>
-          <div class="page-sub">Tell us what you need. We'll handle the rest — hot and fresh.</div>
-        </div>
+    <div class="form-row-2">
+      <div>
+        <label class="form-label">Deadline</label>
+        <input class="form-input" id="f-deadline" type="date">
       </div>
-
-      <div style="max-width:780px">
-        <div class="form-grid">
-          <div class="form-field">
-            <label class="form-label">Your Full Name</label>
-            <input class="form-input" id="new-name" type="text" placeholder="e.g. Maria Chen" />
-          </div>
-          <div class="form-field">
-            <label class="form-label">Department</label>
-            <select class="form-select" id="new-dept">
-              <option value="">Select your department</option>
-              <option>Finance</option>
-              <option>Engineering</option>
-              <option>People / HR</option>
-              <option>Marketing</option>
-              <option>Sales</option>
-              <option>Operations</option>
-              <option>Executive</option>
-              <option>Product</option>
-              <option>Other</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label class="form-label">Email Address</label>
-            <input class="form-input" id="new-email" type="email" placeholder="you@popupbagels.com" />
-          </div>
-          <div class="form-field">
-            <label class="form-label">Phone (Optional)</label>
-            <input class="form-input" id="new-phone" type="tel" placeholder="(212) 555-0000" />
-          </div>
-        </div>
-
-        <div style="border-top:1px solid var(--border);margin:0.5rem 0 1.5rem"></div>
-
-        <div class="form-grid">
-          <div class="form-field full">
-            <label class="form-label">Request Title</label>
-            <input class="form-input" id="new-title" type="text" placeholder="e.g. NDA Review for Vendor Onboarding — Acme Corp" />
-          </div>
-          <div class="form-field">
-            <label class="form-label">Legal Category</label>
-            <select class="form-select" id="new-category">
-              <option value="">Select a category</option>
-              <option>Contracts &amp; Agreements</option>
-              <option>Employment / HR</option>
-              <option>Compliance &amp; Regulatory</option>
-              <option>IP &amp; Licensing</option>
-              <option>Corporate Governance</option>
-              <option>Privacy &amp; Data</option>
-              <option>Disputes &amp; Litigation</option>
-              <option>Real Estate</option>
-              <option>Other</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label class="form-label">Priority Level</label>
-            <select class="form-select" id="new-priority">
-              <option>Standard — 5 to 7 business days</option>
-              <option>Elevated — 2 to 3 business days</option>
-              <option>Urgent — Same or next day (justification required)</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label class="form-label">Deadline (if applicable)</label>
-            <input class="form-input" id="new-deadline" type="date" />
-          </div>
-          <div class="form-field">
-            <label class="form-label">Counterparty / Third Party</label>
-            <input class="form-input" id="new-counterparty" type="text" placeholder="e.g. Acme Corp, John Doe" />
-          </div>
-          <div class="form-field full">
-            <label class="form-label">Description of Request</label>
-            <textarea class="form-textarea" id="new-description" placeholder="Describe your legal need in as much detail as possible. What's the business context? What specific questions do you need answered? Any key dates or constraints? The more detail, the faster we can get moving."></textarea>
-          </div>
-          <div class="form-field full">
-            <label class="form-label">Confidentiality Concerns (Optional)</label>
-            <textarea class="form-textarea" id="new-confidentiality" style="min-height:72px" placeholder="e.g. This involves a potential acquisition — please do not share beyond the legal team."></textarea>
-          </div>
-        </div>
-
-        <div class="section-heading" style="margin-top:0.5rem">Supporting Documents</div>
-        <div class="upload-zone" onclick="simulateUpload()" style="margin-bottom:1.2rem">
-          <span class="upload-bagel">⬤</span>
-          <div class="upload-zone-text">Drop files here or click to upload</div>
-          <div class="upload-zone-hint">PDF · DOCX · XLSX · PNG &mdash; Max 25MB · Multiple files OK</div>
-        </div>
-
-        <div id="new-doc-list" style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1.2rem"></div>
-
-        <div class="priv-notice">
-          <strong>Attorney-Client Privilege Notice</strong>
-          Submissions through this system may be protected by attorney-client privilege. Do not share your ticket ID or request details with external parties. All matters are handled in strict confidence by PopUp Bagels in-house counsel.
-        </div>
-
-        <div class="submit-row">
-          <button class="btn-primary" onclick="submitTicket()">Submit Request</button>
-          <button class="btn-ghost" onclick="showPage('tickets', null)">Cancel</button>
-        </div>
+      <div>
+        <label class="form-label">Counterparty</label>
+        <input class="form-input" id="f-counterparty" type="text" placeholder="Other party name">
       </div>
     </div>
-
+    <div class="form-row">
+      <label class="form-label">Description *</label>
+      <textarea class="form-textarea" id="f-description" placeholder="Describe the legal matter in detail…"></textarea>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Confidentiality Notes</label>
+      <textarea class="form-textarea" id="f-confidentiality" style="min-height:60px" placeholder="Any sensitivity or sharing restrictions…"></textarea>
+    </div>
+    <button class="btn-submit" onclick="submitTicket()">Submit Request</button>
   </div>
 </div>
 
-<!-- ====== FOOTER ====== -->
-<div class="bagel-footer">
-  <div class="footer-left">© 2026 PopUp Bagels &nbsp;·&nbsp; Legal Department &nbsp;·&nbsp; Confidential</div>
-  <img class="footer-logo" src="PUB Legal Logo.png" alt="PopUp Bagels Legal Department">
-  <div class="footer-dots">
-    <div class="footer-dot"></div>
-    <div class="footer-dot"></div>
-    <div class="footer-dot"></div>
-    <div class="footer-dot"></div>
-    <div class="footer-dot"></div>
+<!-- ── ATTORNEY NAME MODAL ── -->
+<div class="overlay" id="name-overlay">
+  <div class="modal modal-sm">
+    <div class="modal-title">Welcome</div>
+    <p class="name-intro">Enter your name. This will appear on messages you send and tickets you manage.</p>
+    <div class="form-row">
+      <label class="form-label">Your Name</label>
+      <input class="form-input" id="name-input" type="text" placeholder="e.g. Alex Rivera"
+        onkeydown="if(event.key==='Enter') saveName()">
+    </div>
+    <button class="btn-submit" onclick="saveName()">Continue</button>
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ===== AIRTABLE CONFIG =====
+// ── CONFIG ──
 const AIRTABLE_TOKEN = window.AIRTABLE_TOKEN || '';
 const BASE_ID = 'appUInS3SOfPul1jr';
 const TABLES = {
@@ -1603,375 +483,302 @@ const TABLES = {
   users:    'tblKg2Ls7eNE1nCHs',
   docs:     'tblCvHWHKVWxPULf5'
 };
+const DOC_FILE_FIELD = 'fldFdB4upCStlXcoR';
 
-// ===== AIRTABLE HELPER =====
-async function atFetch(method, path, body) {
-  const url = `https://api.airtable.com/v0/${BASE_ID}/${path}`;
-  const res = await fetch(url, {
-    method,
-    headers: {
-      'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-      'Content-Type': 'application/json'
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  if (!res.ok) { const e = await res.json(); console.error('Airtable error:', e); return null; }
-  return res.json();
-}
-
-// ===== DATA =====
-let tickets = [];
-let currentTicketRecord = null;
-let currentUserName = '';
-
-function mapStatus(s) {
-  return { 'New':'new', 'In Progress':'open', 'Urgent':'urgent', 'Completed':'closed' }[s] || 'new';
-}
-function mapPriority(p) {
-  return { 'High':'high', 'Medium':'med', 'Low':'low' }[p] || 'med';
-}
-function mapPriorityUp(raw) {
-  if (raw.includes('Urgent')) return 'High';
-  if (raw.includes('Elevated')) return 'Medium';
-  return 'Low';
-}
-
-async function loadTickets() {
-  const listEl = document.getElementById('ticket-list');
-  const header = listEl.querySelector('.header');
-  listEl.innerHTML = '';
-  if (header) listEl.appendChild(header);
-  const loadingDiv = document.createElement('div');
-  loadingDiv.style.cssText = 'padding:2rem;color:var(--mid);font-size:0.8rem;font-family:"DM Mono",monospace;letter-spacing:0.08em';
-  loadingDiv.textContent = 'Loading tickets…';
-  listEl.appendChild(loadingDiv);
-
-  const data = await atFetch('GET', TABLES.tickets + '?sort%5B0%5D%5Bfield%5D=Submitted+At&sort%5B0%5D%5Bdirection%5D=desc');
-  if (!data) { showToast('Could not load tickets. Check your connection.'); return; }
-
-  tickets = (data.records || []).map(r => ({
-    recordId: r.id,
-    id: r.fields['Ticket ID'] || ('#' + (r.fields['# ID'] || '')),
-    title: r.fields['Title'] || '(Untitled)',
-    dept: r.fields['Department'] || '',
-    submitter: r.fields['Submitter Name'] || '',
-    status: mapStatus(r.fields['Status'] || 'New'),
-    category: r.fields['Category'] || '',
-    priority: mapPriority(r.fields['Priority'] || 'Medium'),
-    date: r.fields['Submitted At']
-      ? new Date(r.fields['Submitted At']).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})
-      : '',
-    description: r.fields['Description'] || '',
-    counterparty: r.fields['Counterparty'] || '',
-    deadline: r.fields['Deadline'] || '',
-    confidentiality: r.fields['Confidentiality'] || '',
-    assignedTo: r.fields['Assigned To'] || 'Jordan Reeves',
-  }));
-  renderTickets();
-}
-
+let allTickets = [];
 let currentFilter = 'all';
 let currentSearch = '';
+let currentTicketId = null;
+let counselName = '';
 
-function statusLabel(s) {
-  const map = { new:'Fresh / New', open:'In the Oven', review:'Under Review', closed:'Wrapped Up', urgent:'Hot & Urgent' };
-  return map[s] || s;
+// ── INIT ──
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('pubLegalCounselName');
+  if (saved) {
+    counselName = saved;
+    document.getElementById('attorney-pill').textContent = saved + ' ▾';
+    document.getElementById('name-overlay').classList.add('hidden');
+    loadTickets();
+  }
+});
+
+function saveName() {
+  const val = document.getElementById('name-input').value.trim();
+  if (!val) { showToast('Please enter your name.'); return; }
+  counselName = val;
+  localStorage.setItem('pubLegalCounselName', val);
+  document.getElementById('attorney-pill').textContent = val + ' ▾';
+  document.getElementById('name-overlay').classList.add('hidden');
+  loadTickets();
 }
-function statusClass(s) {
-  const map = { new:'status-new', open:'status-open', review:'status-review', closed:'status-closed', urgent:'status-urgent' };
-  return map[s] || '';
+function showNameModal() {
+  document.getElementById('name-input').value = counselName;
+  document.getElementById('name-overlay').classList.remove('hidden');
 }
-function priorityDot(p) {
-  const cls = { high:'p-high', med:'p-med', low:'p-low' };
-  const lbl = { high:'High', med:'Medium', low:'Low' };
-  return `<span class="priority-dot ${cls[p]||''}"></span>${lbl[p]||p}`;
+
+// ── AIRTABLE HELPER ──
+async function atFetch(method, path, body) {
+  const url = `https://api.airtable.com/v0/${BASE_ID}/${path}`;
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    if (!res.ok) { const e = await res.json(); console.error('Airtable error:', e); return null; }
+    return res.json();
+  } catch(e) { console.error('Fetch error:', e); return null; }
+}
+
+// ── TICKETS ──
+async function loadTickets() {
+  const list = document.getElementById('ticket-list');
+  list.innerHTML = '<div class="state-msg" style="padding:1rem">Loading…</div>';
+  const data = await atFetch('GET', `${TABLES.tickets}?sort%5B0%5D%5Bfield%5D=Submitted%20At&sort%5B0%5D%5Bdirection%5D=desc`);
+  if (!data) { list.innerHTML = '<div class="state-msg" style="padding:1rem">Could not load tickets.</div>'; return; }
+  allTickets = data.records || [];
+  renderTickets();
 }
 
 function renderTickets() {
   const list = document.getElementById('ticket-list');
-  const header = list.querySelector('.header');
-  list.innerHTML = '';
-  if (header) list.appendChild(header);
-
-  const filtered = tickets.filter(t => {
-    if (currentFilter !== 'all' && t.status !== currentFilter) return false;
-    if (currentSearch) {
-      const q = currentSearch.toLowerCase();
-      return t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) ||
-             t.submitter.toLowerCase().includes(q) || t.category.toLowerCase().includes(q) ||
-             t.dept.toLowerCase().includes(q);
-    }
-    return true;
+  const q = currentSearch.toLowerCase();
+  let items = allTickets;
+  if (currentFilter !== 'all') items = items.filter(r => (r.fields['Status'] || 'New') === currentFilter);
+  if (q) items = items.filter(r => {
+    const f = r.fields;
+    return [f['Title'],f['Submitter Name'],f['Ticket ID']].some(v => (v||'').toLowerCase().includes(q));
   });
-
-  if (filtered.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'empty-state';
-    empty.innerHTML = '<span class="empty-big">NONE</span><span class="empty-sub">Nothing here yet. Fresh batch coming?</span>';
-    list.appendChild(empty);
-    return;
-  }
-
-  filtered.forEach(t => {
-    const row = document.createElement('div');
-    row.className = 'ticket-row';
-    row.innerHTML = `
-      <span class="ticket-id">${t.id}</span>
-      <div>
-        <div class="ticket-title">${t.title}</div>
-        <div class="ticket-dept">${t.submitter} &middot; ${t.dept}</div>
+  if (!items.length) { list.innerHTML = '<div class="state-msg" style="padding:1rem">No tickets found.</div>'; return; }
+  list.innerHTML = items.map(r => {
+    const f = r.fields;
+    const s = f['Status'] || 'New';
+    const date = f['Submitted At'] ? new Date(f['Submitted At']).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+    return `<div class="ticket-item${r.id===currentTicketId?' active':''}" onclick="openTicket('${r.id}')">
+      <div class="ti-top">
+        <span class="ti-id">${escHtml(f['Ticket ID']||'—')}</span>
+        <span class="pill ${pillClass(s)}">${escHtml(s)}</span>
       </div>
-      <span><span class="status-pill ${statusClass(t.status)}">${statusLabel(t.status)}</span></span>
-      <span style="font-size:0.76rem;color:var(--mid)">${t.category}</span>
-      <span style="font-size:0.76rem">${priorityDot(t.priority)}</span>
-      <span class="ticket-date">${t.date}</span>
-    `;
-    row.onclick = () => openTicket(t.id);
-    list.appendChild(row);
-  });
+      <div class="ti-title">${escHtml(f['Title']||'(Untitled)')}</div>
+      <div class="ti-meta">${[f['Submitter Name'],f['Department'],date].filter(Boolean).map(escHtml).join(' · ')}</div>
+    </div>`;
+  }).join('');
 }
 
-function setFilter(btn, f) {
-  document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+function setFilter(btn) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
   btn.classList.add('active');
-  currentFilter = f;
+  currentFilter = btn.dataset.status;
   renderTickets();
 }
-function searchTickets(val) { currentSearch = val; renderTickets(); }
-function filterTickets(f) {
-  currentFilter = f;
-  showPage('tickets', null);
-  document.querySelectorAll('.nav-btn').forEach(b => {
-    if (b.textContent.includes('Requests')) b.classList.add('active'); else b.classList.remove('active');
-  });
+function filterTickets() { currentSearch = document.getElementById('search-input').value; renderTickets(); }
+
+// ── TICKET DETAIL ──
+async function openTicket(recordId) {
+  currentTicketId = recordId;
+  const rec = allTickets.find(r => r.id === recordId);
+  if (!rec) return;
+  renderDetail(rec);
+  renderTickets();
+  await Promise.all([loadMessages(recordId), loadDocs(recordId)]);
+}
+
+function renderDetail(rec) {
+  const f = rec.fields;
+  const s = f['Status'] || 'New';
+  const date = f['Submitted At'] ? new Date(f['Submitted At']).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '';
+
+  document.getElementById('d-id').textContent = [f['Ticket ID'], f['Category']].filter(Boolean).join(' · ').toUpperCase();
+  document.getElementById('d-title').textContent = f['Title'] || '(Untitled)';
+  document.getElementById('d-meta').innerHTML =
+    `<span class="pill ${pillClass(s)}">${escHtml(s)}</span>` +
+    [f['Submitter Name'], f['Department'], date].filter(Boolean).map(v => `<span class="meta-chip">${escHtml(v)}</span>`).join('');
+
+  document.getElementById('d-description').textContent = f['Description'] || '(No description provided.)';
+
+  const extras = [
+    ['Priority', f['Priority']],
+    ['Deadline', f['Deadline']],
+    ['Counterparty', f['Counterparty']],
+    ['Assigned To', f['Assigned To']],
+    ['Confidentiality', f['Confidentiality']]
+  ].filter(([,v]) => v);
+  document.getElementById('d-extras').innerHTML = extras.map(([k,v]) =>
+    `<div class="extra-field"><span class="extra-label">${k}</span>${escHtml(v)}</div>`).join('');
+
+  document.querySelectorAll('.status-btn').forEach(b => b.classList.toggle('active', b.dataset.s === s));
+
+  document.getElementById('welcome').classList.add('hidden');
+  document.getElementById('detail').classList.remove('hidden');
+  document.getElementById('d-messages').innerHTML = '<div class="state-msg">Loading…</div>';
+  document.getElementById('d-docs').innerHTML = '<div class="state-msg">Loading…</div>';
+}
+
+function clearDetail() {
+  currentTicketId = null;
+  document.getElementById('detail').classList.add('hidden');
+  document.getElementById('welcome').classList.remove('hidden');
   renderTickets();
 }
-function filterCategory(c) {
-  currentFilter = 'all'; currentSearch = c;
-  showPage('tickets', null);
-  document.querySelectorAll('.nav-btn').forEach(b => {
-    if (b.textContent.includes('Requests')) b.classList.add('active'); else b.classList.remove('active');
-  });
-  renderTickets();
+
+// ── STATUS ──
+async function updateStatus(newStatus) {
+  if (!currentTicketId) return;
+  const result = await atFetch('PATCH', `${TABLES.tickets}/${currentTicketId}`, { fields: { 'Status': newStatus } });
+  if (result) {
+    const rec = allTickets.find(r => r.id === currentTicketId);
+    if (rec) rec.fields['Status'] = newStatus;
+    renderDetail(rec || { fields: {} });
+    renderTickets();
+    showToast('Status updated to ' + newStatus + '.');
+  } else { showToast('Failed to update status.'); }
 }
 
-function openTicket(id) {
-  const t = tickets.find(x => x.id === id);
-  if (!t) return;
-  currentTicketRecord = t;
-
-  // Header
-  document.getElementById('detail-id').textContent = t.id + ' \u00b7 ' + (t.category || '').toUpperCase();
-  document.getElementById('detail-title').textContent = t.title;
-  document.getElementById('detail-meta').innerHTML = `
-    <span class="status-pill ${statusClass(t.status)}">${statusLabel(t.status)}</span>
-    <span style="font-size:0.72rem;color:var(--mid);font-family:'DM Mono',monospace;letter-spacing:0.06em">${t.category}</span>
-    <span style="font-size:0.72rem;color:var(--mid)">Submitted ${t.date} by ${t.submitter} &middot; ${t.dept}</span>
-  `;
-
-  // Description body
-  const bodyEl = document.getElementById('detail-body');
-  if (bodyEl) bodyEl.textContent = t.description || '(No description provided)';
-
-  // Clear docs — real doc upload coming later
-  const docsEl = document.getElementById('detail-docs');
-  if (docsEl) docsEl.innerHTML = '<div style="font-size:0.76rem;color:var(--mid);padding:0.5rem 0">No documents attached yet.</div>';
-
-  // Meta sidebar
-  const mc = document.getElementById('detail-meta-card');
-  if (mc) {
-    mc.innerHTML = `
-      <div class="meta-row"><span class="meta-key">Status</span><span class="meta-val"><span class="status-pill ${statusClass(t.status)}">${statusLabel(t.status)}</span></span></div>
-      <div class="meta-row"><span class="meta-key">Priority</span><span class="meta-val">${priorityDot(t.priority)}</span></div>
-      <div class="meta-row"><span class="meta-key">Category</span><span class="meta-val">${t.category || '—'}</span></div>
-      <div class="meta-row"><span class="meta-key">Requestor</span><span class="meta-val">${t.submitter || '—'}</span></div>
-      <div class="meta-row"><span class="meta-key">Department</span><span class="meta-val">${t.dept || '—'}</span></div>
-      ${t.counterparty ? `<div class="meta-row"><span class="meta-key">Counterparty</span><span class="meta-val">${t.counterparty}</span></div>` : ''}
-      ${t.deadline ? `<div class="meta-row"><span class="meta-key">Deadline</span><span class="meta-val">${t.deadline}</span></div>` : ''}
-      <div class="meta-row"><span class="meta-key">Submitted</span><span class="meta-val">${t.date || '—'}</span></div>
-      <div class="meta-row"><span class="meta-key">Assigned To</span><span class="meta-val">${t.assignedTo || 'Jordan Reeves'}</span></div>
-    `;
-  }
-
-  showPage('detail', null);
-  loadMessages(t.recordId);
-}
-
-async function loadMessages(ticketRecordId) {
-  const body = document.getElementById('message-body');
-  body.innerHTML = '';
-  const formula = encodeURIComponent('FIND("' + ticketRecordId + '", ARRAYJOIN({Ticket}))');
-  const data = await atFetch('GET', TABLES.messages + '?filterByFormula=' + formula + '&sort%5B0%5D%5Bfield%5D=Sent+At&sort%5B0%5D%5Bdirection%5D=asc');
-  if (!data || !data.records || data.records.length === 0) {
-    document.getElementById('msg-count').textContent = '0 messages';
-    return;
-  }
-  data.records.forEach(r => {
-    const role = r.fields['Sender Role'] || 'Employee';
-    const isCounsel = role === 'Counsel';
-    const name = r.fields['Sender Name'] || 'Unknown';
-    const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-    const sentAt = r.fields['Sent At']
-      ? new Date(r.fields['Sent At']).toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})
-      : 'Sent';
-    const div = document.createElement('div');
-    div.className = `message-bubble ${isCounsel ? 'from-counsel' : ''}`;
-    div.innerHTML = `
-      <div class="msg-av ${isCounsel ? 'counsel' : ''}">${initials}</div>
-      <div class="msg-body">
-        <div class="msg-meta">${name} &middot; ${role} &middot; ${sentAt}</div>
-        <div class="msg-text">${r.fields['Body'] || ''}</div>
-      </div>
-    `;
-    body.appendChild(div);
-  });
-  const count = data.records.length;
-  document.getElementById('msg-count').textContent = count + ' message' + (count !== 1 ? 's' : '');
-  body.scrollTop = body.scrollHeight;
-}
-
-function showPage(page, navBtn) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
-  if (navBtn) {
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    navBtn.classList.add('active');
-  }
-  if (page === 'tickets') renderTickets();
-  window.scrollTo(0, 0);
+// ── MESSAGES ──
+async function loadMessages(ticketId) {
+  const el = document.getElementById('d-messages');
+  const formula = encodeURIComponent(`FIND("${ticketId}", ARRAYJOIN({Ticket}))`);
+  const data = await atFetch('GET', `${TABLES.messages}?filterByFormula=${formula}&sort%5B0%5D%5Bfield%5D=Sent%20At&sort%5B0%5D%5Bdirection%5D=asc`);
+  if (!data || !data.records.length) { el.innerHTML = '<div class="state-msg">No messages yet.</div>'; return; }
+  el.innerHTML = data.records.map(r => {
+    const f = r.fields;
+    const counsel = f['Sender Role'] === 'Counsel';
+    const time = f['Sent At'] ? new Date(f['Sent At']).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
+    return `<div class="msg ${counsel?'msg-counsel':'msg-employee'}">
+      <div class="msg-bubble">${escHtml(f['Body']||'')}</div>
+      <div class="msg-meta">${escHtml(f['Sender Name']||'')} · ${counsel?'Counsel':'Employee'} · ${time}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
 }
 
 async function sendMessage() {
-  const input = document.getElementById('msg-input');
+  const input = document.getElementById('reply-input');
   const val = input.value.trim();
-  if (!val) return;
-  const senderName = 'Jordan Reeves';
-  if (currentTicketRecord) {
-    const result = await atFetch('POST', TABLES.messages, {
-      fields: {
-        'Ticket': [currentTicketRecord.recordId],
-        'Sender Name': senderName,
-        'Sender Role': 'Counsel',
-        'Body': val
-      }
+  if (!val || !currentTicketId) return;
+  input.disabled = true;
+  const result = await atFetch('POST', TABLES.messages, { fields: {
+    'Ticket': [currentTicketId],
+    'Sender Name': counselName || 'Counsel',
+    'Sender Role': 'Counsel',
+    'Body': val
+  }});
+  input.disabled = false;
+  if (result) { input.value = ''; await loadMessages(currentTicketId); }
+  else showToast('Message failed. Try again.');
+}
+
+// ── DOCUMENTS ──
+async function loadDocs(ticketId) {
+  const el = document.getElementById('d-docs');
+  const formula = encodeURIComponent(`FIND("${ticketId}", ARRAYJOIN({Ticket}))`);
+  const data = await atFetch('GET', `${TABLES.docs}?filterByFormula=${formula}`);
+  if (!data || !data.records.length) { el.innerHTML = '<div class="state-msg">No documents attached.</div>'; return; }
+  el.innerHTML = data.records.map(r => {
+    const f = r.fields;
+    const ext = (f['Filename']||'').split('.').pop().toUpperCase().slice(0,5) || (f['File Type']||'FILE').split('/').pop().toUpperCase().slice(0,5);
+    const fileUrl = f['File']?.[0]?.url;
+    return `<div class="doc-item">
+      <span class="doc-ext">${escHtml(ext)}</span>
+      <div class="doc-info">
+        <div class="doc-name">${escHtml(f['Filename']||'Untitled')}</div>
+        <div class="doc-meta">${[f['Uploaded By'],f['File Size']].filter(Boolean).map(escHtml).join(' · ')}</div>
+      </div>
+      ${fileUrl ? `<a class="doc-dl" href="${fileUrl}" target="_blank">↓</a>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function uploadDocument(file) {
+  if (!file || !currentTicketId) return;
+  showToast('Uploading…');
+  document.getElementById('file-input').value = '';
+  const result = await atFetch('POST', TABLES.docs, { fields: {
+    'Ticket': [currentTicketId],
+    'Filename': file.name,
+    'File Type': file.type || 'application/octet-stream',
+    'File Size': formatSize(file.size),
+    'Uploaded By': counselName || 'Counsel'
+  }});
+  if (!result) { showToast('Upload failed.'); return; }
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('filename', file.name);
+    fd.append('contentType', file.type || 'application/octet-stream');
+    const up = await fetch(`https://content.airtable.com/v0/${BASE_ID}/${result.id}/${DOC_FILE_FIELD}/uploadAttachment`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}` },
+      body: fd
     });
-    if (!result) { showToast('Message failed to send. Try again.'); return; }
-  }
-  const body = document.getElementById('message-body');
-  const initials = senderName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'ME';
-  const div = document.createElement('div');
-  div.className = 'message-bubble from-counsel';
-  div.innerHTML = `
-    <div class="msg-av counsel">${initials}</div>
-    <div class="msg-body">
-      <div class="msg-meta">${senderName} &middot; Counsel &middot; Just now</div>
-      <div class="msg-text">${val}</div>
-    </div>
-  `;
-  body.appendChild(div);
-  input.value = '';
-  body.scrollTop = body.scrollHeight;
-  const count = body.querySelectorAll('.message-bubble').length;
-  document.getElementById('msg-count').textContent = count + ' message' + (count !== 1 ? 's' : '');
-  showToast('Message sent \u2014 hot off the press.');
+    showToast(up.ok ? 'Document uploaded!' : 'Metadata saved — attach file manually in Airtable.');
+  } catch { showToast('Metadata saved — attach file manually in Airtable.'); }
+  await loadDocs(currentTicketId);
 }
 
-function simulateUpload() {
-  const files = ['Vendor_Agreement_Draft.pdf', 'Legal_Memo_Supporting.docx', 'Financial_Summary_Q1.xlsx', 'Signed_NDA_Copy.pdf'];
-  const f = files[Math.floor(Math.random() * files.length)];
-  const ext = f.split('.').pop().toUpperCase();
-  const sizes = { PDF:'1.4 MB', DOCX:'320 KB', XLSX:'95 KB' };
-  const row = document.createElement('div');
-  row.className = 'doc-row';
-  row.innerHTML = `
-    <div class="doc-icon">${ext}</div>
-    <div>
-      <div class="doc-name">${f}</div>
-      <div class="doc-meta">Uploaded just now &middot; ${sizes[ext] || '500 KB'}</div>
-    </div>
-    <span class="doc-dl">Download \u2193</span>
-  `;
-  const detailDocs = document.getElementById('detail-docs');
-  const newDocs = document.getElementById('new-doc-list');
-  if (document.getElementById('page-detail').classList.contains('active')) {
-    detailDocs.appendChild(row);
-  } else {
-    newDocs.appendChild(row.cloneNode(true));
-  }
-  showToast('"' + f + '" uploaded successfully.');
-}
-
+// ── NEW TICKET ──
 async function submitTicket() {
-  const title    = document.getElementById('new-title').value.trim();
-  const name     = document.getElementById('new-name').value.trim();
-  const dept     = document.getElementById('new-dept').value;
-  const category = document.getElementById('new-category').value;
-  const priorityRaw   = document.getElementById('new-priority').value;
-  const deadline      = document.getElementById('new-deadline').value;
-  const counterparty  = document.getElementById('new-counterparty').value.trim();
-  const description   = document.getElementById('new-description').value.trim();
-  const confidentiality = document.getElementById('new-confidentiality').value.trim();
-
-  if (!title || !name || !dept) {
-    showToast('Please fill in your name, department, and request title.');
-    return;
-  }
-  currentUserName = name;
-
+  const title = document.getElementById('f-title').value.trim();
+  const submitter = document.getElementById('f-submitter').value.trim();
+  if (!title || !submitter) { showToast('Title and submitter name are required.'); return; }
   const fields = {
     'Title': title,
-    'Submitter Name': name,
-    'Department': dept,
-    'Category': category,
-    'Priority': mapPriorityUp(priorityRaw),
-    'Description': description,
-    'Counterparty': counterparty,
-    'Confidentiality': confidentiality,
+    'Submitter Name': submitter,
     'Status': 'New',
-    'Assigned To': 'Jordan Reeves',
+    'Assigned To': counselName || ''
   };
-  if (deadline) fields['Deadline'] = deadline;
-
+  const dept = document.getElementById('f-dept').value;
+  const cat = document.getElementById('f-category').value;
+  const pri = document.getElementById('f-priority').value;
+  const dl = document.getElementById('f-deadline').value;
+  const cp = document.getElementById('f-counterparty').value.trim();
+  const desc = document.getElementById('f-description').value.trim();
+  const conf = document.getElementById('f-confidentiality').value.trim();
+  if (dept) fields['Department'] = dept;
+  if (cat)  fields['Category'] = cat;
+  if (pri)  fields['Priority'] = pri;
+  if (dl)   fields['Deadline'] = dl;
+  if (cp)   fields['Counterparty'] = cp;
+  if (desc) fields['Description'] = desc;
+  if (conf) fields['Confidentiality'] = conf;
   const result = await atFetch('POST', TABLES.tickets, { fields });
-  if (result && result.id) {
-    const newId = result.fields?.['Ticket ID'] || ('LR-' + String(result.fields?.['# ID'] || '').padStart(4, '0'));
-    showToast(newId + ' submitted! We\u2019ll get on it \u2014 hot and fresh.');
+  if (result) {
+    closeNewTicket();
+    showToast((result.fields?.['Ticket ID'] || 'Ticket') + ' created.');
     await loadTickets();
-    setTimeout(() => showPage('tickets', null), 1400);
-  } else {
-    showToast('Something went wrong. Please try again.');
-  }
+  } else showToast('Failed to create ticket.');
 }
-
-async function updateTicketStatus(newStatus) {
-  if (!currentTicketRecord) return;
-  const result = await atFetch('PATCH', TABLES.tickets + '/' + currentTicketRecord.recordId, {
-    fields: { 'Status': newStatus }
+function openNewTicket() { document.getElementById('new-ticket-overlay').classList.remove('hidden'); }
+function closeNewTicket() {
+  document.getElementById('new-ticket-overlay').classList.add('hidden');
+  ['f-title','f-submitter','f-description','f-counterparty','f-confidentiality','f-deadline'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
   });
-  if (result && result.id) {
-    currentTicketRecord.status = mapStatus(newStatus);
-    showToast('Status updated to ' + newStatus + '.');
-    await loadTickets();
-    // Refresh meta sidebar
-    const mc = document.getElementById('detail-meta-card');
-    if (mc) {
-      const s = currentTicketRecord.status;
-      mc.querySelector('.status-pill').className = 'status-pill ' + statusClass(s);
-      mc.querySelector('.status-pill').textContent = statusLabel(s);
-    }
-  } else {
-    showToast('Could not update status. Try again.');
-  }
+  ['f-dept','f-category','f-priority'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.selectedIndex = 0;
+  });
 }
 
+// ── HELPERS ──
+function pillClass(s) {
+  return { 'New':'pill-new','In Progress':'pill-prog','Urgent':'pill-urgent','Completed':'pill-done' }[s] || 'pill-new';
+}
+function formatSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3200);
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
 }
-
-loadTickets();
 </script>
 </body>
 </html>
