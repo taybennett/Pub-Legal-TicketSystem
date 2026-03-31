@@ -672,10 +672,10 @@ async function updateStatus(newStatus) {
 // ── MESSAGES ──
 async function loadMessages(ticketId) {
   const el = document.getElementById('d-messages');
-  const formula = encodeURIComponent(`FIND("${ticketId}", ARRAYJOIN({Ticket}))`);
-  const data = await atFetch('GET', `${TABLES.messages}?filterByFormula=${formula}&sort%5B0%5D%5Bfield%5D=Sent%20At&sort%5B0%5D%5Bdirection%5D=asc`);
-  if (!data || !data.records.length) { el.innerHTML = '<div class="state-msg">No messages yet.</div>'; return; }
-  el.innerHTML = data.records.map(r => {
+  const data = await atFetch('GET', `${TABLES.messages}?sort%5B0%5D%5Bfield%5D=Sent%20At&sort%5B0%5D%5Bdirection%5D=asc`);
+  const records = (data?.records || []).filter(r => Array.isArray(r.fields['Ticket']) && r.fields['Ticket'].includes(ticketId));
+  if (!records.length) { el.innerHTML = '<div class="state-msg">No messages yet.</div>'; return; }
+  el.innerHTML = records.map(r => {
     const f = r.fields;
     const counsel = f['Sender Role'] === 'Counsel';
     const time = f['Sent At'] ? new Date(f['Sent At']).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
@@ -689,6 +689,7 @@ async function loadMessages(ticketId) {
 
 async function sendMessage() {
   const input = document.getElementById('reply-input');
+
   const val = input.value.trim();
   if (!val || !currentTicketId) return;
   input.disabled = true;
@@ -706,10 +707,10 @@ async function sendMessage() {
 // ── DOCUMENTS ──
 async function loadDocs(ticketId) {
   const el = document.getElementById('d-docs');
-  const formula = encodeURIComponent(`FIND("${ticketId}", ARRAYJOIN({Ticket}))`);
-  const data = await atFetch('GET', `${TABLES.docs}?filterByFormula=${formula}`);
-  if (!data || !data.records.length) { el.innerHTML = '<div class="state-msg">No documents attached.</div>'; return; }
-  el.innerHTML = data.records.map(r => {
+  const data = await atFetch('GET', `${TABLES.docs}`);
+  const records = (data?.records || []).filter(r => Array.isArray(r.fields['Ticket']) && r.fields['Ticket'].includes(ticketId));
+  if (!records.length) { el.innerHTML = '<div class="state-msg">No documents attached.</div>'; return; }
+  el.innerHTML = records.map(r => {
     const f = r.fields;
     const ext = (f['Filename']||'').split('.').pop().toUpperCase().slice(0,5) || (f['File Type']||'FILE').split('/').pop().toUpperCase().slice(0,5);
     const fileUrl = f['File']?.[0]?.url;
@@ -737,14 +738,11 @@ async function uploadDocument(file) {
   }});
   if (!result) { showToast('Upload failed.'); return; }
   try {
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('filename', file.name);
-    fd.append('contentType', file.type || 'application/octet-stream');
+    const base64 = await fileToBase64(file);
     const up = await fetch(`https://content.airtable.com/v0/${BASE_ID}/${result.id}/${DOC_FILE_FIELD}/uploadAttachment`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}` },
-      body: fd
+      headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contentType: file.type || 'application/octet-stream', file: base64, filename: file.name })
     });
     showToast(up.ok ? 'Document uploaded!' : 'Metadata saved — attach file manually in Airtable.');
   } catch { showToast('Metadata saved — attach file manually in Airtable.'); }
@@ -812,16 +810,22 @@ async function uploadDocumentToTicket(file, ticketRecordId, uploaderName) {
   }});
   if (!result) return;
   try {
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('filename', file.name);
-    fd.append('contentType', file.type || 'application/octet-stream');
+    const base64 = await fileToBase64(file);
     await fetch(`https://content.airtable.com/v0/${BASE_ID}/${result.id}/${DOC_FILE_FIELD}/uploadAttachment`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}` },
-      body: fd
+      headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contentType: file.type || 'application/octet-stream', file: base64, filename: file.name })
     });
   } catch(e) { console.warn('File binary upload failed:', e); }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 // ── HELPERS ──
