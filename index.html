@@ -1400,7 +1400,7 @@
         <div>
           <div class="meta-card">
             <div class="meta-card-head">Ticket Details</div>
-            <div class="meta-card-body">
+            <div class="meta-card-body" id="detail-meta-card">
               <div class="meta-row">
                 <span class="meta-key">Status</span>
                 <span class="meta-val"><span class="status-pill status-open">In the Oven</span></span>
@@ -1436,10 +1436,9 @@
             </div>
           </div>
 
-          <button class="action-btn action-btn-primary" onclick="showToast('Status updated to Under Review.')">Mark Under Review</button>
-          <button class="action-btn" onclick="showToast('Ticket closed. Good work.')">Close Ticket</button>
-          <button class="action-btn" onclick="showToast('Info request sent to requestor.')">Request More Info</button>
-          <button class="action-btn" onclick="showToast('Flagged as urgent — hot and fresh.')">Flag as Urgent</button>
+          <button class="action-btn action-btn-primary" onclick="updateTicketStatus('In Progress')">Mark In Progress</button>
+          <button class="action-btn" onclick="updateTicketStatus('Completed')">Close Ticket</button>
+          <button class="action-btn" onclick="updateTicketStatus('Urgent')">Flag as Urgent</button>
 
           <div class="meta-card" style="margin-top:1rem">
             <div class="meta-card-head">History</div>
@@ -1759,6 +1758,8 @@ function openTicket(id) {
   const t = tickets.find(x => x.id === id);
   if (!t) return;
   currentTicketRecord = t;
+
+  // Header
   document.getElementById('detail-id').textContent = t.id + ' \u00b7 ' + (t.category || '').toUpperCase();
   document.getElementById('detail-title').textContent = t.title;
   document.getElementById('detail-meta').innerHTML = `
@@ -1766,6 +1767,31 @@ function openTicket(id) {
     <span style="font-size:0.72rem;color:var(--mid);font-family:'DM Mono',monospace;letter-spacing:0.06em">${t.category}</span>
     <span style="font-size:0.72rem;color:var(--mid)">Submitted ${t.date} by ${t.submitter} &middot; ${t.dept}</span>
   `;
+
+  // Description body
+  const bodyEl = document.getElementById('detail-body');
+  if (bodyEl) bodyEl.textContent = t.description || '(No description provided)';
+
+  // Clear docs — real doc upload coming later
+  const docsEl = document.getElementById('detail-docs');
+  if (docsEl) docsEl.innerHTML = '<div style="font-size:0.76rem;color:var(--mid);padding:0.5rem 0">No documents attached yet.</div>';
+
+  // Meta sidebar
+  const mc = document.getElementById('detail-meta-card');
+  if (mc) {
+    mc.innerHTML = `
+      <div class="meta-row"><span class="meta-key">Status</span><span class="meta-val"><span class="status-pill ${statusClass(t.status)}">${statusLabel(t.status)}</span></span></div>
+      <div class="meta-row"><span class="meta-key">Priority</span><span class="meta-val">${priorityDot(t.priority)}</span></div>
+      <div class="meta-row"><span class="meta-key">Category</span><span class="meta-val">${t.category || '—'}</span></div>
+      <div class="meta-row"><span class="meta-key">Requestor</span><span class="meta-val">${t.submitter || '—'}</span></div>
+      <div class="meta-row"><span class="meta-key">Department</span><span class="meta-val">${t.dept || '—'}</span></div>
+      ${t.counterparty ? `<div class="meta-row"><span class="meta-key">Counterparty</span><span class="meta-val">${t.counterparty}</span></div>` : ''}
+      ${t.deadline ? `<div class="meta-row"><span class="meta-key">Deadline</span><span class="meta-val">${t.deadline}</span></div>` : ''}
+      <div class="meta-row"><span class="meta-key">Submitted</span><span class="meta-val">${t.date || '—'}</span></div>
+      <div class="meta-row"><span class="meta-key">Assigned To</span><span class="meta-val">${t.assignedTo || 'Jordan Reeves'}</span></div>
+    `;
+  }
+
   showPage('detail', null);
   loadMessages(t.recordId);
 }
@@ -1773,7 +1799,7 @@ function openTicket(id) {
 async function loadMessages(ticketRecordId) {
   const body = document.getElementById('message-body');
   body.innerHTML = '';
-  const formula = encodeURIComponent('FIND("' + ticketRecordId + '", ARRAYJOIN(Ticket))');
+  const formula = encodeURIComponent('FIND("' + ticketRecordId + '", ARRAYJOIN({Ticket}))');
   const data = await atFetch('GET', TABLES.messages + '?filterByFormula=' + formula + '&sort%5B0%5D%5Bfield%5D=Sent+At&sort%5B0%5D%5Bdirection%5D=asc');
   if (!data || !data.records || data.records.length === 0) {
     document.getElementById('msg-count').textContent = '0 messages';
@@ -1913,6 +1939,27 @@ async function submitTicket() {
     setTimeout(() => showPage('tickets', null), 1400);
   } else {
     showToast('Something went wrong. Please try again.');
+  }
+}
+
+async function updateTicketStatus(newStatus) {
+  if (!currentTicketRecord) return;
+  const result = await atFetch('PATCH', TABLES.tickets + '/' + currentTicketRecord.recordId, {
+    fields: { 'Status': newStatus }
+  });
+  if (result && result.id) {
+    currentTicketRecord.status = mapStatus(newStatus);
+    showToast('Status updated to ' + newStatus + '.');
+    await loadTickets();
+    // Refresh meta sidebar
+    const mc = document.getElementById('detail-meta-card');
+    if (mc) {
+      const s = currentTicketRecord.status;
+      mc.querySelector('.status-pill').className = 'status-pill ' + statusClass(s);
+      mc.querySelector('.status-pill').textContent = statusLabel(s);
+    }
+  } else {
+    showToast('Could not update status. Try again.');
   }
 }
 
