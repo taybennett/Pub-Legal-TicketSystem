@@ -283,7 +283,7 @@ header {
     <div class="login-sub">LEGAL REQUEST PORTAL</div>
     <div class="form-row">
       <label class="form-label">Your Name</label>
-      <select class="form-select" id="login-name">
+      <select class="form-select" id="login-name" onchange="toggleEmailRow()">
         <option value="">Loading users…</option>
       </select>
     </div>
@@ -291,6 +291,12 @@ header {
       <label class="form-label">PIN</label>
       <input class="form-input" id="login-pin" type="password" placeholder="Enter your PIN"
         onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <div class="form-row" id="email-row" style="display:none;">
+      <label class="form-label">Your Email</label>
+      <input class="form-input" id="login-email" type="email" placeholder="Enter your email address"
+        onkeydown="if(event.key==='Enter') doLogin()">
+      <div style="font-size:0.7rem;color:var(--mid);margin-top:0.25rem;font-family:'DM Mono',monospace;">First time only — we'll save this for future logins.</div>
     </div>
     <div class="login-error" id="login-error"></div>
     <button class="btn-submit" id="login-btn" onclick="doLogin()">Sign In</button>
@@ -618,6 +624,15 @@ async function loadLoginUsers() {
     allUsers.map(r => `<option value="${r.id}">${escHtml(r.fields['Name']||'')}</option>`).join('');
 }
 
+function toggleEmailRow() {
+  const recordId = document.getElementById('login-name').value;
+  const rec = allUsers.find(r => r.id === recordId);
+  const hasEmail = rec && (rec.fields['Email'] || '').trim();
+  const row = document.getElementById('email-row');
+  row.style.display = hasEmail ? 'none' : (recordId ? '' : 'none');
+  if (!hasEmail && recordId) document.getElementById('login-email').value = '';
+}
+
 async function doLogin() {
   const errEl = document.getElementById('login-error');
   const btn = document.getElementById('login-btn');
@@ -649,12 +664,36 @@ async function doLogin() {
     btn.textContent = 'Sign In'; btn.disabled = false; return;
   }
 
+  // ── Email capture: require email if not already in Airtable ──
+  const existingEmail = (rec.fields['Email'] || '').trim();
+  let userEmail = existingEmail;
+  if (!existingEmail) {
+    const emailInput = (document.getElementById('login-email').value || '').trim();
+    if (!emailInput || !emailInput.includes('@')) {
+      errEl.textContent = 'Please enter a valid email address.';
+      btn.textContent = 'Sign In'; btn.disabled = false; return;
+    }
+    try {
+      btn.textContent = 'Saving…';
+      await atFetch('PATCH', TABLES.users, {
+        records: [{ id: recordId, fields: { 'Email': emailInput } }]
+      });
+      userEmail = emailInput;
+      // Update cached allUsers record so toggleEmailRow won't re-show the field
+      const cached = allUsers.find(r => r.id === recordId);
+      if (cached) cached.fields['Email'] = emailInput;
+    } catch(e) {
+      errEl.textContent = 'Could not save email — please try again.';
+      btn.textContent = 'Sign In'; btn.disabled = false; return;
+    }
+  }
+
   currentUser = {
     name: rec.fields['Name'] || '',
     role: role,
     recordId: rec.id,
     dept: rec.fields['Department'] || '',
-    email: rec.fields['Email'] || ''
+    email: userEmail
   };
   localStorage.setItem('pubLegalSession', JSON.stringify(currentUser));
   btn.textContent = 'Sign In'; btn.disabled = false;
@@ -687,6 +726,8 @@ function doLogout() {
   document.getElementById('emp-app').classList.add('hidden');
   document.getElementById('btn-new-ticket').classList.add('hidden');
   document.getElementById('login-pin').value = '';
+  document.getElementById('login-email').value = '';
+  document.getElementById('email-row').style.display = 'none';
   document.getElementById('login-error').textContent = '';
   document.getElementById('login-screen').classList.remove('hidden');
 }
