@@ -582,6 +582,7 @@ const TABLES = {
   docs:     'tblCvHWHKVWxPULf5'
 };
 const DOC_FILE_FIELD = 'fldw5S3VPLkxD71Ej';
+const DEFAULT_ATTORNEY_EMAIL = 'taylorb@popupbagels.com';
 
 // ── SESSION STATE ──
 let currentUser = null;   // { name, role, recordId, dept }
@@ -828,7 +829,7 @@ async function submitAttyTicket() {
   const fields = { 'Title': title, 'Submitter Name': submitter, 'Status': 'New', 'Assigned To': currentUser?.name || '' };
   const submitterEmail = getUserEmail(submitter);
   if (submitterEmail) fields['Submitter Email'] = submitterEmail;
-  if (currentUser?.email) fields['Attorney Email'] = currentUser.email;
+  fields['Attorney Email'] = currentUser?.email || DEFAULT_ATTORNEY_EMAIL;
   const dept = document.getElementById('f-dept').value;
   const cat  = document.getElementById('f-category').value;
   const pri  = document.getElementById('f-priority').value;
@@ -888,6 +889,7 @@ async function submitEmpTicket() {
   const name = currentUser?.name || '';
   const fields = { 'Title': title, 'Submitter Name': name, 'Status': 'New', 'Description': desc };
   if (currentUser?.email) fields['Submitter Email'] = currentUser.email;
+  fields['Attorney Email'] = DEFAULT_ATTORNEY_EMAIL;
   if (currentUser?.dept) fields['Department'] = currentUser.dept;
   const cat  = document.getElementById('s-category').value;
   const pri  = document.getElementById('s-priority').value;
