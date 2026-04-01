@@ -652,7 +652,8 @@ async function doLogin() {
     name: rec.fields['Name'] || '',
     role: role,
     recordId: rec.id,
-    dept: rec.fields['Department'] || ''
+    dept: rec.fields['Department'] || '',
+    email: rec.fields['Email'] || ''
   };
   localStorage.setItem('pubLegalSession', JSON.stringify(currentUser));
   btn.textContent = 'Sign In'; btn.disabled = false;
@@ -701,6 +702,12 @@ async function atFetch(method, path, body) {
     if (!res.ok) { const e = await res.json(); console.error('Airtable error:', e); return null; }
     return res.json();
   } catch(e) { console.error('Fetch error:', e); return null; }
+}
+
+// ── EMAIL HELPER ──
+function getUserEmail(name) {
+  const user = allUsers.find(r => (r.fields['Name'] || '') === name);
+  return user?.fields['Email'] || '';
 }
 
 // ══════════════════════════════════════════
@@ -819,6 +826,9 @@ async function submitAttyTicket() {
   const submitter = document.getElementById('f-submitter').value.trim();
   if (!title || !submitter) { showToast('Title and submitter name are required.'); return; }
   const fields = { 'Title': title, 'Submitter Name': submitter, 'Status': 'New', 'Assigned To': currentUser?.name || '' };
+  const submitterEmail = getUserEmail(submitter);
+  if (submitterEmail) fields['Submitter Email'] = submitterEmail;
+  if (currentUser?.email) fields['Attorney Email'] = currentUser.email;
   const dept = document.getElementById('f-dept').value;
   const cat  = document.getElementById('f-category').value;
   const pri  = document.getElementById('f-priority').value;
@@ -877,6 +887,7 @@ async function submitEmpTicket() {
   if (!title || !desc) { showToast('Title and description are required.'); return; }
   const name = currentUser?.name || '';
   const fields = { 'Title': title, 'Submitter Name': name, 'Status': 'New', 'Description': desc };
+  if (currentUser?.email) fields['Submitter Email'] = currentUser.email;
   if (currentUser?.dept) fields['Department'] = currentUser.dept;
   const cat  = document.getElementById('s-category').value;
   const pri  = document.getElementById('s-priority').value;
@@ -1014,12 +1025,19 @@ async function sendMessage(view) {
   if (!val || !currentTicketId) return;
   input.disabled = true;
   const isAtty = view === 'atty';
-  const result = await atFetch('POST', TABLES.messages, { fields: {
+  // Find the current ticket to get the recipient's email
+  const ticketRec = (isAtty ? allTickets : myTickets).find(r => r.id === currentTicketId);
+  const recipientEmail = isAtty
+    ? (ticketRec?.fields['Submitter Email'] || '')
+    : (ticketRec?.fields['Attorney Email'] || '');
+  const msgFields = {
     'Ticket': [currentTicketId],
     'Sender Name': currentUser?.name || (isAtty ? 'Counsel' : 'Employee'),
     'Sender Role': isAtty ? 'Counsel' : 'Employee',
     'Body': val
-  }});
+  };
+  if (recipientEmail) msgFields['Recipient Email'] = recipientEmail;
+  const result = await atFetch('POST', TABLES.messages, { fields: msgFields });
   input.disabled = false;
   if (result) { input.value = ''; await loadMessages(currentTicketId, view); }
   else showToast('Message failed. Try again.');
