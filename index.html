@@ -301,6 +301,8 @@ header {
 .um-edit-btn:hover { background: var(--black); color: var(--white); border-color: var(--black); }
 .btn-secondary { background: none; border: 1px solid var(--border); padding: 10px 22px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; color: var(--black); font-weight: 500; }
 .btn-secondary:hover { border-color: var(--black); }
+.btn-delete { background: none; border: 1px solid #e0a0a0; padding: 10px 22px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; color: #c0392b; font-weight: 500; margin-left: auto; }
+.btn-delete:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
 .pin-row { display: flex; gap: 0.5rem; }
 .btn-toggle-pin { background: none; border: 1px solid var(--border); padding: 0 14px; font-size: 0.7rem; cursor: pointer; color: var(--mid); font-family: 'DM Mono', monospace; letter-spacing: 0.05em; flex-shrink: 0; white-space: nowrap; }
 .btn-toggle-pin:hover { background: var(--black); color: var(--white); border-color: var(--black); }
@@ -765,6 +767,7 @@ header {
       <div class="um-form-actions">
         <button class="btn-primary" id="um-save-btn" onclick="saveUser()">Save User</button>
         <button class="btn-secondary" onclick="showUmList()">Cancel</button>
+        <button class="btn-delete hidden" id="um-delete-btn" onclick="deleteUser()">Delete User</button>
       </div>
       <div class="login-error" id="um-error" style="margin-top:0.75rem;min-height:1.2rem"></div>
     </div>
@@ -1367,6 +1370,7 @@ function openUserForm(recordId) {
   document.getElementById('um-pin').value = '';
   document.getElementById('um-pin').type = 'password';
   document.getElementById('um-pin-toggle').textContent = 'Show';
+  const deleteBtn = document.getElementById('um-delete-btn');
   if (recordId) {
     const rec = allUsers.find(r => r.id === recordId);
     if (!rec) return;
@@ -1376,6 +1380,7 @@ function openUserForm(recordId) {
     document.getElementById('um-email').value = rec.fields['Email'] || '';
     document.getElementById('um-role').value = rec.fields['Role'] || 'Employee';
     document.getElementById('um-dept').value = rec.fields['Department'] || '';
+    deleteBtn.classList.remove('hidden');
   } else {
     document.getElementById('um-form-title').textContent = 'New User';
     document.getElementById('um-record-id').value = '';
@@ -1383,6 +1388,7 @@ function openUserForm(recordId) {
     document.getElementById('um-email').value = '';
     document.getElementById('um-role').value = 'Employee';
     document.getElementById('um-dept').value = '';
+    deleteBtn.classList.add('hidden');
   }
 }
 function toggleUmPin() {
@@ -1433,6 +1439,33 @@ async function saveUser() {
     showUmList();
   } else {
     errEl.textContent = 'Save failed — please try again.';
+  }
+}
+
+async function deleteUser() {
+  const recordId = document.getElementById('um-record-id').value;
+  if (!recordId) return;
+  const name = document.getElementById('um-name').value.trim() || 'this user';
+  if (!confirm(`Permanently delete ${name}? This cannot be undone.`)) return;
+  const deleteBtn = document.getElementById('um-delete-btn');
+  const saveBtn = document.getElementById('um-save-btn');
+  deleteBtn.textContent = 'Deleting…'; deleteBtn.disabled = true;
+  saveBtn.disabled = true;
+  const res = await fetch(
+    `https://api.airtable.com/v0/${BASE_ID}/${TABLES.users}/${recordId}`,
+    { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + AIRTABLE_TOKEN } }
+  );
+  deleteBtn.textContent = 'Delete User'; deleteBtn.disabled = false;
+  saveBtn.disabled = false;
+  if (res.ok) {
+    allUsers = allUsers.filter(r => r.id !== recordId);
+    // Remove from login dropdown if present
+    const opt = document.querySelector(`#login-name option[value="${recordId}"]`);
+    if (opt) opt.remove();
+    showToast(`${name} deleted.`);
+    showUmList();
+  } else {
+    document.getElementById('um-error').textContent = 'Delete failed — please try again.';
   }
 }
 
