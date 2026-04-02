@@ -1261,18 +1261,39 @@ function fileToBase64(file) {
 }
 
 // ── DOC VIEWER ──
-function viewDoc(url, filename, mimeType, docRecordId) {
+async function viewDoc(url, filename, mimeType, docRecordId) {
   document.getElementById('dv-title').textContent = filename;
   const dl = document.getElementById('dv-download');
   dl.href = url; dl.setAttribute('download', filename);
   const body = document.getElementById('dv-body');
+  // Clean up any prior blob URL to avoid memory leaks
+  if (body.dataset.blobUrl) { URL.revokeObjectURL(body.dataset.blobUrl); delete body.dataset.blobUrl; }
   const type = (mimeType || '').toLowerCase();
+  const isPdf = type === 'application/pdf' || filename.toLowerCase().endsWith('.pdf');
+
   if (type.startsWith('image/')) {
     body.innerHTML = `<img src="${url}" alt="${filename}">`;
-  } else if (type === 'application/pdf' || filename.toLowerCase().endsWith('.pdf')) {
-    body.innerHTML = `<iframe src="${url}#toolbar=1" title="${filename}"></iframe>`;
+  } else if (isPdf) {
+    // Airtable serves attachments with Content-Disposition: attachment, which forces a
+    // download instead of inline display. Fix: fetch the binary, create a blob URL
+    // (no headers), and load that in the iframe instead.
+    body.innerHTML = `<div class="ai-loading">Loading PDF…</div>`;
+    document.getElementById('doc-viewer-overlay').classList.remove('hidden');
+    document.addEventListener('keydown', _dvEscListener);
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('fetch ' + resp.status);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      body.dataset.blobUrl = blobUrl;
+      body.innerHTML = `<iframe src="${blobUrl}" title="${filename}" style="width:100%;height:100%;border:none;display:block"></iframe>`;
+    } catch {
+      // Fallback: pipe through Google Docs Viewer (works for publicly-reachable signed URLs)
+      const gdocs = `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+      body.innerHTML = `<iframe src="${gdocs}" title="${filename}" style="width:100%;height:100%;border:none;display:block"></iframe>`;
+    }
   } else if (type.startsWith('text/') || type === 'application/json') {
-    body.innerHTML = `<iframe src="${url}" title="${filename}"></iframe>`;
+    body.innerHTML = `<iframe src="${url}" title="${filename}" style="width:100%;height:100%;border:none;display:block"></iframe>`;
   } else {
     body.innerHTML = `<div class="doc-viewer-unsupported">
       <div style="font-size:2.5rem">📄</div>
@@ -1281,7 +1302,8 @@ function viewDoc(url, filename, mimeType, docRecordId) {
       <a class="doc-viewer-dl" href="${url}" target="_blank" download="${filename}" style="margin-top:0.5rem">↓ Download to view</a>
     </div>`;
   }
-  // Show AI analysis panel if summary exists for this doc
+
+  // AI analysis panel
   const analysisPanel = document.getElementById('dv-analysis');
   const analysisBody = document.getElementById('dv-analysis-body');
   const summary = docRecordId ? (docAISummaries[docRecordId] || null) : null;
@@ -1297,7 +1319,9 @@ function viewDoc(url, filename, mimeType, docRecordId) {
 }
 function closeDocViewer() {
   document.getElementById('doc-viewer-overlay').classList.add('hidden');
-  document.getElementById('dv-body').innerHTML = '';
+  const body = document.getElementById('dv-body');
+  if (body.dataset.blobUrl) { URL.revokeObjectURL(body.dataset.blobUrl); delete body.dataset.blobUrl; }
+  body.innerHTML = '';
   document.getElementById('dv-analysis').classList.add('hidden');
   document.getElementById('dv-analysis-body').innerHTML = '';
   document.removeEventListener('keydown', _dvEscListener);
