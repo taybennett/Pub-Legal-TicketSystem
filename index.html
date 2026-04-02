@@ -11,13 +11,13 @@
   --black: #0a0a0a;
   --white: #f5f3ee;
   --cream: #ede9e0;
-  --red: #c8392b;
-  --red-dark: #a12220;
+  --red: #ff6433;
+  --red-dark: #d94e25;
   --mid: #7a7268;
   --border: #d0ccc4;
-  --green: #1a6b3c;
-  --amber: #b87a0a;
-  --blue: #1a4a8a;
+  --green: #00ACE5;
+  --amber: #cc9c6c;
+  --blue: #00ACE5;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -116,10 +116,10 @@ header {
 
 /* ── STATUS PILLS ── */
 .pill { font-size: 0.62rem; font-family: 'DM Mono', monospace; letter-spacing: 0.06em; padding: 2px 7px; font-weight: 500; white-space: nowrap; }
-.pill-new    { background: #dce8f5; color: var(--blue); }
-.pill-prog   { background: #fef3dc; color: var(--amber); }
-.pill-urgent { background: #fde8e6; color: var(--red); }
-.pill-done   { background: #ddf0e7; color: var(--green); }
+.pill-new    { background: #d6f0fb; color: var(--blue); }
+.pill-prog   { background: #f5ebe0; color: #a07040; }
+.pill-urgent { background: #ffe5db; color: var(--red); }
+.pill-done   { background: #d6f0fb; color: var(--green); }
 
 /* ── ATTORNEY MAIN PANEL ── */
 .atty-main { flex: 1; overflow-y: auto; }
@@ -300,8 +300,8 @@ header {
 .um-edit-btn:hover { background: var(--black); color: var(--white); border-color: var(--black); }
 .btn-secondary { background: none; border: 1px solid var(--border); padding: 10px 22px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; color: var(--black); font-weight: 500; }
 .btn-secondary:hover { border-color: var(--black); }
-.btn-delete { background: none; border: 1px solid #e0a0a0; padding: 10px 22px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; color: #c0392b; font-weight: 500; margin-left: auto; }
-.btn-delete:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
+.btn-delete { background: none; border: 1px solid #ffb8a0; padding: 10px 22px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; color: #ff6433; font-weight: 500; margin-left: auto; }
+.btn-delete:hover { background: #ff6433; color: #fff; border-color: #ff6433; }
 .pin-row { display: flex; gap: 0.5rem; }
 .btn-toggle-pin { background: none; border: 1px solid var(--border); padding: 0 14px; font-size: 0.7rem; cursor: pointer; color: var(--mid); font-family: 'DM Mono', monospace; letter-spacing: 0.05em; flex-shrink: 0; white-space: nowrap; }
 .btn-toggle-pin:hover { background: var(--black); color: var(--white); border-color: var(--black); }
