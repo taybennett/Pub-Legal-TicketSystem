@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>PUB Legal</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/config.js"></script>
@@ -286,8 +286,19 @@ header {
    MOBILE  (≤ 768px)
 ══════════════════════════════════════════ */
 @media (max-width: 768px) {
-  /* ── Header ── */
-  header { padding: 0 0.9rem; height: 50px; }
+  /* ── Header: safe area for notch / Dynamic Island / rounded corners ── */
+  header {
+    /* Top padding = status bar + notch; sides = rounded corner clearance */
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: max(0.9rem, env(safe-area-inset-left, 0.9rem));
+    padding-right: max(0.9rem, env(safe-area-inset-right, 0.9rem));
+    padding-bottom: 0;
+    /* Grow vertically to sit behind the notch — content stays in the lower 50px */
+    height: auto;
+    min-height: calc(50px + env(safe-area-inset-top, 0px));
+    align-items: flex-end; /* pin logo + buttons to the bottom of the taller bar */
+    padding-bottom: 10px;  /* breathing room above the red border */
+  }
   .logo { font-size: 1.25rem; }
   .btn-header { padding: 5px 10px; font-size: 0.72rem; letter-spacing: 0; }
 
@@ -343,8 +354,31 @@ header {
   .doc-viewer-body { flex: 1; min-height: 0; }
   .doc-viewer-analysis { width: 100%; height: 260px; min-height: 260px; flex-shrink: 0; border-left: none; border-top: 1px solid var(--border); }
 
-  /* ── Login ── */
-  .login-box { padding: 2rem 1.4rem; }
+  /* ── Login screen: pad top/sides for safe area ── */
+  .login-screen {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .login-box { padding: 2rem 1.4rem; width: 100%; max-width: 420px; }
+
+  /* ── Bottom sheet modal: clear home indicator bar ── */
+  .modal { padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)); }
+
+  /* ── Toast: stay above home indicator ── */
+  .toast { bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
+
+  /* ── Scrollable areas: bottom padding so content clears home indicator ── */
+  .ticket-list, .atty-main, .page.active, .requests-wrap, .submit-wrap {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ── Sidebar search/filter: left/right safe area ── */
+  .sidebar-top {
+    padding-left: max(0.9rem, env(safe-area-inset-left, 0.9rem));
+    padding-right: max(0.9rem, env(safe-area-inset-right, 0.9rem));
+  }
 }
 
 /* Extra-small phones */
