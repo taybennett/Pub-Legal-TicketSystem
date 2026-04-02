@@ -1260,35 +1260,86 @@ function fileToBase64(file) {
   });
 }
 
+// ── PDF.js RENDERER ──
+// Renders PDFs to canvas elements — bypasses browser Content-Disposition entirely.
+async function renderPdfWithPdfJs(url, bodyEl) {
+  bodyEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--mid);font-size:0.85rem;font-style:italic">Loading PDF…</div>`;
+
+  // Lazy-load PDF.js from cdnjs
+  if (!window.pdfjsLib) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  const data = await resp.arrayBuffer();
+
+  const pdf = await window.pdfjsLib.getDocument({ data }).promise;
+
+  // Scrollable page stack
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'height:100%;overflow-y:auto;background:#525659;padding:1.25rem;display:flex;flex-direction:column;align-items:center;gap:1rem;box-sizing:border-box;';
+  bodyEl.innerHTML = '';
+  bodyEl.appendChild(wrap);
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    // Scale to fit container width
+    const containerW = bodyEl.clientWidth - 40;
+    const baseVp = page.getViewport({ scale: 1 });
+    const scale = Math.min(2, containerW / baseVp.width);
+    const vp = page.getViewport({ scale });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = vp.width;
+    canvas.height = vp.height;
+    canvas.style.cssText = 'max-width:100%;display:block;box-shadow:0 2px 12px rgba(0,0,0,.45);background:#fff;';
+    wrap.appendChild(canvas);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+  }
+}
+
 // ── DOC VIEWER ──
 async function viewDoc(url, filename, mimeType, docRecordId) {
   document.getElementById('dv-title').textContent = filename;
   const dl = document.getElementById('dv-download');
   dl.href = url; dl.setAttribute('download', filename);
   const body = document.getElementById('dv-body');
-  // Clean up any prior blob URL to avoid memory leaks
-  if (body.dataset.blobUrl) { URL.revokeObjectURL(body.dataset.blobUrl); delete body.dataset.blobUrl; }
+  body.innerHTML = '';
+
   const type = (mimeType || '').toLowerCase();
   const isPdf = type === 'application/pdf' || filename.toLowerCase().endsWith('.pdf');
+
+  // AI analysis panel — set up before showing overlay
+  const analysisPanel = document.getElementById('dv-analysis');
+  const analysisBody = document.getElementById('dv-analysis-body');
+  const summary = docRecordId ? (docAISummaries[docRecordId] || null) : null;
+  if (summary) {
+    analysisBody.innerHTML = renderAIMarkdown(summary);
+    analysisPanel.classList.remove('hidden');
+  } else {
+    analysisPanel.classList.add('hidden');
+    analysisBody.innerHTML = '';
+  }
+
+  // Show overlay immediately so the user sees loading state
+  document.getElementById('doc-viewer-overlay').classList.remove('hidden');
+  document.addEventListener('keydown', _dvEscListener);
 
   if (type.startsWith('image/')) {
     body.innerHTML = `<img src="${url}" alt="${filename}">`;
   } else if (isPdf) {
-    // Airtable serves attachments with Content-Disposition: attachment, which forces a
-    // download instead of inline display. Fix: fetch the binary, create a blob URL
-    // (no headers), and load that in the iframe instead.
-    body.innerHTML = `<div class="ai-loading">Loading PDF…</div>`;
-    document.getElementById('doc-viewer-overlay').classList.remove('hidden');
-    document.addEventListener('keydown', _dvEscListener);
     try {
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error('fetch ' + resp.status);
-      const blob = await resp.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      body.dataset.blobUrl = blobUrl;
-      body.innerHTML = `<iframe src="${blobUrl}" title="${filename}" style="width:100%;height:100%;border:none;display:block"></iframe>`;
-    } catch {
-      // Fallback: pipe through Google Docs Viewer (works for publicly-reachable signed URLs)
+      await renderPdfWithPdfJs(url, body);
+    } catch(e) {
+      console.warn('PDF.js failed, falling back to Google Docs Viewer:', e);
       const gdocs = `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
       body.innerHTML = `<iframe src="${gdocs}" title="${filename}" style="width:100%;height:100%;border:none;display:block"></iframe>`;
     }
@@ -1302,26 +1353,10 @@ async function viewDoc(url, filename, mimeType, docRecordId) {
       <a class="doc-viewer-dl" href="${url}" target="_blank" download="${filename}" style="margin-top:0.5rem">↓ Download to view</a>
     </div>`;
   }
-
-  // AI analysis panel
-  const analysisPanel = document.getElementById('dv-analysis');
-  const analysisBody = document.getElementById('dv-analysis-body');
-  const summary = docRecordId ? (docAISummaries[docRecordId] || null) : null;
-  if (summary) {
-    analysisBody.innerHTML = renderAIMarkdown(summary);
-    analysisPanel.classList.remove('hidden');
-  } else {
-    analysisPanel.classList.add('hidden');
-    analysisBody.innerHTML = '';
-  }
-  document.getElementById('doc-viewer-overlay').classList.remove('hidden');
-  document.addEventListener('keydown', _dvEscListener);
 }
 function closeDocViewer() {
   document.getElementById('doc-viewer-overlay').classList.add('hidden');
-  const body = document.getElementById('dv-body');
-  if (body.dataset.blobUrl) { URL.revokeObjectURL(body.dataset.blobUrl); delete body.dataset.blobUrl; }
-  body.innerHTML = '';
+  document.getElementById('dv-body').innerHTML = '';
   document.getElementById('dv-analysis').classList.add('hidden');
   document.getElementById('dv-analysis-body').innerHTML = '';
   document.removeEventListener('keydown', _dvEscListener);
