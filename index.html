@@ -292,11 +292,13 @@ header {
    MOBILE  (≤ 768px)
 ══════════════════════════════════════════ */
 @media (max-width: 768px) {
-  /* ── Header: tighter side padding on mobile ── */
-  /* (safe-area-inset-top already handled in base styles above) */
+  /* ── Header: force clearance below Dynamic Island / notch ── */
   header {
-    padding-left: max(1rem, env(safe-area-inset-left, 0px));
-    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+    /* Use whichever is larger: the device's actual safe area OR 60px.
+       60px clears the Dynamic Island on every current iPhone model. */
+    padding-top: max(env(safe-area-inset-top, 0px), 60px);
+    padding-left: max(1.1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1.1rem, env(safe-area-inset-right, 0px));
   }
   .header-inner { height: 50px; }
   .logo { font-size: 1.25rem; }
