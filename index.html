@@ -34,13 +34,19 @@ body {
 header {
   background: var(--black);
   color: var(--white);
+  flex-shrink: 0;
+  border-bottom: 3px solid var(--red);
+  /* Shell expands to fill behind notch/Dynamic Island on any device */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+}
+/* Inner row always sits at a fixed height BELOW the safe area */
+.header-inner {
   height: 56px;
-  padding: 0 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-shrink: 0;
-  border-bottom: 3px solid var(--red);
 }
 .logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.55rem; letter-spacing: 0.06em; }
 .logo span { color: var(--red); }
@@ -286,21 +292,15 @@ header {
    MOBILE  (≤ 768px)
 ══════════════════════════════════════════ */
 @media (max-width: 768px) {
-  /* ── Header: safe area for notch / Dynamic Island / rounded corners ── */
+  /* ── Header: tighter side padding on mobile ── */
+  /* (safe-area-inset-top already handled in base styles above) */
   header {
-    /* Top padding = status bar + notch; sides = rounded corner clearance */
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-left: max(0.9rem, env(safe-area-inset-left, 0.9rem));
-    padding-right: max(0.9rem, env(safe-area-inset-right, 0.9rem));
-    padding-bottom: 0;
-    /* Grow vertically to sit behind the notch — content stays in the lower 50px */
-    height: auto;
-    min-height: calc(50px + env(safe-area-inset-top, 0px));
-    align-items: flex-end; /* pin logo + buttons to the bottom of the taller bar */
-    padding-bottom: 10px;  /* breathing room above the red border */
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
   }
+  .header-inner { height: 50px; }
   .logo { font-size: 1.25rem; }
-  .btn-header { padding: 5px 10px; font-size: 0.72rem; letter-spacing: 0; }
+  .btn-header { padding: 5px 12px; font-size: 0.72rem; letter-spacing: 0; }
 
   /* ── Attorney: one panel at a time ── */
   .atty-layout { flex-direction: column; }
@@ -421,10 +421,12 @@ header {
 
 <!-- ── HEADER (shown after login) ── -->
 <header id="app-header" class="hidden">
-  <div class="logo">PUB <span>LEGAL</span></div>
-  <div class="header-right">
-    <span class="user-pill" id="user-pill" onclick="doLogout()">Sign Out</span>
-    <button class="btn-header hidden" id="btn-new-ticket" onclick="openNewTicket()">+ New Ticket</button>
+  <div class="header-inner">
+    <div class="logo">PUB <span>LEGAL</span></div>
+    <div class="header-right">
+      <span class="user-pill" id="user-pill" onclick="doLogout()">Sign Out</span>
+      <button class="btn-header hidden" id="btn-new-ticket" onclick="openNewTicket()">+ New Ticket</button>
+    </div>
   </div>
 </header>
 
