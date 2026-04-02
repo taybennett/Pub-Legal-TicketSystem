@@ -281,6 +281,79 @@ header {
 .hidden { display: none !important; }
 .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(2rem); background: var(--black); color: var(--white); padding: 0.55rem 1.2rem; font-size: 0.78rem; font-family: 'DM Mono', monospace; letter-spacing: 0.06em; opacity: 0; transition: all 0.2s; z-index: 999; pointer-events: none; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ══════════════════════════════════════════
+   MOBILE  (≤ 768px)
+══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* ── Header ── */
+  header { padding: 0 0.9rem; height: 50px; }
+  .logo { font-size: 1.25rem; }
+  .btn-header { padding: 5px 10px; font-size: 0.72rem; letter-spacing: 0; }
+
+  /* ── Attorney: one panel at a time ── */
+  .atty-layout { flex-direction: column; }
+  /* Default: show sidebar (ticket list), hide main panel */
+  .sidebar { width: 100%; min-width: unset; flex: 1; border-right: none; overflow: hidden; }
+  .atty-main { display: none; }
+  .welcome { display: none; } /* sidebar is the "home" on mobile */
+  /* When a ticket is open: show main, hide sidebar */
+  .atty-layout.has-detail .sidebar { display: none; }
+  .atty-layout.has-detail .atty-main { display: flex; flex-direction: column; flex: 1; overflow-y: auto; }
+
+  /* ── Detail panel ── */
+  .detail { padding: 1.1rem 0.9rem; max-width: none; }
+  .detail-title { font-size: 1.4rem; }
+  .status-bar { flex-wrap: wrap; gap: 3px; padding: 0.5rem 0.7rem; }
+  .extra-grid { grid-template-columns: 1fr 1fr; }
+
+  /* ── 2-col form grids → 1 col ── */
+  .form-row-2 { grid-template-columns: 1fr; gap: 0; }
+
+  /* ── Messages ── */
+  .messages { height: 180px; }
+  .msg-bubble { max-width: 88%; }
+  .reply-row { gap: 0.4rem; }
+  .btn-send { min-height: 46px; padding: 0 1rem; flex-shrink: 0; }
+
+  /* ── Employee tabs & pages ── */
+  .tabs { padding: 0 0.75rem; }
+  .tab { padding: 0.9rem 1rem; min-height: 46px; font-size: 0.74rem; }
+  .submit-wrap { padding: 1.25rem 0.9rem; }
+  .requests-wrap { padding: 1.25rem 0.9rem; }
+
+  /* ── New ticket modal → bottom sheet ── */
+  .overlay { align-items: flex-end; padding: 0; }
+  .modal { width: 100%; max-width: 100%; max-height: 92vh; padding: 1.5rem 1rem 2rem; border-radius: 0; }
+
+  /* ── Touch targets ── */
+  .chip { padding: 6px 10px; min-height: 34px; font-size: 0.7rem; }
+  .status-btn { padding: 6px 12px; min-height: 34px; }
+  .doc-view, .doc-dl { padding: 6px 10px; min-height: 36px; font-size: 0.73rem; }
+  .ticket-item { padding: 0.9rem; }
+  .ticket-card { padding: 0.9rem; }
+  .form-input, .form-select, .form-textarea { padding: 11px 11px; font-size: 0.9rem; } /* larger tap target & prevents iOS zoom */
+
+  /* ── Doc viewer → full screen, stacked ── */
+  .doc-viewer-overlay { padding: 0; }
+  .doc-viewer-modal { width: 100vw; height: 100vh; max-width: 100vw; }
+  .doc-viewer-header { padding: 0.6rem 0.75rem; }
+  .doc-viewer-title { font-size: 0.78rem; }
+  .doc-viewer-content { flex-direction: column; }
+  .doc-viewer-body { flex: 1; min-height: 0; }
+  .doc-viewer-analysis { width: 100%; height: 260px; min-height: 260px; flex-shrink: 0; border-left: none; border-top: 1px solid var(--border); }
+
+  /* ── Login ── */
+  .login-box { padding: 2rem 1.4rem; }
+}
+
+/* Extra-small phones */
+@media (max-width: 400px) {
+  .status-btn { padding: 5px 8px; font-size: 0.68rem; }
+  .detail-title { font-size: 1.2rem; }
+  .page-title { font-size: 1.5rem; }
+  .btn-header { display: none; } /* hide "+ New Ticket" — use FAB pattern instead */
+}
 </style>
 </head>
 <body>
@@ -837,6 +910,8 @@ async function openTicket(recordId) {
   currentTicketId = recordId;
   const rec = allTickets.find(r => r.id === recordId);
   if (!rec) return;
+  // On mobile: swap sidebar out, detail in
+  document.getElementById('atty-app').classList.add('has-detail');
   renderAttyDetail(rec);
   renderTickets();
   await Promise.all([loadMessages(recordId,'atty'), loadDocs(recordId,'atty')]);
@@ -868,6 +943,8 @@ function clearDetail() {
   currentTicketId = null;
   document.getElementById('detail').classList.add('hidden');
   document.getElementById('welcome').classList.remove('hidden');
+  // On mobile: swap detail out, sidebar back in
+  document.getElementById('atty-app').classList.remove('has-detail');
   renderTickets();
 }
 
