@@ -282,6 +282,31 @@ header {
 .ai-section-title:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 .ai-loading { color: var(--mid); font-size: 0.8rem; font-style: italic; padding: 1rem; }
 
+/* ── USER MANAGEMENT ── */
+.um-modal { max-width: 640px; }
+.um-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.um-toolbar .modal-title { margin-bottom: 0; }
+.um-user-card { display: flex; align-items: center; gap: 0.9rem; padding: 0.8rem 0; border-bottom: 1px solid var(--border); }
+.um-user-card:last-child { border-bottom: none; }
+.um-initials { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.05em; flex-shrink: 0; }
+.um-initials.role-atty { background: var(--black); color: var(--white); }
+.um-initials.role-emp { background: var(--cream); color: var(--black); border: 1px solid var(--border); }
+.um-user-info { flex: 1; min-width: 0; }
+.um-user-name { font-size: 0.88rem; font-weight: 600; }
+.um-user-meta { font-size: 0.71rem; color: var(--mid); margin-top: 2px; }
+.um-role-badge { font-size: 0.6rem; font-family: 'DM Mono', monospace; letter-spacing: 0.08em; padding: 2px 8px; border: 1px solid; flex-shrink: 0; white-space: nowrap; }
+.um-role-badge.role-atty { background: var(--black); color: var(--white); border-color: var(--black); }
+.um-role-badge.role-emp { color: var(--mid); border-color: var(--border); }
+.um-edit-btn { background: none; border: 1px solid var(--border); padding: 4px 14px; font-size: 0.72rem; cursor: pointer; font-family: 'DM Mono', monospace; letter-spacing: 0.05em; color: var(--mid); flex-shrink: 0; }
+.um-edit-btn:hover { background: var(--black); color: var(--white); border-color: var(--black); }
+.btn-secondary { background: none; border: 1px solid var(--border); padding: 10px 22px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; color: var(--black); font-weight: 500; }
+.btn-secondary:hover { border-color: var(--black); }
+.pin-row { display: flex; gap: 0.5rem; }
+.btn-toggle-pin { background: none; border: 1px solid var(--border); padding: 0 14px; font-size: 0.7rem; cursor: pointer; color: var(--mid); font-family: 'DM Mono', monospace; letter-spacing: 0.05em; flex-shrink: 0; white-space: nowrap; }
+.btn-toggle-pin:hover { background: var(--black); color: var(--white); border-color: var(--black); }
+.um-form-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap; }
+.um-hint { font-size: 0.7rem; color: var(--mid); margin-top: 0.3rem; font-family: 'DM Mono', monospace; }
+
 /* ── UTILITIES ── */
 .state-msg { font-size: 0.75rem; font-family: 'DM Mono', monospace; letter-spacing: 0.07em; color: var(--mid); padding: 0.75rem 0; }
 .hidden { display: none !important; }
@@ -427,6 +452,7 @@ header {
     <div class="logo">PUB <span>LEGAL</span></div>
     <div class="header-right">
       <span class="user-pill" id="user-pill" onclick="doLogout()">Sign Out</span>
+      <button class="btn-header hidden" id="btn-manage-users" onclick="openUserMgmt()" style="background:none;border:1px solid #444;color:#ccc;">⚙ Users</button>
       <button class="btn-header hidden" id="btn-new-ticket" onclick="openNewTicket()">+ New Ticket</button>
     </div>
   </div>
@@ -683,6 +709,68 @@ header {
   </div>
 </div>
 
+<!-- ── USER MANAGEMENT MODAL (Attorney only) ── -->
+<div class="overlay hidden" id="user-mgmt-overlay" onclick="if(event.target===this)closeUserMgmt()">
+  <div class="modal um-modal">
+    <button class="modal-close" onclick="closeUserMgmt()">×</button>
+
+    <!-- LIST VIEW -->
+    <div id="um-list-view">
+      <div class="um-toolbar">
+        <div class="modal-title">Manage Users</div>
+        <button class="btn-primary" onclick="openUserForm(null)">+ New User</button>
+      </div>
+      <div id="um-user-list"><div class="state-msg">Loading…</div></div>
+    </div>
+
+    <!-- EDIT / CREATE VIEW -->
+    <div id="um-form-view" class="hidden">
+      <button class="detail-back" onclick="showUmList()">← All Users</button>
+      <div class="modal-title" id="um-form-title">New User</div>
+      <input type="hidden" id="um-record-id">
+      <div class="form-row">
+        <label class="form-label">Full Name *</label>
+        <input class="form-input" id="um-name" type="text" placeholder="First Last">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="um-email" type="email" placeholder="name@popupbagels.com">
+      </div>
+      <div class="form-row-2">
+        <div>
+          <label class="form-label">Role *</label>
+          <select class="form-select" id="um-role">
+            <option value="Employee">Employee</option>
+            <option value="Attorney">Attorney</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Department</label>
+          <select class="form-select" id="um-dept">
+            <option value="">— None —</option>
+            <option>Finance</option><option>Engineering</option><option>People / HR</option>
+            <option>Marketing</option><option>Sales</option><option>Operations</option>
+            <option>Executive</option><option>Product</option><option>Legal</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">PIN</label>
+        <div class="pin-row">
+          <input class="form-input" id="um-pin" type="password" placeholder="Leave blank to keep existing PIN" style="flex:1">
+          <button type="button" class="btn-toggle-pin" id="um-pin-toggle" onclick="toggleUmPin()">Show</button>
+        </div>
+        <div class="um-hint">Minimum 4 characters. Required for new users.</div>
+      </div>
+      <div class="um-form-actions">
+        <button class="btn-primary" id="um-save-btn" onclick="saveUser()">Save User</button>
+        <button class="btn-secondary" onclick="showUmList()">Cancel</button>
+      </div>
+      <div class="login-error" id="um-error" style="margin-top:0.75rem;min-height:1.2rem"></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- Doc viewer -->
@@ -836,6 +924,7 @@ function launchApp() {
 
   if (currentUser.role === 'Attorney') {
     document.getElementById('atty-app').classList.remove('hidden');
+    document.getElementById('btn-manage-users').classList.remove('hidden');
     document.getElementById('btn-new-ticket').classList.remove('hidden');
     loadUsers();
     loadTickets();
@@ -853,7 +942,9 @@ function doLogout() {
   document.getElementById('app-header').classList.add('hidden');
   document.getElementById('atty-app').classList.add('hidden');
   document.getElementById('emp-app').classList.add('hidden');
+  document.getElementById('btn-manage-users').classList.add('hidden');
   document.getElementById('btn-new-ticket').classList.add('hidden');
+  closeUserMgmt();
   document.getElementById('login-pin').value = '';
   document.getElementById('login-email').value = '';
   document.getElementById('email-row').style.display = 'none';
@@ -1222,6 +1313,128 @@ async function sendMessage(view) {
 // ══════════════════════════════════════════
 // SHARED: DOCUMENTS
 // ══════════════════════════════════════════
+
+// ══════════════════════════════════════════
+// USER MANAGEMENT  (Attorney only)
+// ══════════════════════════════════════════
+
+function openUserMgmt() {
+  document.getElementById('user-mgmt-overlay').classList.remove('hidden');
+  showUmList();
+}
+function closeUserMgmt() {
+  document.getElementById('user-mgmt-overlay').classList.add('hidden');
+}
+function showUmList() {
+  document.getElementById('um-list-view').classList.remove('hidden');
+  document.getElementById('um-form-view').classList.add('hidden');
+  renderUserList();
+}
+function renderUserList() {
+  const el = document.getElementById('um-user-list');
+  if (!allUsers.length) { el.innerHTML = '<div class="state-msg">No users found.</div>'; return; }
+  // Sort: attorneys first, then alphabetical
+  const sorted = [...allUsers].sort((a, b) => {
+    const ra = a.fields['Role'] === 'Attorney' ? 0 : 1;
+    const rb = b.fields['Role'] === 'Attorney' ? 0 : 1;
+    if (ra !== rb) return ra - rb;
+    return (a.fields['Name'] || '').localeCompare(b.fields['Name'] || '');
+  });
+  el.innerHTML = sorted.map(r => {
+    const f = r.fields;
+    const name = f['Name'] || 'Unnamed';
+    const role = f['Role'] || 'Employee';
+    const isAtty = role === 'Attorney';
+    const initials = name.split(' ').map(w => w[0]).filter(Boolean).join('').toUpperCase().slice(0, 2);
+    const dept = f['Department'] || '';
+    const email = f['Email'] || '';
+    const meta = [dept, email].filter(Boolean).join(' · ');
+    return `<div class="um-user-card">
+      <div class="um-initials ${isAtty ? 'role-atty' : 'role-emp'}">${escHtml(initials)}</div>
+      <div class="um-user-info">
+        <div class="um-user-name">${escHtml(name)}</div>
+        ${meta ? `<div class="um-user-meta">${escHtml(meta)}</div>` : ''}
+      </div>
+      <span class="um-role-badge ${isAtty ? 'role-atty' : 'role-emp'}">${escHtml(role.toUpperCase())}</span>
+      <button class="um-edit-btn" onclick="openUserForm('${r.id}')">Edit</button>
+    </div>`;
+  }).join('');
+}
+function openUserForm(recordId) {
+  document.getElementById('um-list-view').classList.add('hidden');
+  document.getElementById('um-form-view').classList.remove('hidden');
+  document.getElementById('um-error').textContent = '';
+  document.getElementById('um-pin').value = '';
+  document.getElementById('um-pin').type = 'password';
+  document.getElementById('um-pin-toggle').textContent = 'Show';
+  if (recordId) {
+    const rec = allUsers.find(r => r.id === recordId);
+    if (!rec) return;
+    document.getElementById('um-form-title').textContent = 'Edit User';
+    document.getElementById('um-record-id').value = recordId;
+    document.getElementById('um-name').value = rec.fields['Name'] || '';
+    document.getElementById('um-email').value = rec.fields['Email'] || '';
+    document.getElementById('um-role').value = rec.fields['Role'] || 'Employee';
+    document.getElementById('um-dept').value = rec.fields['Department'] || '';
+  } else {
+    document.getElementById('um-form-title').textContent = 'New User';
+    document.getElementById('um-record-id').value = '';
+    document.getElementById('um-name').value = '';
+    document.getElementById('um-email').value = '';
+    document.getElementById('um-role').value = 'Employee';
+    document.getElementById('um-dept').value = '';
+  }
+}
+function toggleUmPin() {
+  const input = document.getElementById('um-pin');
+  const btn = document.getElementById('um-pin-toggle');
+  if (input.type === 'password') { input.type = 'text'; btn.textContent = 'Hide'; }
+  else { input.type = 'password'; btn.textContent = 'Show'; }
+}
+async function saveUser() {
+  const errEl = document.getElementById('um-error');
+  const saveBtn = document.getElementById('um-save-btn');
+  errEl.textContent = '';
+  const recordId = document.getElementById('um-record-id').value;
+  const name = document.getElementById('um-name').value.trim();
+  const email = document.getElementById('um-email').value.trim();
+  const role = document.getElementById('um-role').value;
+  const dept = document.getElementById('um-dept').value;
+  const pin = document.getElementById('um-pin').value.trim();
+  if (!name) { errEl.textContent = 'Name is required.'; return; }
+  if (!recordId && !pin) { errEl.textContent = 'PIN is required for new users.'; return; }
+  if (pin && pin.length < 4) { errEl.textContent = 'PIN must be at least 4 characters.'; return; }
+  const fields = { 'Name': name, 'Role': role, 'Department': dept || null };
+  if (email) fields['Email'] = email;
+  if (pin) fields['PIN'] = pin;
+  saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
+  let result;
+  if (recordId) {
+    result = await atFetch('PATCH', `${TABLES.users}/${recordId}`, { fields });
+  } else {
+    result = await atFetch('POST', TABLES.users, { fields, typecast: true });
+  }
+  saveBtn.textContent = 'Save User'; saveBtn.disabled = false;
+  if (result) {
+    // Update in-memory cache
+    if (recordId) {
+      const idx = allUsers.findIndex(r => r.id === recordId);
+      if (idx >= 0) allUsers[idx] = result;
+    } else {
+      allUsers.push(result);
+      // Refresh login dropdown so new user appears at next login
+      const sel = document.getElementById('login-name');
+      const opt = document.createElement('option');
+      opt.value = result.id;
+      opt.textContent = result.fields['Name'] || '';
+      sel.appendChild(opt);
+    }
+    showToast(recordId ? 'User updated.' : 'User created.');
+    showUmList();
+  } else {
+    errEl.textContent = 'Save failed — please try again.';
+  }
+}
 
 // ── CLAUDE AI DOCUMENT ANALYSIS ──
 async function analyzeDocumentWithClaude(base64, mimeType, filename) {
