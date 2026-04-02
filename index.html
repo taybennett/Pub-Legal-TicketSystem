@@ -262,10 +262,19 @@ header {
 .doc-viewer-dl:hover { background: var(--black); color: var(--white); }
 .doc-viewer-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--mid); padding: 0 4px; line-height: 1; }
 .doc-viewer-close:hover { color: var(--black); }
-.doc-viewer-body { flex: 1; overflow: hidden; background: #f4f4f4; }
+.doc-viewer-content { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+.doc-viewer-body { flex: 1; overflow: hidden; background: #f4f4f4; min-width: 0; }
 .doc-viewer-body iframe { width: 100%; height: 100%; border: none; display: block; }
 .doc-viewer-body img { max-width: 100%; max-height: 100%; display: block; margin: auto; object-fit: contain; padding: 1rem; }
 .doc-viewer-unsupported { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 1rem; color: var(--mid); font-size: 0.9rem; }
+.doc-viewer-analysis { width: 300px; flex-shrink: 0; border-left: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; background: var(--white); }
+.doc-viewer-analysis.hidden { display: none !important; }
+.ai-analysis-hdr { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; color: var(--mid); }
+.ai-badge { background: var(--black); color: var(--white); font-size: 0.58rem; padding: 2px 6px; letter-spacing: 0.1em; font-weight: 700; border-radius: 2px; }
+.ai-analysis-body { padding: 0.85rem 1rem; font-size: 0.8rem; line-height: 1.7; color: var(--black); flex: 1; }
+.ai-section-title { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mid); margin: 0.85rem 0 0.2rem; padding-top: 0.65rem; border-top: 1px solid var(--border); }
+.ai-section-title:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.ai-loading { color: var(--mid); font-size: 0.8rem; font-style: italic; padding: 1rem; }
 
 /* ── UTILITIES ── */
 .state-msg { font-size: 0.75rem; font-family: 'DM Mono', monospace; letter-spacing: 0.07em; color: var(--mid); padding: 0.75rem 0; }
@@ -573,7 +582,13 @@ header {
       <a class="doc-viewer-dl" id="dv-download" href="#" target="_blank" download>↓ Download</a>
       <button class="doc-viewer-close" onclick="closeDocViewer()">×</button>
     </div>
-    <div class="doc-viewer-body" id="dv-body"></div>
+    <div class="doc-viewer-content">
+      <div class="doc-viewer-body" id="dv-body"></div>
+      <div class="doc-viewer-analysis hidden" id="dv-analysis">
+        <div class="ai-analysis-hdr"><span class="ai-badge">✦ AI</span> Document Analysis</div>
+        <div class="ai-analysis-body" id="dv-analysis-body"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -588,7 +603,9 @@ const TABLES = {
   docs:     'tblCvHWHKVWxPULf5'
 };
 const DOC_FILE_FIELD = 'fldw5S3VPLkxD71Ej';
+const AI_SUMMARY_FIELD = 'fldb3skoTq5M4SN4V';
 const DEFAULT_ATTORNEY_EMAIL = 'taylorb@popupbagels.com';
+const ANTHROPIC_KEY = window.ANTHROPIC_KEY || '';
 
 // ── SESSION STATE ──
 let currentUser = null;   // { name, role, recordId, dept }
@@ -597,6 +614,7 @@ let allUsers = [];
 let myTickets = [];
 let currentFilter = 'all';
 let currentSearch = '';
+let docAISummaries = {};
 let currentTicketId = null;
 
 // ── INIT ──
@@ -1090,26 +1108,86 @@ async function sendMessage(view) {
 // SHARED: DOCUMENTS
 // ══════════════════════════════════════════
 
+// ── CLAUDE AI DOCUMENT ANALYSIS ──
+async function analyzeDocumentWithClaude(base64, mimeType, filename) {
+  if (!ANTHROPIC_KEY) return null;
+  const type = (mimeType || '').toLowerCase();
+  const prompt = `You are a legal assistant for PopUp Bagels. Analyze this document ("${filename}") and provide a structured extraction with exactly these section headers:\n\n**Summary**\n**Key Parties**\n**Main Obligations**\n**Important Dates**\n**Notable Clauses**\n\nUnder each header write 1-4 concise bullet lines starting with "- ". Use plain English, no legalese.`;
+  let userContent;
+  if (type === 'application/pdf') {
+    userContent = [
+      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+      { type: 'text', text: prompt }
+    ];
+  } else if (['image/jpeg','image/png','image/gif','image/webp'].includes(type)) {
+    userContent = [
+      { type: 'image', source: { type: 'base64', media_type: type, data: base64 } },
+      { type: 'text', text: prompt }
+    ];
+  } else if (type.startsWith('text/') || type === 'application/json') {
+    try {
+      const decoded = atob(base64);
+      userContent = [{ type: 'text', text: prompt + '\n\nDocument content:\n\n' + decoded.slice(0, 8000) }];
+    } catch { return null; }
+  } else { return null; }
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1024, messages: [{ role: 'user', content: userContent }] })
+    });
+    if (!resp.ok) { console.warn('Claude API error:', resp.status, await resp.text()); return null; }
+    const data = await resp.json();
+    return data.content?.[0]?.text || null;
+  } catch(e) { console.warn('Claude analysis failed:', e); return null; }
+}
+
+function renderAIMarkdown(text) {
+  if (!text) return '';
+  let firstSection = true;
+  return text.split('\n').map(line => {
+    const trimmed = line.trim();
+    const boldHeader = trimmed.match(/^\*\*([^*]+)\*\*\s*[:\-]?\s*$/);
+    const hashHeader = trimmed.match(/^#{1,3}\s+(.+)$/);
+    if (boldHeader || hashHeader) {
+      const title = escHtml((boldHeader || hashHeader)[1]);
+      const cls = firstSection ? (firstSection = false, 'ai-section-title') : 'ai-section-title';
+      if (firstSection === false && boldHeader) firstSection = null;
+      return `<div class="${cls}">${title}</div>`;
+    }
+    if (trimmed === '') return '';
+    const escaped = escHtml(trimmed).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    return `<div style="margin-bottom:0.2rem">${escaped}</div>`;
+  }).join('');
+}
+
 async function loadDocs(ticketId, view) {
   const elId = view === 'atty' ? 'd-docs' : 'rd-docs';
   const el = document.getElementById(elId);
   const data = await atFetch('GET', `${TABLES.docs}`);
   const records = (data?.records || []).filter(r => Array.isArray(r.fields['Ticket']) && r.fields['Ticket'].includes(ticketId));
   if (!records.length) { el.innerHTML = '<div class="state-msg">No documents attached.</div>'; return; }
+  records.forEach(r => { docAISummaries[r.id] = r.fields['AI Summary'] || null; });
   el.innerHTML = records.map(r => {
     const f = r.fields;
     const ext = (f['Filename']||'').split('.').pop().toUpperCase().slice(0,5) || (f['File Type']||'FILE').split('/').pop().toUpperCase().slice(0,5);
     const fileUrl = f['File']?.[0]?.url;
     const fname = escHtml(f['Filename']||'Untitled');
     const ftype = escHtml(f['File Type']||'');
+    const hasAI = !!f['AI Summary'];
     return `<div class="doc-item">
       <span class="doc-ext">${escHtml(ext)}</span>
       <div class="doc-info">
-        <div class="doc-name">${fname}</div>
+        <div class="doc-name">${fname}${hasAI ? '&nbsp;<span class="ai-badge">✦ AI</span>' : ''}</div>
         <div class="doc-meta">${[f['Uploaded By'],f['File Size']].filter(Boolean).map(escHtml).join(' · ')}</div>
       </div>
       <div class="doc-actions">
-        ${fileUrl ? `<button class="doc-view" onclick="viewDoc('${fileUrl}','${fname}','${ftype}')">View</button>` : ''}
+        ${fileUrl ? `<button class="doc-view" onclick="viewDoc('${fileUrl}','${fname}','${ftype}','${r.id}')">View</button>` : ''}
         ${fileUrl ? `<a class="doc-dl" href="${fileUrl}" target="_blank" download>↓</a>` : ''}
       </div>
     </div>`;
@@ -1137,7 +1215,15 @@ async function uploadDocument(file, view) {
       headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ contentType: file.type || 'application/octet-stream', file: base64, filename: file.name })
     });
-    showToast(up.ok ? 'Document uploaded!' : 'Metadata saved — attach file manually in Airtable.');
+    showToast(up.ok ? 'Document uploaded! Analyzing…' : 'Metadata saved — attach file manually in Airtable.');
+    if (ANTHROPIC_KEY && up.ok) {
+      const summary = await analyzeDocumentWithClaude(base64, file.type, file.name);
+      if (summary) {
+        await atFetch('PATCH', `${TABLES.docs}/${result.id}`, { fields: { 'AI Summary': summary } });
+        docAISummaries[result.id] = summary;
+        showToast('AI analysis complete!');
+      } else { showToast('Document uploaded!'); }
+    }
   } catch { showToast('Metadata saved — attach file manually in Airtable.'); }
   await loadDocs(currentTicketId, view);
 }
@@ -1153,11 +1239,15 @@ async function uploadDocumentToTicket(file, ticketRecordId, uploaderName) {
   if (!result) return;
   try {
     const base64 = await fileToBase64(file);
-    await fetch(`https://content.airtable.com/v0/${BASE_ID}/${result.id}/${DOC_FILE_FIELD}/uploadAttachment`, {
+    const up = await fetch(`https://content.airtable.com/v0/${BASE_ID}/${result.id}/${DOC_FILE_FIELD}/uploadAttachment`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ contentType: file.type || 'application/octet-stream', file: base64, filename: file.name })
     });
+    if (ANTHROPIC_KEY && up.ok) {
+      const summary = await analyzeDocumentWithClaude(base64, file.type, file.name);
+      if (summary) await atFetch('PATCH', `${TABLES.docs}/${result.id}`, { fields: { 'AI Summary': summary } });
+    }
   } catch(e) { console.warn('File binary upload failed:', e); }
 }
 
@@ -1171,7 +1261,7 @@ function fileToBase64(file) {
 }
 
 // ── DOC VIEWER ──
-function viewDoc(url, filename, mimeType) {
+function viewDoc(url, filename, mimeType, docRecordId) {
   document.getElementById('dv-title').textContent = filename;
   const dl = document.getElementById('dv-download');
   dl.href = url; dl.setAttribute('download', filename);
@@ -1191,12 +1281,25 @@ function viewDoc(url, filename, mimeType) {
       <a class="doc-viewer-dl" href="${url}" target="_blank" download="${filename}" style="margin-top:0.5rem">↓ Download to view</a>
     </div>`;
   }
+  // Show AI analysis panel if summary exists for this doc
+  const analysisPanel = document.getElementById('dv-analysis');
+  const analysisBody = document.getElementById('dv-analysis-body');
+  const summary = docRecordId ? (docAISummaries[docRecordId] || null) : null;
+  if (summary) {
+    analysisBody.innerHTML = renderAIMarkdown(summary);
+    analysisPanel.classList.remove('hidden');
+  } else {
+    analysisPanel.classList.add('hidden');
+    analysisBody.innerHTML = '';
+  }
   document.getElementById('doc-viewer-overlay').classList.remove('hidden');
   document.addEventListener('keydown', _dvEscListener);
 }
 function closeDocViewer() {
   document.getElementById('doc-viewer-overlay').classList.add('hidden');
   document.getElementById('dv-body').innerHTML = '';
+  document.getElementById('dv-analysis').classList.add('hidden');
+  document.getElementById('dv-analysis-body').innerHTML = '';
   document.removeEventListener('keydown', _dvEscListener);
 }
 function _dvEscListener(e) { if (e.key === 'Escape') closeDocViewer(); }
