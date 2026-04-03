@@ -321,6 +321,7 @@ header {
 .hidden { display: none !important; }
 .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(2rem); background: var(--black); color: var(--white); padding: 0.55rem 1.2rem; font-size: 0.78rem; font-family: 'FFFAcidGrotesk', sans-serif; letter-spacing: 0.06em; opacity: 0; transition: all 0.2s; z-index: 999; pointer-events: none; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ══════════════════════════════════════════
    MOBILE  (≤ 768px)
@@ -1688,9 +1689,22 @@ async function viewDoc(url, filename, mimeType, docRecordId) {
   // AI analysis panel — set up before showing overlay
   const analysisPanel = document.getElementById('dv-analysis');
   const analysisBody = document.getElementById('dv-analysis-body');
-  const summary = docRecordId ? (docAISummaries[docRecordId] || null) : null;
-  if (summary) {
-    analysisBody.innerHTML = renderAIMarkdown(summary);
+  const cachedSummary = docRecordId ? (docAISummaries[docRecordId] || null) : null;
+  const canAnalyze = !!ANTHROPIC_KEY && (
+    isPdf ||
+    type.startsWith('image/') ||
+    type.startsWith('text/') ||
+    type === 'application/json'
+  );
+
+  if (cachedSummary) {
+    analysisBody.innerHTML = renderAIMarkdown(cachedSummary);
+    analysisPanel.classList.remove('hidden');
+  } else if (canAnalyze) {
+    analysisBody.innerHTML = `<div style="display:flex;align-items:center;gap:0.6rem;color:var(--mid);font-size:0.82rem;padding:0.5rem 0">
+      <span style="display:inline-block;width:14px;height:14px;border:2px solid var(--red);border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0"></span>
+      Analyzing document…
+    </div>`;
     analysisPanel.classList.remove('hidden');
   } else {
     analysisPanel.classList.add('hidden');
@@ -1720,6 +1734,34 @@ async function viewDoc(url, filename, mimeType, docRecordId) {
       <div style="font-size:0.8rem">This file type cannot be previewed in the browser.</div>
       <a class="doc-viewer-dl" href="${url}" target="_blank" download="${filename}" style="margin-top:0.5rem">↓ Download to view</a>
     </div>`;
+  }
+
+  // Live on-demand analysis — runs if no cached summary exists
+  if (!cachedSummary && canAnalyze) {
+    try {
+      const docResp = await fetch(url);
+      if (docResp.ok) {
+        const buffer = await docResp.arrayBuffer();
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        const effectiveType = isPdf ? 'application/pdf' : type;
+        const newSummary = await analyzeDocumentWithClaude(b64, effectiveType, filename);
+        if (newSummary) {
+          // Update UI
+          analysisBody.innerHTML = renderAIMarkdown(newSummary);
+          // Cache in memory
+          if (docRecordId) {
+            docAISummaries[docRecordId] = newSummary;
+            // Save back to Airtable so it's instant next time
+            atFetch('PATCH', `${TABLES.docs}/${docRecordId}`, { fields: { 'AI Summary': newSummary } });
+          }
+        } else {
+          analysisBody.innerHTML = `<div style="color:var(--mid);font-size:0.8rem;padding:0.5rem 0">Analysis unavailable for this file.</div>`;
+        }
+      }
+    } catch(e) {
+      console.warn('On-demand analysis failed:', e);
+      analysisBody.innerHTML = `<div style="color:var(--mid);font-size:0.8rem;padding:0.5rem 0">Analysis failed — check console.</div>`;
+    }
   }
 }
 function closeDocViewer() {
