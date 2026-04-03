@@ -582,6 +582,19 @@ header {
             <option value="Distribution">Distribution</option>
             <option value="Other">Other</option>
         </select>
+        <label style="margin-top:0.75rem">Filter by Category</label>
+        <select class="form-select" id="dl-cat-filter" onchange="filterDocLib()">
+            <option value="">All Categories</option>
+            <option>Contracts &amp; Agreements</option>
+            <option>Employment / HR</option>
+            <option>Compliance &amp; Regulatory</option>
+            <option>IP &amp; Licensing</option>
+            <option>Corporate Governance</option>
+            <option>Privacy &amp; Data</option>
+            <option>Disputes &amp; Litigation</option>
+            <option>Real Estate</option>
+            <option>Other</option>
+        </select>
         <div class="doc-lib-count" id="dl-count"></div>
       </div>
     </div><!-- /sview-docs -->
@@ -1255,15 +1268,19 @@ async function loadDocLibrary() {
 
 function filterDocLib() {
   var deptFilter = document.getElementById('dl-dept-filter').value;
+  var catFilter  = document.getElementById('dl-cat-filter').value;
   var grid = document.getElementById('doc-lib-grid');
   var countEl = document.getElementById('dl-count');
   var docs = allDocs;
-  if (deptFilter) {
+  if (deptFilter || catFilter) {
     docs = docs.filter(function(d) {
       var ticketIds = d.fields['Ticket'] || [];
       return ticketIds.some(function(tid) {
         var t = allTickets.find(function(tk) { return tk.id === tid; });
-        return t && t.fields['Department'] === deptFilter;
+        if (!t) return false;
+        var deptMatch = !deptFilter || t.fields['Department'] === deptFilter;
+        var catMatch  = !catFilter  || t.fields['Category']   === catFilter;
+        return deptMatch && catMatch;
       });
     });
   }
@@ -1282,6 +1299,7 @@ function filterDocLib() {
     var ticketIds   = f['Ticket'] || [];
     var ticket      = allTickets.find(function(tk) { return ticketIds.indexOf(tk.id) >= 0; });
     var dept        = ticket && ticket.fields['Department'] ? ticket.fields['Department'] : '';
+    var cat         = ticket && ticket.fields['Category']   ? ticket.fields['Category']   : '';
     var ticketName  = ticket ? (ticket.fields['Title'] || ticket.fields['Request Title'] || ticket.fields['Name'] || '') : '';
     var safeUrl     = url.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     var safeNameQ   = fname.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -1290,6 +1308,7 @@ function filterDocLib() {
       + '<div class="doc-card-ext">' + escHtml(ext) + '</div>'
       + '<div class="doc-card-name">' + escHtml(fname) + '</div>'
       + (dept ? '<div class="doc-card-dept">' + escHtml(dept) + '</div>' : '')
+      + (cat  ? '<div class="doc-card-ticket" style="color:var(--blue);margin-bottom:0.15rem">' + escHtml(cat) + '</div>' : '')
       + (ticketName ? '<div class="doc-card-ticket">' + escHtml(ticketName) + '</div>' : '')
       + '</div>';
   }).join('');
