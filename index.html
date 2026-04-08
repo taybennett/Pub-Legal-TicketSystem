@@ -1884,16 +1884,7 @@ async function analyzeDocumentWithClaude(base64, mimeType, filename) {
       const decoded = atob(base64);
       userContent = [{ type: 'text', text: prompt + '\n\nDocument content:\n\n' + decoded.slice(0, 8000) }];
     } catch { return null; }
-  } else if (isDocx(type, filename)) {
-    try {
-      const mammoth = await loadMammoth();
-      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-      const result = await mammoth.extractRawText({ arrayBuffer: bytes.buffer });
-      const text = (result.value || '').slice(0, 12000);
-      if (!text.trim()) return null;
-      userContent = [{ type: 'text', text: prompt + '\n\nDocument content (extracted from Word doc):\n\n' + text }];
-    } catch(e) { console.warn('mammoth extraction failed:', e); return null; }
-  } else { return null; }
+  } else { return null; }  // docx handled separately via analyzeDocxFromBuffer
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -1996,15 +1987,51 @@ function isDocx(mimeType, filename) {
   return n.endsWith('.docx') || t === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 }
 
+// Analyse a .docx directly from an ArrayBuffer — no base64 round-trip,
+// no stack-unsafe Uint8Array.from mapper
+async function analyzeDocxFromBuffer(buffer, filename) {
+  if (!ANTHROPIC_KEY) return null;
+  try {
+    const mammoth = await loadMammoth();
+    const extracted = await mammoth.extractRawText({ arrayBuffer: buffer });
+    const text = (extracted.value || '').trim().slice(0, 12000);
+    if (!text) return null;
+    const prompt = `You are a legal assistant for PopUp Bagels. Analyze this document ("${filename}") and provide a structured extraction with exactly these section headers:\n\n**Summary**\n**Key Parties**\n**Main Obligations**\n**Important Dates**\n**Notable Clauses**\n\nUnder each header write 1-4 concise bullet lines starting with "- ". Use plain English, no legalese.`;
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1024,
+        messages: [{ role: 'user', content: [{ type: 'text', text: prompt + '\n\nDocument content:\n\n' + text }] }] })
+    });
+    if (!resp.ok) { console.warn('Claude API error:', resp.status, await resp.text()); return null; }
+    const data = await resp.json();
+    return data.content?.[0]?.text || null;
+  } catch(e) {
+    console.warn('docx analysis failed:', e);
+    return null;
+  }
+}
+
 async function analyzeDocInline(docId, url, mimeType, filename) {
   try {
     const resp = await fetch(url);
     if (!resp.ok) { updateAIPanel(docId, null); return; }
     const buffer = await resp.arrayBuffer();
-    const b64 = arrayBufferToBase64(buffer);
-    const effectiveType = (filename||'').toLowerCase().endsWith('.pdf') ? 'application/pdf' : (mimeType||'');
-    const summary = await analyzeDocumentWithClaude(b64, effectiveType, filename);
-    updateAIPanel(docId, summary);
+    let summary;
+    if (isDocx(mimeType, filename)) {
+      // docx: pass ArrayBuffer directly to mammoth, skip base64 round-trip
+      summary = await analyzeDocxFromBuffer(buffer, filename);
+    } else {
+      const b64 = arrayBufferToBase64(buffer);
+      const effectiveType = (filename||'').toLowerCase().endsWith('.pdf') ? 'application/pdf' : (mimeType||'');
+      summary = await analyzeDocumentWithClaude(b64, effectiveType, filename);
+    }
+    updateAIPanel(docId, summary || null);
     if (summary) {
       docAISummaries[docId] = summary;
       atFetch('PATCH', `${TABLES.docs}/${docId}`, { fields: { 'AI Summary': summary } });
@@ -2220,13 +2247,12 @@ async function viewDoc(url, filename, mimeType, docRecordId) {
       const docResp = await fetch(url);
       if (docResp.ok) {
         const buffer = await docResp.arrayBuffer();
-        const b64 = arrayBufferToBase64(buffer);
-        const effectiveType = isPdf ? 'application/pdf' : type;
-        const newSummary = await analyzeDocumentWithClaude(b64, effectiveType, filename);
+        // docx: pass ArrayBuffer directly to avoid stack-unsafe base64 round-trip
+        const newSummary = isWordDoc
+          ? await analyzeDocxFromBuffer(buffer, filename)
+          : await analyzeDocumentWithClaude(arrayBufferToBase64(buffer), isPdf ? 'application/pdf' : type, filename);
         if (newSummary) {
-          // Update UI
           analysisBody.innerHTML = renderAIMarkdown(newSummary);
-          // Cache in memory + update inline ticket panel
           if (docRecordId) {
             docAISummaries[docRecordId] = newSummary;
             atFetch('PATCH', `${TABLES.docs}/${docRecordId}`, { fields: { 'AI Summary': newSummary } });
