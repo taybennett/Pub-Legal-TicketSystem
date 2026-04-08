@@ -210,12 +210,18 @@ header {
 .btn-submit:hover { background: var(--red-dark); }
 
 /* ── DOCUMENTS ── */
-.doc-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0; border-bottom: 1px solid var(--border); }
+.doc-item { display: flex; flex-direction: column; padding: 0.65rem 0; border-bottom: 1px solid var(--border); }
 .doc-item:last-child { border-bottom: none; }
-.doc-ext { background: var(--black); color: var(--white); font-size: 0.58rem; font-family: 'FFFAcidGrotesk', sans-serif; padding: 3px 5px; min-width: 34px; text-align: center; }
+.doc-item-row { display: flex; align-items: center; gap: 0.75rem; }
+.doc-ext { background: var(--black); color: var(--white); font-size: 0.58rem; font-family: 'FFFAcidGrotesk', sans-serif; padding: 3px 5px; min-width: 34px; text-align: center; flex-shrink: 0; }
 .doc-info { flex: 1; min-width: 0; }
 .doc-name { font-size: 0.82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .doc-meta { font-size: 0.68rem; color: var(--mid); }
+.doc-ai-panel { margin-top: 0.55rem; padding: 0.6rem 0.8rem; background: var(--cream); border-left: 3px solid var(--red); font-size: 0.74rem; line-height: 1.5; }
+.doc-ai-panel .ai-section-title { font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--red); margin: 0.45rem 0 0.2rem; font-weight: 600; }
+.doc-ai-panel .ai-section-title:first-child { margin-top: 0; }
+.doc-ai-loading { display: flex; align-items: center; gap: 0.5rem; color: var(--mid); font-size: 0.72rem; padding: 0.5rem 0.8rem; margin-top: 0.45rem; }
+.doc-ai-loading .spin-dot { width: 12px; height: 12px; border: 2px solid var(--red); border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
 .doc-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
 .doc-dl, .doc-view { font-size: 0.75rem; color: var(--mid); text-decoration: none; padding: 3px 8px; border: 1px solid var(--border); cursor: pointer; background: none; font-family: inherit; }
 .doc-dl:hover, .doc-view:hover { background: var(--black); color: var(--white); }
@@ -1898,25 +1904,87 @@ async function loadDocs(ticketId, view) {
   const records = (data?.records || []).filter(r => Array.isArray(r.fields['Ticket']) && r.fields['Ticket'].includes(ticketId));
   if (!records.length) { el.innerHTML = '<div class="state-msg">No documents attached.</div>'; return; }
   records.forEach(r => { docAISummaries[r.id] = r.fields['AI Summary'] || null; });
+
   el.innerHTML = records.map(r => {
     const f = r.fields;
     const ext = (f['Filename']||'').split('.').pop().toUpperCase().slice(0,5) || (f['File Type']||'FILE').split('/').pop().toUpperCase().slice(0,5);
     const fileUrl = f['File']?.[0]?.url;
     const fname = escHtml(f['Filename']||'Untitled');
+    const rawFname = f['Filename']||'Untitled';
     const ftype = escHtml(f['File Type']||'');
-    const hasAI = !!f['AI Summary'];
+    const summary = f['AI Summary'] || null;
+    const canAnalyze = ANTHROPIC_KEY && fileUrl && isAnalyzable(f['File Type'], rawFname);
+
+    let aiPanel = '';
+    if (summary) {
+      aiPanel = `<div class="doc-ai-panel" id="ai-panel-${r.id}"><span class="ai-badge">✦ AI</span> ${renderAIMarkdown(summary)}</div>`;
+    } else if (canAnalyze) {
+      aiPanel = `<div class="doc-ai-loading" id="ai-panel-${r.id}"><span class="spin-dot"></span>Analyzing…</div>`;
+    }
+
     return `<div class="doc-item">
-      <span class="doc-ext">${escHtml(ext)}</span>
-      <div class="doc-info">
-        <div class="doc-name">${fname}${hasAI ? '&nbsp;<span class="ai-badge">✦ AI</span>' : ''}</div>
-        <div class="doc-meta">${[f['Uploaded By'],f['File Size']].filter(Boolean).map(escHtml).join(' · ')}</div>
+      <div class="doc-item-row">
+        <span class="doc-ext">${escHtml(ext)}</span>
+        <div class="doc-info">
+          <div class="doc-name">${fname}</div>
+          <div class="doc-meta">${[f['Uploaded By'],f['File Size']].filter(Boolean).map(escHtml).join(' · ')}</div>
+        </div>
+        <div class="doc-actions">
+          ${fileUrl ? `<button class="doc-view" onclick="viewDoc('${fileUrl}','${fname}','${ftype}','${r.id}')">View</button>` : ''}
+          ${fileUrl ? `<a class="doc-dl" href="${fileUrl}" target="_blank" download>↓</a>` : ''}
+        </div>
       </div>
-      <div class="doc-actions">
-        ${fileUrl ? `<button class="doc-view" onclick="viewDoc('${fileUrl}','${fname}','${ftype}','${r.id}')">View</button>` : ''}
-        ${fileUrl ? `<a class="doc-dl" href="${fileUrl}" target="_blank" download>↓</a>` : ''}
-      </div>
+      ${aiPanel}
     </div>`;
   }).join('');
+
+  // Kick off analysis for any docs missing a summary
+  records.forEach(r => {
+    const f = r.fields;
+    if (!f['AI Summary'] && ANTHROPIC_KEY) {
+      const fileUrl = f['File']?.[0]?.url;
+      if (fileUrl && isAnalyzable(f['File Type'], f['Filename']||'')) {
+        analyzeDocInline(r.id, fileUrl, f['File Type'], f['Filename']||'document');
+      }
+    }
+  });
+}
+
+function isAnalyzable(mimeType, filename) {
+  const t = (mimeType || '').toLowerCase();
+  const n = (filename || '').toLowerCase();
+  return t === 'application/pdf' || n.endsWith('.pdf') ||
+         t.startsWith('image/') || t.startsWith('text/') || t === 'application/json';
+}
+
+async function analyzeDocInline(docId, url, mimeType, filename) {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) { updateAIPanel(docId, null); return; }
+    const buffer = await resp.arrayBuffer();
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    const effectiveType = (filename||'').toLowerCase().endsWith('.pdf') ? 'application/pdf' : (mimeType||'');
+    const summary = await analyzeDocumentWithClaude(b64, effectiveType, filename);
+    updateAIPanel(docId, summary);
+    if (summary) {
+      docAISummaries[docId] = summary;
+      atFetch('PATCH', `${TABLES.docs}/${docId}`, { fields: { 'AI Summary': summary } });
+    }
+  } catch(e) {
+    console.warn('Inline analysis failed:', e);
+    updateAIPanel(docId, null);
+  }
+}
+
+function updateAIPanel(docId, summary) {
+  const panel = document.getElementById('ai-panel-' + docId);
+  if (!panel) return;
+  if (summary) {
+    panel.className = 'doc-ai-panel';
+    panel.innerHTML = '<span class="ai-badge">✦ AI</span> ' + renderAIMarkdown(summary);
+  } else {
+    panel.remove();
+  }
 }
 
 async function uploadDocument(file, view) {
@@ -1940,16 +2008,9 @@ async function uploadDocument(file, view) {
       headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ contentType: file.type || 'application/octet-stream', file: base64, filename: file.name })
     });
-    showToast(up.ok ? 'Document uploaded! Analyzing…' : 'Metadata saved — attach file manually in Airtable.');
-    if (ANTHROPIC_KEY && up.ok) {
-      const summary = await analyzeDocumentWithClaude(base64, file.type, file.name);
-      if (summary) {
-        await atFetch('PATCH', `${TABLES.docs}/${result.id}`, { fields: { 'AI Summary': summary } });
-        docAISummaries[result.id] = summary;
-        showToast('AI analysis complete!');
-      } else { showToast('Document uploaded!'); }
-    }
+    showToast('Document uploaded!');
   } catch { showToast('Metadata saved — attach file manually in Airtable.'); }
+  // loadDocs re-renders the list and fires analyzeDocInline for any doc missing a summary
   await loadDocs(currentTicketId, view);
 }
 
@@ -2104,11 +2165,11 @@ async function viewDoc(url, filename, mimeType, docRecordId) {
         if (newSummary) {
           // Update UI
           analysisBody.innerHTML = renderAIMarkdown(newSummary);
-          // Cache in memory
+          // Cache in memory + update inline ticket panel
           if (docRecordId) {
             docAISummaries[docRecordId] = newSummary;
-            // Save back to Airtable so it's instant next time
             atFetch('PATCH', `${TABLES.docs}/${docRecordId}`, { fields: { 'AI Summary': newSummary } });
+            updateAIPanel(docRecordId, newSummary);
           }
         } else {
           analysisBody.innerHTML = `<div style="color:var(--mid);font-size:0.8rem;padding:0.5rem 0">Analysis unavailable for this file.</div>`;
