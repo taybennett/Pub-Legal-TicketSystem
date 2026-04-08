@@ -1326,6 +1326,17 @@ function openDocFromLib(url, fname, mtype, docId) {
 }
 
 
+// ── SAFE BASE64 ENCODER (chunked to avoid call stack overflow) ─────────────
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunk = 8192;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 // ── MAMMOTH LOADER (Word doc support) ──────────────────────────────────────
 async function loadMammoth() {
   if (window.mammoth) return window.mammoth;
@@ -1990,7 +2001,7 @@ async function analyzeDocInline(docId, url, mimeType, filename) {
     const resp = await fetch(url);
     if (!resp.ok) { updateAIPanel(docId, null); return; }
     const buffer = await resp.arrayBuffer();
-    const b64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    const b64 = arrayBufferToBase64(buffer);
     const effectiveType = (filename||'').toLowerCase().endsWith('.pdf') ? 'application/pdf' : (mimeType||'');
     const summary = await analyzeDocumentWithClaude(b64, effectiveType, filename);
     updateAIPanel(docId, summary);
@@ -2209,7 +2220,7 @@ async function viewDoc(url, filename, mimeType, docRecordId) {
       const docResp = await fetch(url);
       if (docResp.ok) {
         const buffer = await docResp.arrayBuffer();
-        const b64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        const b64 = arrayBufferToBase64(buffer);
         const effectiveType = isPdf ? 'application/pdf' : type;
         const newSummary = await analyzeDocumentWithClaude(b64, effectiveType, filename);
         if (newSummary) {
