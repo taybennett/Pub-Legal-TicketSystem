@@ -1325,6 +1325,19 @@ function openDocFromLib(url, fname, mtype, docId) {
   viewDoc(url, fname, mtype, docId);
 }
 
+
+// ── MAMMOTH LOADER (Word doc support) ──────────────────────────────────────
+async function loadMammoth() {
+  if (window.mammoth) return window.mammoth;
+  await new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  return window.mammoth;
+}
+
 // ── AIRTABLE HELPER ──
 async function atFetch(method, path, body) {
   const url = `https://api.airtable.com/v0/${BASE_ID}/${path}`;
@@ -1860,6 +1873,15 @@ async function analyzeDocumentWithClaude(base64, mimeType, filename) {
       const decoded = atob(base64);
       userContent = [{ type: 'text', text: prompt + '\n\nDocument content:\n\n' + decoded.slice(0, 8000) }];
     } catch { return null; }
+  } else if (isDocx(type, filename)) {
+    try {
+      const mammoth = await loadMammoth();
+      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+      const result = await mammoth.extractRawText({ arrayBuffer: bytes.buffer });
+      const text = (result.value || '').slice(0, 12000);
+      if (!text.trim()) return null;
+      userContent = [{ type: 'text', text: prompt + '\n\nDocument content (extracted from Word doc):\n\n' + text }];
+    } catch(e) { console.warn('mammoth extraction failed:', e); return null; }
   } else { return null; }
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1954,7 +1976,13 @@ function isAnalyzable(mimeType, filename) {
   const t = (mimeType || '').toLowerCase();
   const n = (filename || '').toLowerCase();
   return t === 'application/pdf' || n.endsWith('.pdf') ||
-         t.startsWith('image/') || t.startsWith('text/') || t === 'application/json';
+         t.startsWith('image/') || t.startsWith('text/') || t === 'application/json' ||
+         n.endsWith('.docx') || t === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+}
+function isDocx(mimeType, filename) {
+  const t = (mimeType || '').toLowerCase();
+  const n = (filename || '').toLowerCase();
+  return n.endsWith('.docx') || t === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 }
 
 async function analyzeDocInline(docId, url, mimeType, filename) {
@@ -2107,8 +2135,9 @@ async function viewDoc(url, filename, mimeType, docRecordId) {
   const analysisPanel = document.getElementById('dv-analysis');
   const analysisBody = document.getElementById('dv-analysis-body');
   const cachedSummary = docRecordId ? (docAISummaries[docRecordId] || null) : null;
+  const isWordDoc = isDocx(type, filename);
   const canAnalyze = !!ANTHROPIC_KEY && (
-    isPdf ||
+    isPdf || isWordDoc ||
     type.startsWith('image/') ||
     type.startsWith('text/') ||
     type === 'application/json'
@@ -2144,6 +2173,27 @@ async function viewDoc(url, filename, mimeType, docRecordId) {
     }
   } else if (type.startsWith('text/') || type === 'application/json') {
     body.innerHTML = `<iframe src="${url}" title="${filename}" style="width:100%;height:100%;border:none;display:block"></iframe>`;
+  } else if (isWordDoc) {
+    body.innerHTML = `<div style="height:100%;overflow-y:auto;padding:2rem;background:#fff;display:flex;align-items:flex-start;justify-content:center">
+      <div id="dv-docx-content" style="max-width:680px;width:100%;font-size:0.9rem;line-height:1.7;color:#111">
+        <div style="display:flex;align-items:center;gap:0.5rem;color:var(--mid);font-size:0.78rem">
+          <span style="display:inline-block;width:14px;height:14px;border:2px solid var(--red);border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite"></span>
+          Loading document…
+        </div>
+      </div>
+    </div>`;
+    try {
+      const mammoth = await loadMammoth();
+      const resp = await fetch(url);
+      const buf = await resp.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer: buf });
+      const docEl = document.getElementById('dv-docx-content');
+      if (docEl) docEl.innerHTML = result.value || '<em>Document appears to be empty.</em>';
+    } catch(e) {
+      const docEl = document.getElementById('dv-docx-content');
+      if (docEl) docEl.innerHTML = '<em>Could not render this document. Please download to view.</em>';
+      console.warn('docx render failed:', e);
+    }
   } else {
     body.innerHTML = `<div class="doc-viewer-unsupported">
       <div style="font-size:2.5rem">📄</div>
