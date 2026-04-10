@@ -529,7 +529,6 @@ header {
 .genfa-group-banner { background: var(--white); border: 1px solid var(--border); border-left: 4px solid var(--blue); padding: 0.85rem 1rem; margin: 0.5rem 0 0.75rem; }
 .genfa-group-banner-title { font-size: 0.78rem; font-weight: 700; color: var(--blue); margin-bottom: 0.2rem; }
 .genfa-group-banner-sub { font-size: 0.68rem; color: var(--mid); margin-bottom: 0.3rem; }
-.genfa-group-banner-addendum { font-size: 0.7rem; color: var(--black); }
 
 </style>
 </head>
@@ -695,7 +694,7 @@ header {
         <div class="genfa-section-label">Franchisee Group</div>
         <div class="genfa-row" style="grid-template-columns:1fr;">
           <div class="genfa-field">
-            <label>Select Group <span style="color:var(--mid);font-weight:400;">(optional &#x2014; activates group-specific addendums)</span></label>
+            <label>Select Group <span style="color:var(--mid);font-weight:400;">(optional &#x2014; applies group-specific token values)</span></label>
             <select id="fa-group" onchange="onGroupChange()">
               <option value="">&#x2014; Ad Hoc / No Group &#x2014;</option>
             </select>
@@ -2531,9 +2530,7 @@ async function fetchFranchiseeGroups() {
         id:           f['Group ID']       || '',
         name:         f['Group Name']     || '',
         description:  f['Description']    || '',
-        addendumTitle:f['Addendum Title'] || '',
-        tokenMap:     tokenMap,
-        b64:          f['Addendum B64'] ? f['Addendum B64'].replace(/\s+/g, '') : null
+        tokenMap:     tokenMap
       };
     }).filter(function(g){ return g.id; });
 
@@ -2549,25 +2546,12 @@ function populateGroupDropdown() {
   // Remove all existing options except the first (Ad Hoc)
   while (sel.options.length > 1) sel.remove(1);
 
-  // Separate groups with addendums from those without
-  var withAddendum    = _franchiseeGroups.filter(function(g){ return g.b64; });
-  var withoutAddendum = _franchiseeGroups.filter(function(g){ return !g.b64; });
-
-  function addOptgroup(label, groups) {
-    if (!groups.length) return;
-    var og = document.createElement('optgroup');
-    og.label = label;
-    groups.forEach(function(g) {
-      var opt = document.createElement('option');
-      opt.value = g.id;
-      opt.textContent = g.name;
-      og.appendChild(opt);
-    });
-    sel.appendChild(og);
-  }
-
-  addOptgroup('Groups with Negotiated Addendum', withAddendum);
-  addOptgroup('Other Franchisee Groups', withoutAddendum);
+  _franchiseeGroups.forEach(function(g) {
+    var opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = g.name;
+    sel.appendChild(opt);
+  });
 }
 
 function toTitleCase(str) {
@@ -2589,41 +2573,10 @@ function onGroupChange() {
   var grp = _franchiseeGroups.find(function(g){ return g.id === groupId; });
   if (!grp) return;
   banner.classList.remove('hidden');
-  var addLine = grp.b64
-    ? '<div class="genfa-group-banner-addendum">+ Addendum included: <strong>' + grp.addendumTitle + '</strong> &#x2014; will be merged into the FA</div>'
-    : '<div class="genfa-group-banner-addendum" style="opacity:0.6;">&#x2014; Standard FA only (no negotiated addendum on file yet)</div>';
   banner.innerHTML = '<div class="genfa-group-banner-title">&#x2713; ' + grp.name + '</div>' +
-    '<div class="genfa-group-banner-sub">' + grp.description + '</div>' +
-    addLine;
+    '<div class="genfa-group-banner-sub">' + grp.description + '</div>';
 }
 
-async function mergeAddendumIntoFA(faZip, addendumB64, formTokens, groupTokens) {
-  var JSZip = window.JSZip;
-  var dec = new TextDecoder('utf-8');
-  var enc = new TextEncoder();
-  var addZip = await JSZip.loadAsync(b64ToUint8Array(addendumB64));
-  var allTokens = Object.assign({}, formTokens, groupTokens);
-  var xmlPaths = Object.keys(addZip.files).filter(function(p){ return p.endsWith('.xml') || p.endsWith('.rels'); });
-  for (var i = 0; i < xmlPaths.length; i++) {
-    var path = xmlPaths[i];
-    var content = dec.decode(await addZip.files[path].async('uint8array'));
-    for (var [k, v] of Object.entries(allTokens)) {
-      content = content.split(k).join(v);
-    }
-    addZip.file(path, enc.encode(content));
-  }
-  var addDocXml = dec.decode(await addZip.files['word/document.xml'].async('uint8array'));
-  var bodyStart = addDocXml.indexOf('<w:body>') + '<w:body>'.length;
-  var bodyEnd   = addDocXml.lastIndexOf('</w:body>');
-  var addBody   = addDocXml.slice(bodyStart, bodyEnd).trim();
-  addBody = addBody.replace(/<w:sectPr[\s\S]*?<\/w:sectPr>\s*$/, '').trim();
-  var pageBreak = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
-  var faDocXml  = dec.decode(await faZip.files['word/document.xml'].async('uint8array'));
-  var faBodyEnd = faDocXml.lastIndexOf('</w:body>');
-  faDocXml = faDocXml.slice(0, faBodyEnd) + pageBreak + addBody + faDocXml.slice(faBodyEnd);
-  faZip.file('word/document.xml', enc.encode(faDocXml));
-  return faZip;
-}
 
 // ── FA GENERATOR ──────────────────────────────────────────────────────────
 
@@ -2773,29 +2726,10 @@ async function generateFA(e) {
       if (changed) zip.file(path, enc.encode(content));
     }
 
-    // Merge addendum if group selected
-    if (selectedGroup && selectedGroup.b64) {
-      statusEl.textContent = 'Merging addendum…';
-      var shopAddrFull = buildFullAddress(addr1, addr2, state);
-      var formAddTokens = {
-        '{{SHOP_ADDRESS_FULL}}':          shopAddrFull,
-        '{{FRANCHISEE_ENTITY}}':          entity,
-        '{{FRANCHISEE_SIGNATORY_NAME}}':  sigName,
-        '{{FRANCHISEE_SIGNATORY_TITLE}}': sigTitle,
-        '{{EFFECTIVE_DATE}}':             execDateRaw,
-      };
-      var groupTokensFormatted = {};
-      for (var [k2, v2] of Object.entries(selectedGroup.tokenMap || {})) {
-        groupTokensFormatted['{{' + k2 + '}}'] = v2;
-      }
-      await mergeAddendumIntoFA(zip, selectedGroup.b64, formAddTokens, groupTokensFormatted);
-    }
-
     // Generate filename
     const safeShop   = shopName.replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
     const safeEntity = entity.replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
-    const addSuffix  = (selectedGroup && selectedGroup.b64) ? '-with-Addendum' : '';
-    const filename   = `${safeShop}-${safeEntity}-Franchise-Agreement${addSuffix}.docx`;
+    const filename   = `${safeShop}-${safeEntity}-Franchise-Agreement.docx`;
 
     // Download
     statusEl.textContent = 'Packaging document…';
