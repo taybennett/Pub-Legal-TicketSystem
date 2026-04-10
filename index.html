@@ -2599,7 +2599,7 @@ function onGroupChange() {
 
 async function mergeAddendumIntoFA(faZip, addendumB64, formTokens, groupTokens) {
   var JSZip = window.JSZip;
-  var addZip = await JSZip.loadAsync(addendumB64, {base64: true});
+  var addZip = await JSZip.loadAsync(b64ToUint8Array(addendumB64));
   var allTokens = Object.assign({}, formTokens, groupTokens);
   var xmlPaths = Object.keys(addZip.files).filter(function(p){ return p.endsWith('.xml') || p.endsWith('.rels'); });
   for (var i = 0; i < xmlPaths.length; i++) {
@@ -2634,6 +2634,17 @@ async function loadJSZip() {
     document.head.appendChild(s);
   });
   return window.JSZip;
+}
+
+// Decode a base64 string to Uint8Array using the browser's native atob().
+// This bypasses JSZip's own base64 decoder, which can mishandle very large
+// strings (e.g. the 228 K-char FA template), causing a spurious
+// "uncompressed data size mismatch" error in JSZip 3.10.x.
+function b64ToUint8Array(b64) {
+  var binaryStr = atob(b64);
+  var bytes = new Uint8Array(binaryStr.length);
+  for (var i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+  return bytes;
 }
 
 function ordinalSuffix(day) {
@@ -2741,7 +2752,7 @@ async function generateFA(e) {
     const buf = FA_B64;  // will pass to JSZip with {base64: true}
 
     // Unzip
-    const zip = await JSZip.loadAsync(buf, {base64: true});
+    const zip = await JSZip.loadAsync(b64ToUint8Array(buf));
 
     // Replace tokens in all XML files
     statusEl.textContent = 'Filling in fields…';
