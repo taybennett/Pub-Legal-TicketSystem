@@ -2816,15 +2816,12 @@ async function generateFA(e) {
     if (selectedGroup && selectedGroup.b64) {
       statusEl.textContent = 'Merging addendum…';
       var shopAddrFull = buildFullAddress(addr1, addr2, state);
-      var sigName   = (document.getElementById('fa-signame')  || {value:''}).value.trim();
-      var sigTitle  = (document.getElementById('fa-sigtitle') || {value:''}).value.trim();
-      var execDate  = (document.getElementById('fa-execdate') || {value:''}).value.trim();
       var formAddTokens = {
-        '{{SHOP_ADDRESS_FULL}}':         shopAddrFull,
-        '{{FRANCHISEE_ENTITY}}':         entity,
-        '{{FRANCHISEE_SIGNATORY_NAME}}': sigName,
+        '{{SHOP_ADDRESS_FULL}}':          shopAddrFull,
+        '{{FRANCHISEE_ENTITY}}':          entity,
+        '{{FRANCHISEE_SIGNATORY_NAME}}':  sigName,
         '{{FRANCHISEE_SIGNATORY_TITLE}}': sigTitle,
-        '{{EFFECTIVE_DATE}}':            execDate,
+        '{{EFFECTIVE_DATE}}':             execDateRaw,
       };
       var groupTokensFormatted = {};
       for (var [k2, v2] of Object.entries(selectedGroup.tokens)) {
