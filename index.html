@@ -2599,27 +2599,29 @@ function onGroupChange() {
 
 async function mergeAddendumIntoFA(faZip, addendumB64, formTokens, groupTokens) {
   var JSZip = window.JSZip;
+  var dec = new TextDecoder('utf-8');
+  var enc = new TextEncoder();
   var addZip = await JSZip.loadAsync(b64ToUint8Array(addendumB64));
   var allTokens = Object.assign({}, formTokens, groupTokens);
   var xmlPaths = Object.keys(addZip.files).filter(function(p){ return p.endsWith('.xml') || p.endsWith('.rels'); });
   for (var i = 0; i < xmlPaths.length; i++) {
     var path = xmlPaths[i];
-    var content = await addZip.files[path].async('string');
+    var content = dec.decode(await addZip.files[path].async('uint8array'));
     for (var [k, v] of Object.entries(allTokens)) {
       content = content.split(k).join(v);
     }
-    addZip.file(path, content);
+    addZip.file(path, enc.encode(content));
   }
-  var addDocXml = await addZip.files['word/document.xml'].async('string');
+  var addDocXml = dec.decode(await addZip.files['word/document.xml'].async('uint8array'));
   var bodyStart = addDocXml.indexOf('<w:body>') + '<w:body>'.length;
   var bodyEnd   = addDocXml.lastIndexOf('</w:body>');
   var addBody   = addDocXml.slice(bodyStart, bodyEnd).trim();
   addBody = addBody.replace(/<w:sectPr[\s\S]*?<\/w:sectPr>\s*$/, '').trim();
   var pageBreak = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
-  var faDocXml  = await faZip.files['word/document.xml'].async('string');
+  var faDocXml  = dec.decode(await faZip.files['word/document.xml'].async('uint8array'));
   var faBodyEnd = faDocXml.lastIndexOf('</w:body>');
   faDocXml = faDocXml.slice(0, faBodyEnd) + pageBreak + addBody + faDocXml.slice(faBodyEnd);
-  faZip.file('word/document.xml', faDocXml);
+  faZip.file('word/document.xml', enc.encode(faDocXml));
   return faZip;
 }
 
@@ -2756,9 +2758,11 @@ async function generateFA(e) {
 
     // Replace tokens in all XML files
     statusEl.textContent = 'Filling in fields…';
+    const dec = new TextDecoder('utf-8');
+    const enc = new TextEncoder();
     const xmlPaths = Object.keys(zip.files).filter(p => p.endsWith('.xml') || p.endsWith('.rels'));
     for (const path of xmlPaths) {
-      let content = await zip.files[path].async('string');
+      let content = dec.decode(await zip.files[path].async('uint8array'));
       let changed = false;
       for (const [token, value] of Object.entries(tokens)) {
         if (content.includes(token)) {
@@ -2766,7 +2770,7 @@ async function generateFA(e) {
           changed = true;
         }
       }
-      if (changed) zip.file(path, content);
+      if (changed) zip.file(path, enc.encode(content));
     }
 
     // Merge addendum if group selected
