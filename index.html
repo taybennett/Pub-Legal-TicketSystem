@@ -2569,14 +2569,48 @@ async function fetchFranchiseeGroups() {
 function populateGroupDropdown() {
   var sel = document.getElementById('fa-group');
   if (!sel) return;
-  // Remove all existing options except the first (Ad Hoc)
   while (sel.options.length > 1) sel.remove(1);
 
+  // Parse "Entity — DRA" names (em-dash separator)
+  var entityMap = {};
   _franchiseeGroups.forEach(function(g) {
-    var opt = document.createElement('option');
-    opt.value = g.id;
-    opt.textContent = g.name;
-    sel.appendChild(opt);
+    var parts = g.name.split(' \u2014 ');
+    var entity = parts[0].trim();
+    var dra    = parts.length > 1 ? parts[1].trim() : null;
+    if (!entityMap[entity]) entityMap[entity] = [];
+    entityMap[entity].push({ g: g, dra: dra || g.name });
+  });
+
+  // Sort entities alphabetically
+  var entities = Object.keys(entityMap).sort(function(a, b) {
+    return a.toLowerCase().localeCompare(b.toLowerCase());
+  });
+
+  entities.forEach(function(entity) {
+    var items = entityMap[entity];
+    // Sort DRAs alphabetically within each entity
+    items.sort(function(a, b) {
+      return a.dra.toLowerCase().localeCompare(b.dra.toLowerCase());
+    });
+
+    if (items.length === 1) {
+      // Single DRA: one flat option with the full name
+      var opt = document.createElement('option');
+      opt.value = items[0].g.id;
+      opt.textContent = items[0].g.name;
+      sel.appendChild(opt);
+    } else {
+      // Multiple DRAs: optgroup labelled with the entity name
+      var og = document.createElement('optgroup');
+      og.label = entity;
+      items.forEach(function(item) {
+        var opt = document.createElement('option');
+        opt.value = item.g.id;
+        opt.textContent = item.dra;
+        og.appendChild(opt);
+      });
+      sel.appendChild(og);
+    }
   });
 }
 
