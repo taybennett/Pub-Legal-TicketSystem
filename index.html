@@ -698,9 +698,30 @@ header {
             <label>Select Group <span style="color:var(--mid);font-weight:400;">(optional &#x2014; activates group-specific addendums)</span></label>
             <select id="fa-group" onchange="onGroupChange()">
               <option value="">&#x2014; Ad Hoc / No Group &#x2014;</option>
-              <option value="seeded-capital-boston">Seeded Capital Partners &#x2014; Boston DRA</option>
-              <option value="seeded-capital-panj">Seeded Capital Partners &#x2014; PA/NJ DRA</option>
-              <option value="seeded-capital-dmv">Seeded Capital Partners &#x2014; DMV DRA</option>
+              <optgroup label="Seeded Capital Partners (Addendum on file)">
+                <option value="seeded-capital-boston">Seeded Capital Partners &#x2014; Boston DRA</option>
+                <option value="seeded-capital-panj">Seeded Capital Partners &#x2014; PA/NJ DRA</option>
+                <option value="seeded-capital-dmv">Seeded Capital Partners &#x2014; DMV DRA</option>
+              </optgroup>
+              <optgroup label="Other Franchisee Groups">
+                <option value="mpz-pop-florida">MPZ Pop LLC &#x2014; Florida DRA</option>
+                <option value="pcmae-new-england">P.C. MAE &#x2014; New England DRA</option>
+                <option value="bagel-boyz-sandiego">Bagel Boyz &#x2014; San Diego DRA</option>
+                <option value="sweetzer-la">Sweetzer &#x2014; Los Angeles DRA</option>
+                <option value="justpop-newyork">Just Pop (NY) &#x2014; New York DRA</option>
+                <option value="palmedough-sc">Palmedough &#x2014; South Carolina DRA</option>
+                <option value="hoosier-wildcat-inky">Hoosier-Wildcat &#x2014; Indiana/KY DRA</option>
+                <option value="pop-tenn-nashville">Pop Tenn Inc &#x2014; Nashville DRA</option>
+                <option value="pub-alabama">PUB Alabama &#x2014; Alabama DRA</option>
+                <option value="jip-dip-georgia">Jip Dip &#x2014; Georgia DRA</option>
+                <option value="pop-cotswold-nc">Pop Cotswold &#x2014; North Carolina DRA</option>
+                <option value="gsp-bagels-hawaii">GSP Bagels &#x2014; Hawaii DRA</option>
+                <option value="lonestar-texas">Lonestar &#x2014; Texas DRA</option>
+                <option value="bagel-bros-ilwi">Bagel Bros &#x2014; Illinois/Wisconsin DRA</option>
+                <option value="pub-az-arizona">PUB AZ &#x2014; Arizona DRA</option>
+                <option value="blue-rey-utah">Blue Rey Baking Co &#x2014; Utah DRA</option>
+                <option value="lucky-bagel-nv">Lucky Bagel (NV) &#x2014; Nevada DRA</option>
+              </optgroup>
             </select>
           </div>
         </div>
@@ -2552,6 +2573,24 @@ const FRANCHISEE_GROUPS = [
       'SCP_ALL_ENTITIES':  'BBP Mass, LLC, BBP PANJ, LLC and/or BBP DMV, LLC',
     }
   },
+  // ── NON-SCP FRANCHISEES (addendums pending upload) ──────────────────────────
+  { id: 'mpz-pop-florida',    name: 'MPZ Pop LLC — Florida DRA',               description: 'MPZ Pop LLC — Florida Territory',               addendumTitle: null, b64: null, tokens: {} },
+  { id: 'pcmae-new-england',  name: 'P.C. MAE — New England DRA',              description: 'P.C. MAE — New England Territory',              addendumTitle: null, b64: null, tokens: {} },
+  { id: 'bagel-boyz-sandiego',name: 'Bagel Boyz — San Diego DRA',              description: 'Bagel Boyz — San Diego Territory',              addendumTitle: null, b64: null, tokens: {} },
+  { id: 'sweetzer-la',        name: 'Sweetzer — Los Angeles DRA',              description: 'Sweetzer — Los Angeles Territory',              addendumTitle: null, b64: null, tokens: {} },
+  { id: 'justpop-newyork',    name: 'Just Pop (NY) — New York DRA',            description: 'Just Pop (NY) — New York Territory',            addendumTitle: null, b64: null, tokens: {} },
+  { id: 'palmedough-sc',      name: 'Palmedough — South Carolina DRA',         description: 'Palmedough — South Carolina Territory',         addendumTitle: null, b64: null, tokens: {} },
+  { id: 'hoosier-wildcat-inky',name: 'Hoosier-Wildcat — Indiana/KY DRA',       description: 'Hoosier-Wildcat — Indiana/KY Territory',        addendumTitle: null, b64: null, tokens: {} },
+  { id: 'pop-tenn-nashville', name: 'Pop Tenn Inc — Nashville DRA',            description: 'Pop Tenn Inc — Nashville Territory',            addendumTitle: null, b64: null, tokens: {} },
+  { id: 'pub-alabama',        name: 'PUB Alabama — Alabama DRA',               description: 'PUB Alabama — Alabama Territory',               addendumTitle: null, b64: null, tokens: {} },
+  { id: 'jip-dip-georgia',    name: 'Jip Dip — Georgia DRA',                  description: 'Jip Dip — Georgia Territory',                   addendumTitle: null, b64: null, tokens: {} },
+  { id: 'pop-cotswold-nc',    name: 'Pop Cotswold — North Carolina DRA',       description: 'Pop Cotswold — North Carolina Territory',       addendumTitle: null, b64: null, tokens: {} },
+  { id: 'gsp-bagels-hawaii',  name: 'GSP Bagels — Hawaii DRA',                description: 'GSP Bagels — Hawaii Territory',                 addendumTitle: null, b64: null, tokens: {} },
+  { id: 'lonestar-texas',     name: 'Lonestar — Texas DRA',                   description: 'Lonestar — Texas Territory',                    addendumTitle: null, b64: null, tokens: {} },
+  { id: 'bagel-bros-ilwi',    name: 'Bagel Bros — Illinois/Wisconsin DRA',    description: 'Bagel Bros — Illinois/Wisconsin Territory',     addendumTitle: null, b64: null, tokens: {} },
+  { id: 'pub-az-arizona',     name: 'PUB AZ — Arizona DRA',                   description: 'PUB AZ — Arizona Territory',                    addendumTitle: null, b64: null, tokens: {} },
+  { id: 'blue-rey-utah',      name: 'Blue Rey Baking Co — Utah DRA',          description: 'Blue Rey Baking Co — Utah Territory',           addendumTitle: null, b64: null, tokens: {} },
+  { id: 'lucky-bagel-nv',     name: 'Lucky Bagel (NV) — Nevada DRA',          description: 'Lucky Bagel (NV) — Nevada Territory',           addendumTitle: null, b64: null, tokens: {} },
 ];
 
 function toTitleCase(str) {
@@ -2573,9 +2612,12 @@ function onGroupChange() {
   var grp = FRANCHISEE_GROUPS.find(function(g){ return g.id === groupId; });
   if (!grp) return;
   banner.classList.remove('hidden');
+  var addLine = grp.b64
+    ? '<div class="genfa-group-banner-addendum">+ Addendum included: <strong>' + grp.addendumTitle + '</strong> &#x2014; will be merged into the FA</div>'
+    : '<div class="genfa-group-banner-addendum" style="opacity:0.6;">&#x2014; Standard FA only (no negotiated addendum on file yet)</div>';
   banner.innerHTML = '<div class="genfa-group-banner-title">&#x2713; ' + grp.name + '</div>' +
     '<div class="genfa-group-banner-sub">' + grp.description + '</div>' +
-    '<div class="genfa-group-banner-addendum">+ Addendum included: <strong>' + grp.addendumTitle + '</strong> &#x2014; will be merged into the FA</div>';
+    addLine;
 }
 
 async function mergeAddendumIntoFA(faZip, addendumB64, formTokens, groupTokens) {
@@ -2740,7 +2782,7 @@ async function generateFA(e) {
     }
 
     // Merge addendum if group selected
-    if (selectedGroup) {
+    if (selectedGroup && selectedGroup.b64) {
       statusEl.textContent = 'Merging addendum…';
       var shopAddrFull = buildFullAddress(addr1, addr2, state);
       var formAddTokens = { '{{SHOP_ADDRESS_FULL}}': shopAddrFull };
@@ -2754,7 +2796,7 @@ async function generateFA(e) {
     // Generate filename
     const safeShop   = shopName.replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
     const safeEntity = entity.replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
-    const addSuffix  = selectedGroup ? '-with-Addendum' : '';
+    const addSuffix  = (selectedGroup && selectedGroup.b64) ? '-with-Addendum' : '';
     const filename   = `${safeShop}-${safeEntity}-Franchise-Agreement${addSuffix}.docx`;
 
     // Download
