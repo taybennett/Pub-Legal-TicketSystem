@@ -809,11 +809,11 @@ header {
 
         <!-- ─ OWNERS ─ -->
         <div class="genfa-section-label">Ownership Table (Exhibit C)</div>
-        <div class="genfa-hint">The primary signatory is automatically listed as Owner 1.</div>
+        <div class="genfa-hint">Enter all owners and their ownership percentages.</div>
         <div id="fa-owners-list">
           <div class="genfa-owner-row">
             <span class="genfa-owner-num">1</span>
-            <input type="text" class="fa-owner-name" placeholder="Owner name (auto: signatory)" disabled id="fa-owner1-name">
+            <input type="text" class="fa-owner-name" placeholder="Owner name" id="fa-owner1-name">
             <input type="text" class="fa-owner-pct" placeholder="%" id="fa-owner1-pct">
           </div>
           <div class="genfa-owner-row">
@@ -2533,7 +2533,7 @@ async function fetchFranchiseeGroups() {
         description:  f['Description']    || '',
         addendumTitle:f['Addendum Title'] || '',
         tokenMap:     tokenMap,
-        b64:          f['Addendum B64']   || null
+        b64:          f['Addendum B64'] ? f['Addendum B64'].replace(/\s+/g, '') : null
       };
     }).filter(function(g){ return g.id; });
 
@@ -2684,7 +2684,7 @@ async function generateFA(e) {
     for (let i = 1; i <= 5; i++) {
       const n = document.getElementById(`fa-owner${i}-name`).value.trim();
       const p = document.getElementById(`fa-owner${i}-pct`).value.trim();
-      owners.push({ name: i === 1 ? sigName : n, pct: p });
+      owners.push({ name: n, pct: p });
     }
 
     // Build date tokens
