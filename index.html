@@ -91,7 +91,13 @@ header {
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
   overflow: hidden; background: var(--white);
+  transition: width 0.2s, min-width 0.2s;
 }
+/* Collapse sidebar to just the hamburger when view has no sidebar content */
+.sidebar--slim {
+  width: 46px; min-width: 46px;
+}
+.sidebar--slim .snav-active-label { display: none; }
 .sidebar-top { padding: 0.9rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .search-input {
   width: 100%; padding: 7px 10px;
@@ -1397,6 +1403,9 @@ function switchAttyView(view) {
   document.getElementById('snav-dropdown').classList.add('hidden');
   const labels = { tickets: 'TICKETS', dashboard: 'DASHBOARD', docs: 'DOCS', genfa: 'GEN FA' };
   document.getElementById('snav-active-label').textContent = labels[view] || view.toUpperCase();
+  // Collapse sidebar when the view has no sidebar content
+  const hasSidebarContent = view === 'tickets' || view === 'docs';
+  document.querySelector('.sidebar').classList.toggle('sidebar--slim', !hasSidebarContent);
   ['tickets','dashboard','docs','genfa'].forEach(v => {
     document.getElementById('snav-' + v).classList.toggle('active', v === view);
     document.getElementById('sview-' + v).classList.toggle('hidden', v !== view);
