@@ -90,8 +90,11 @@ header {
   width: 300px; min-width: 300px;
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
-  overflow: hidden; background: var(--white);
+  background: var(--white);
   transition: width 0.2s, min-width 0.2s;
+  /* overflow must stay visible so the hamburger dropdown isn't clipped */
+  overflow: visible;
+  position: relative; z-index: 10;
 }
 /* Collapse sidebar to just the hamburger when view has no sidebar content */
 .sidebar--slim {
