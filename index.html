@@ -445,10 +445,15 @@ header {
 }
 
 /* ── SIDEBAR NAV TABS ── */
-.sidebar-nav { display: flex; border-bottom: 2px solid var(--border); flex-shrink: 0; background: var(--white); }
-.snav-tab { flex: 1; padding: 0.65rem 0.3rem; text-align: center; font-size: 0.6rem; letter-spacing: 0.09em; cursor: pointer; border: none; background: none; color: var(--mid); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color 0.15s; }
-.snav-tab.active { color: var(--black); border-bottom-color: var(--red); font-weight: 600; }
-.snav-tab:hover:not(.active) { color: var(--black); }
+.sidebar-nav { display: flex; align-items: center; padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--white); position: relative; gap: 0.5rem; }
+.hamburger-btn { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.15rem 0.35rem; color: var(--black); line-height: 1; border-radius: 3px; transition: background 0.15s; }
+.hamburger-btn:hover { background: var(--cream); }
+.snav-active-label { font-size: 0.6rem; letter-spacing: 0.12em; font-weight: 700; color: var(--black); text-transform: uppercase; }
+.snav-dropdown { position: absolute; top: 100%; left: 0; width: 100%; background: var(--white); border-bottom: 2px solid var(--border); box-shadow: 0 6px 16px rgba(0,0,0,0.1); z-index: 200; display: flex; flex-direction: column; }
+.snav-dropdown.hidden { display: none; }
+.snav-item { padding: 0.7rem 1rem; text-align: left; font-size: 0.62rem; letter-spacing: 0.1em; cursor: pointer; border: none; border-left: 3px solid transparent; background: none; color: var(--mid); font-family: 'FFFAcidGrotesk', sans-serif; transition: color 0.12s, background 0.12s; }
+.snav-item.active { color: var(--black); border-left-color: var(--red); font-weight: 700; background: var(--cream); }
+.snav-item:hover:not(.active) { color: var(--black); background: var(--cream); }
 .sidebar-view { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 
 /* ── DASHBOARD ── */
@@ -582,10 +587,14 @@ header {
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-nav">
-      <button class="snav-tab active" id="snav-tickets" onclick="switchAttyView('tickets')">TICKETS</button>
-      <button class="snav-tab" id="snav-dashboard" onclick="switchAttyView('dashboard')">DASHBOARD</button>
-      <button class="snav-tab" id="snav-docs" onclick="switchAttyView('docs')">DOCS</button>
-      <button class="snav-tab" id="snav-genfa" onclick="switchAttyView('genfa')">GEN FA</button>
+      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleSideNav(event)">&#9776;</button>
+      <span class="snav-active-label" id="snav-active-label">TICKETS</span>
+      <div class="snav-dropdown hidden" id="snav-dropdown">
+        <button class="snav-item active" id="snav-tickets" onclick="switchAttyView('tickets')">TICKETS</button>
+        <button class="snav-item" id="snav-dashboard" onclick="switchAttyView('dashboard')">DASHBOARD</button>
+        <button class="snav-item" id="snav-docs" onclick="switchAttyView('docs')">DOCS</button>
+        <button class="snav-item" id="snav-genfa" onclick="switchAttyView('genfa')">GEN FA</button>
+      </div>
     </div>
 
     <!-- TICKETS sidebar view -->
@@ -1366,8 +1375,28 @@ let currentAttyView = 'tickets';
 let allDocs = [];
 let docsLoaded = false;
 
+function toggleSideNav(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('snav-dropdown');
+  const isOpen = !dd.classList.contains('hidden');
+  dd.classList.toggle('hidden', isOpen);
+  if (!isOpen) {
+    // Close when clicking outside
+    const close = function(ev) {
+      if (!dd.contains(ev.target) && ev.target.id !== 'hamburger-btn') {
+        dd.classList.add('hidden');
+      }
+    };
+    document.addEventListener('click', close, { once: true });
+  }
+}
+
 function switchAttyView(view) {
   currentAttyView = view;
+  // Close hamburger menu and update label
+  document.getElementById('snav-dropdown').classList.add('hidden');
+  const labels = { tickets: 'TICKETS', dashboard: 'DASHBOARD', docs: 'DOCS', genfa: 'GEN FA' };
+  document.getElementById('snav-active-label').textContent = labels[view] || view.toUpperCase();
   ['tickets','dashboard','docs','genfa'].forEach(v => {
     document.getElementById('snav-' + v).classList.toggle('active', v === view);
     document.getElementById('sview-' + v).classList.toggle('hidden', v !== view);
