@@ -2593,24 +2593,16 @@ function populateGroupDropdown() {
       return a.dra.toLowerCase().localeCompare(b.dra.toLowerCase());
     });
 
-    if (items.length === 1) {
-      // Single DRA: one flat option with the full name
+    // Always use optgroup so every entity name renders bold
+    var og = document.createElement('optgroup');
+    og.label = entity;
+    items.forEach(function(item) {
       var opt = document.createElement('option');
-      opt.value = items[0].g.id;
-      opt.textContent = items[0].g.name;
-      sel.appendChild(opt);
-    } else {
-      // Multiple DRAs: optgroup labelled with the entity name
-      var og = document.createElement('optgroup');
-      og.label = entity;
-      items.forEach(function(item) {
-        var opt = document.createElement('option');
-        opt.value = item.g.id;
-        opt.textContent = item.dra;
-        og.appendChild(opt);
-      });
-      sel.appendChild(og);
-    }
+      opt.value = item.g.id;
+      opt.textContent = item.dra;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
   });
 }
 
