@@ -629,15 +629,27 @@ header {
 }
 
 /* -- AGREEMENT MODAL (Lease / FA) ---------------------------------------- */
-.agr-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+.agr-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
 .agr-modal-overlay.hidden { display: none; }
-.agr-modal { background: var(--white); max-width: 640px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 1.5rem 1.75rem 1.75rem; border: 1px solid var(--border); box-shadow: 0 20px 60px rgba(0,0,0,0.25); position: relative; }
-.agr-modal-close { position: absolute; top: 0.5rem; right: 0.75rem; background: none; border: none; font-size: 1.6rem; color: var(--mid); cursor: pointer; line-height: 1; padding: 0.25rem 0.5rem; }
+.agr-modal { background: var(--white); max-width: 1200px; width: 100%; max-height: 92vh; border: 1px solid var(--border); box-shadow: 0 20px 60px rgba(0,0,0,0.25); position: relative; display: flex; flex-direction: column; overflow: hidden; }
+.agr-modal-close { position: absolute; top: 0.5rem; right: 0.75rem; background: none; border: none; font-size: 1.6rem; color: var(--mid); cursor: pointer; line-height: 1; padding: 0.25rem 0.5rem; z-index: 3; }
 .agr-modal-close:hover { color: var(--black); }
+.agr-modal-header { padding: 1.25rem 1.75rem 1rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .agr-modal-kind { font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--red); margin-bottom: 0.35rem; }
 .agr-modal-title { font-size: 1.25rem; font-weight: 700; color: var(--black); line-height: 1.3; }
-.agr-modal-sub { font-size: 0.78rem; color: var(--mid); margin-top: 0.25rem; margin-bottom: 1rem; }
-.agr-modal-body { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem 1.25rem; font-size: 0.82rem; }
+.agr-modal-sub { font-size: 0.78rem; color: var(--mid); margin-top: 0.25rem; }
+.agr-modal-split { display: grid; grid-template-columns: 1.4fr 1fr; flex: 1; min-height: 0; overflow: hidden; }
+.agr-modal-pdf-pane { border-right: 1px solid var(--border); background: #ececec; display: flex; flex-direction: column; min-height: 480px; }
+.agr-modal-pdf-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.85rem; background: #2a2a2a; color: #eee; font-size: 0.72rem; flex-shrink: 0; }
+.agr-modal-pdf-filename { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
+.agr-modal-pdf-open { color: #9cc9ff; text-decoration: none; font-weight: 600; flex-shrink: 0; margin-left: 0.75rem; }
+.agr-modal-pdf-open:hover { text-decoration: underline; }
+.agr-modal-pdf-pane iframe { flex: 1; width: 100%; border: 0; display: block; background: #fff; }
+.agr-modal-pdf-placeholder { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--mid); padding: 2rem; font-size: 0.9rem; }
+.agr-modal-pdf-placeholder code { background: rgba(0,0,0,0.06); padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.82em; }
+.agr-modal-data-pane { padding: 1.1rem 1.25rem 1.25rem; overflow-y: auto; font-size: 0.82rem; }
+.agr-modal-body { display: flex; flex-direction: column; gap: 0.55rem; }
+.agr-modal-body .agr-submeta { color: var(--mid); font-size: 0.78em; font-weight: 400; }
 .agr-row { display: flex; flex-direction: column; gap: 0.15rem; }
 .agr-row.full { grid-column: 1 / -1; }
 .agr-row .k { font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mid); font-weight: 600; }
@@ -651,7 +663,7 @@ header {
 .agr-note { grid-column: 1 / -1; padding: 0.65rem 0.85rem; background: var(--cream); border-left: 3px solid var(--border); font-size: 0.78rem; color: var(--black); }
 .agr-missing { grid-column: 1 / -1; padding: 1.5rem; text-align: center; color: var(--mid); font-size: 0.85rem; border: 1px dashed var(--border); }
 @media (max-width: 640px) {
-  .agr-modal-body { grid-template-columns: 1fr; }
+  .agr-modal-split { grid-template-columns: 1fr; } .agr-modal-pdf-pane { min-height: 380px; border-right: none; border-bottom: 1px solid var(--border); }
 }
 
 
@@ -3485,6 +3497,28 @@ function agrStatusPill(s) {
   return '<span class="v pill">' + escHtml(s || '-') + '</span>';
 }
 
+function renderAgrPdfPane(attachmentField) {
+  const pane = document.getElementById('agr-modal-pdf-pane');
+  const attachments = Array.isArray(attachmentField) ? attachmentField : null;
+  if (attachments && attachments.length > 0 && attachments[0].url) {
+    const att = attachments[0];
+    const src = att.url;
+    const filename = att.filename || 'Document';
+    pane.innerHTML =
+      '<div class="agr-modal-pdf-toolbar">' +
+        '<span class="agr-modal-pdf-filename" title="' + escHtml(filename) + '">' + escHtml(filename) + '</span>' +
+        '<a class="agr-modal-pdf-open" href="' + escHtml(src) + '" target="_blank" rel="noopener">Open in new tab ↗</a>' +
+      '</div>' +
+      '<iframe src="' + escHtml(src) + '" title="' + escHtml(filename) + '"></iframe>';
+  } else {
+    pane.innerHTML =
+      '<div class="agr-modal-pdf-placeholder">' +
+        '<div style="font-weight:600;margin-bottom:0.25rem;">No document attached</div>' +
+        '<div style="font-size:0.78rem;opacity:0.85;">Upload a PDF to the <code>Lease File</code> or <code>FA File</code> attachment field in Airtable to preview it here.</div>' +
+      '</div>';
+  }
+}
+
 function openLeaseModal(leaseId, locationId) {
   const lease = allLeases.find(function(l){ return l.id === leaseId; });
   const loc   = allLocations.find(function(l){ return l.id === locationId; });
@@ -3493,20 +3527,31 @@ function openLeaseModal(leaseId, locationId) {
   document.getElementById('agr-modal-kind').textContent  = 'LEASE';
   document.getElementById('agr-modal-title').textContent = f['Lease ID'] || 'Lease';
   document.getElementById('agr-modal-sub').textContent   = loc ? ((loc.fields['Shop Name'] || '') + ' - ' + [loc.fields['City'], loc.fields['State']].filter(Boolean).join(', ')) : '';
+
+  renderAgrPdfPane(f['Lease File']);
+
+  // Base Rent (stacked: annual + monthly)
+  const annual = f['Annual Rent'], monthly = f['Monthly Rent'];
+  let baseRentHtml;
+  if (annual == null && monthly == null) {
+    baseRentHtml = '-';
+  } else {
+    const parts = [];
+    if (annual != null)  parts.push('<strong>' + escHtml(fmtCurrency(annual)) + '</strong> / year');
+    if (monthly != null) parts.push('<span class="agr-submeta">' + escHtml(fmtCurrency(monthly)) + ' / month</span>');
+    baseRentHtml = parts.join('<br>');
+  }
+
+  const sqft = f['Square Foot'];
   const rows = [
-    ['Landlord',         escHtml(f['Landlord']         || '-')],
-    ['Landlord Contact', escHtml(f['Landlord Contact'] || '-')],
-    ['Execution Date',   escHtml(fmtDate(f['Execution Date']))],
-    ['Commencement',     escHtml(fmtDate(f['Commencement Date']))],
-    ['Expiration Date',  escHtml(fmtDate(f['Expiration Date']))],
-    ['Term Years',       escHtml(f['Term Years'] != null ? (f['Term Years'] + ' yrs') : '-')],
-    ['Term Left',        '<strong>' + escHtml(computeTermLeft(f['Expiration Date'])) + '</strong>'],
-    ['Status',           agrStatusPill(f['Status'])],
-    ['Monthly Rent',     escHtml(fmtCurrency(f['Monthly Rent']))],
-    ['Annual Rent',      escHtml(fmtCurrency(f['Annual Rent']))],
-    ['Rent Escalator',   escHtml(fmtPercent(f['Rent Escalator'])) + '/yr'],
-    ['Security Deposit', escHtml(fmtCurrency(f['Security Deposit']))],
-    ['Renewal Options',  escHtml(f['Renewal Options']  || '-')]
+    ['Execution Date',              escHtml(fmtDate(f['Execution Date']))],
+    ['Rent Commencement Date',      escHtml(fmtDate(f['Commencement Date']))],
+    ['Initial Term Expiration',     escHtml(fmtDate(f['Expiration Date']))],
+    ['Options',                     escHtml(f['Renewal Options'] || '-')],
+    ['Square Foot',                 sqft != null ? (escHtml(String(sqft)) + ' sq ft') : '-'],
+    ['Gas or Electric',             escHtml(f['Gas or Electric'] || '-')],
+    ['Base Rent',                   baseRentHtml],
+    ['Inline/Endcap/Freestanding',  escHtml(f['Configuration'] || '-')]
   ];
   let html = rows.map(function(r){ return '<div class="agr-row"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'; }).join('');
   if (f['Notes']) html += '<div class="agr-note"><strong>Notes:</strong> ' + escHtml(f['Notes']) + '</div>';
@@ -3522,6 +3567,8 @@ function openFAModal(faId, locationId) {
   document.getElementById('agr-modal-kind').textContent  = 'FRANCHISE AGREEMENT';
   document.getElementById('agr-modal-title').textContent = f['Agreement Name'] || 'Franchise Agreement';
   document.getElementById('agr-modal-sub').textContent   = loc ? ((loc.fields['Shop Name'] || '') + ' - ' + [loc.fields['City'], loc.fields['State']].filter(Boolean).join(', ')) : '';
+
+  renderAgrPdfPane(f['FA File']);
   const rows = [
     ['Brand',            escHtml(f['Brand']             || '-')],
     ['Franchisee Entity',escHtml(f['Franchisee Entity'] || '-')],
@@ -3795,10 +3842,15 @@ async function generateFA(e) {
 <div class="agr-modal-overlay hidden" id="agr-modal-overlay" onclick="if(event.target===this) closeAgrModal()">
   <div class="agr-modal">
     <button class="agr-modal-close" onclick="closeAgrModal()" aria-label="Close">&times;</button>
-    <div class="agr-modal-kind" id="agr-modal-kind">AGREEMENT</div>
-    <div class="agr-modal-title" id="agr-modal-title">Details</div>
-    <div class="agr-modal-sub" id="agr-modal-sub"></div>
-    <div class="agr-modal-body" id="agr-modal-body"></div>
+    <div class="agr-modal-header">
+      <div class="agr-modal-kind" id="agr-modal-kind">AGREEMENT</div>
+      <div class="agr-modal-title" id="agr-modal-title">Details</div>
+      <div class="agr-modal-sub" id="agr-modal-sub"></div>
+    </div>
+    <div class="agr-modal-split">
+      <div class="agr-modal-pdf-pane" id="agr-modal-pdf-pane"></div>
+      <div class="agr-modal-data-pane"><div class="agr-modal-body" id="agr-modal-body"></div></div>
+    </div>
   </div>
 </div>
 </body>
