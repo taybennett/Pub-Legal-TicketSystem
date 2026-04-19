@@ -98,9 +98,9 @@ header {
 }
 /* Collapse sidebar to just the hamburger when view has no sidebar content */
 .sidebar--slim {
-  width: 46px; min-width: 46px;
+  /* Permanent-nav mode: sidebar always wide enough for the vertical nav column */
+  width: 200px; min-width: 200px;
 }
-.sidebar--slim .snav-active-label { display: none; }
 .sidebar-top { padding: 0.9rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .search-input {
   width: 100%; padding: 7px 10px;
@@ -454,13 +454,9 @@ header {
 }
 
 /* ── SIDEBAR NAV TABS ── */
-.sidebar-nav { display: flex; align-items: center; padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--white); position: relative; gap: 0.5rem; }
-.hamburger-btn { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.15rem 0.35rem; color: var(--black); line-height: 1; border-radius: 3px; transition: background 0.15s; }
-.hamburger-btn:hover { background: var(--cream); }
-.snav-active-label { font-size: 0.6rem; letter-spacing: 0.12em; font-weight: 700; color: var(--black); text-transform: uppercase; }
-.snav-dropdown { position: absolute; top: 100%; left: 0; width: 100%; background: var(--white); border-bottom: 2px solid var(--border); box-shadow: 0 6px 16px rgba(0,0,0,0.1); z-index: 200; display: flex; flex-direction: column; }
-.snav-dropdown.hidden { display: none; }
-.snav-item { padding: 0.7rem 1rem; text-align: left; font-size: 0.62rem; letter-spacing: 0.1em; cursor: pointer; border: none; border-left: 3px solid transparent; background: none; color: var(--mid); font-family: 'FFFAcidGrotesk', sans-serif; transition: color 0.12s, background 0.12s; }
+.sidebar-nav { display: flex; flex-direction: column; align-items: stretch; padding: 0.5rem 0; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--white); }
+.snav-dropdown { display: flex; flex-direction: column; width: 100%; }
+.snav-item { padding: 0.7rem 1rem; text-align: left; font-size: 0.68rem; letter-spacing: 0.1em; cursor: pointer; border: none; border-left: 3px solid transparent; background: none; color: var(--mid); font-family: 'FFFAcidGrotesk', sans-serif; transition: color 0.12s, background 0.12s; }
 .snav-item.active { color: var(--black); border-left-color: var(--red); font-weight: 700; background: var(--cream); }
 .snav-item:hover:not(.active) { color: var(--black); background: var(--cream); }
 .sidebar-view { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
@@ -755,18 +751,14 @@ header {
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
-    <div class="sidebar-nav">
-      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleSideNav(event)">&#9776;</button>
-      <span class="snav-active-label" id="snav-active-label">TICKETS</span>
-      <div class="snav-dropdown hidden" id="snav-dropdown">
-        <button class="snav-item active" id="snav-tickets" onclick="switchAttyView('tickets')">TICKETS</button>
-        <button class="snav-item" id="snav-dashboard" onclick="switchAttyView('dashboard')">DASHBOARD</button>
-        <button class="snav-item" id="snav-docs" onclick="switchAttyView('docs')">DOCS</button>
-        <button class="snav-item" id="snav-genfa" onclick="switchAttyView('genfa')">GEN FA</button>
-        <button class="snav-item" id="snav-tracker" onclick="switchAttyView('tracker')">TRACKER</button>
-        <button class="snav-item" id="snav-gc" onclick="switchAttyView('gc')">GC DASHBOARD</button>
-        <button class="snav-item" id="snav-loc" onclick="switchAttyView('loc')">LOCATIONS</button>
-      </div>
+    <div class="sidebar-nav" id="snav-dropdown">
+      <button class="snav-item active" id="snav-tickets" onclick="switchAttyView('tickets')">TICKETS</button>
+      <button class="snav-item" id="snav-dashboard" onclick="switchAttyView('dashboard')">DASHBOARD</button>
+      <button class="snav-item" id="snav-docs" onclick="switchAttyView('docs')">DOCS</button>
+      <button class="snav-item" id="snav-genfa" onclick="switchAttyView('genfa')">GEN FA</button>
+      <button class="snav-item" id="snav-tracker" onclick="switchAttyView('tracker')">TRACKER</button>
+      <button class="snav-item" id="snav-gc" onclick="switchAttyView('gc')">GC DASHBOARD</button>
+      <button class="snav-item" id="snav-loc" onclick="switchAttyView('loc')">LOCATIONS</button>
     </div>
 
     <!-- TICKETS sidebar view -->
@@ -1698,28 +1690,9 @@ let currentAttyView = 'tickets';
 let allDocs = [];
 let docsLoaded = false;
 
-function toggleSideNav(e) {
-  e.stopPropagation();
-  const dd = document.getElementById('snav-dropdown');
-  const isOpen = !dd.classList.contains('hidden');
-  dd.classList.toggle('hidden', isOpen);
-  if (!isOpen) {
-    // Close when clicking outside
-    const close = function(ev) {
-      if (!dd.contains(ev.target) && ev.target.id !== 'hamburger-btn') {
-        dd.classList.add('hidden');
-      }
-    };
-    document.addEventListener('click', close, { once: true });
-  }
-}
 
 function switchAttyView(view) {
   currentAttyView = view;
-  // Close hamburger menu and update label
-  document.getElementById('snav-dropdown').classList.add('hidden');
-  const labels = { tickets: 'TICKETS', dashboard: 'DASHBOARD', docs: 'DOCS', genfa: 'GEN FA', tracker: 'TRACKER', gc: 'GC DASHBOARD', loc: 'LOCATIONS' };
-  document.getElementById('snav-active-label').textContent = labels[view] || view.toUpperCase();
   // Collapse sidebar when the view has no sidebar content
   const hasSidebarContent = view === 'tickets' || view === 'docs';
   document.querySelector('.sidebar').classList.toggle('sidebar--slim', !hasSidebarContent);
