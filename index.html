@@ -3435,8 +3435,8 @@ function renderLocations() {
       +     '<div><div class="k">DM</div><div class="v">'          + escHtml(f['District Manager']  || '-') + '</div></div>'
       +   '</div>'
       +   '<div class="loc-card-actions">'
-      +     '<button class="loc-btn' + hasLease + '" ' + (lease ? 'onclick="openLeaseModal(' + JSON.stringify(lease.id) + ',' + JSON.stringify(loc.id) + ')"' : 'disabled') + '>View Lease</button>'
-      +     '<button class="loc-btn' + hasFA    + '" ' + (fa    ? 'onclick="openFAModal('    + JSON.stringify(fa.id)    + ',' + JSON.stringify(loc.id) + ')"' : 'disabled') + '>View FA</button>'
+      +     '<button class="loc-btn' + hasLease + '" ' + (lease ? 'onclick="openLeaseModal(\'' + lease.id + '\',\'' + loc.id + '\')"' : 'disabled') + '>View Lease</button>'
+      +     '<button class="loc-btn' + hasFA    + '" ' + (fa    ? 'onclick="openFAModal(\'' + fa.id + '\',\'' + loc.id + '\')"' : 'disabled') + '>View FA</button>'
       +   '</div>'
       + '</div>';
   }).join('');
