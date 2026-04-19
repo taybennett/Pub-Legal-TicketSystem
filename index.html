@@ -694,6 +694,11 @@ header {
 .tracker-badge--year     { background: #fff3cd; color: #856404; }
 .tracker-badge--sixmonth { background: #ffe5cc; color: #884400; }
 .tracker-badge--expired  { background: #f8d7da; color: #721c24; }
+.tracker-th-delete { width: 2.25rem; }
+.tracker-td-delete { text-align: right; padding: 0.25rem 0.5rem; }
+.tracker-row-delete { background: none; border: none; color: var(--mid); font-size: 0.9rem; cursor: pointer; padding: 0.2rem 0.45rem; border-radius: 3px; line-height: 1; font-family: inherit; transition: background 0.12s, color 0.12s; }
+.tracker-row-delete:hover:not(:disabled) { background: #fde8ea; color: #c0392b; }
+.tracker-row-delete:disabled { opacity: 0.5; cursor: not-allowed; }
 .genfa-status.error { color: var(--red); }
 .genfa-status.ok { color: #2a9a5c; }
 @media (max-width: 768px) {
@@ -1079,6 +1084,7 @@ header {
               <th>Expiration Date</th>
               <th>Days Remaining</th>
               <th>Status</th>
+              <th class="tracker-th-delete"></th>
             </tr>
           </thead>
           <tbody id="tracker-tbody"></tbody>
@@ -3126,9 +3132,36 @@ function renderTrackerTable(records, filter) {
         '<td>' + esc(r.expDate)     + '</td>' +
         '<td>' + daysText           + '</td>' +
         '<td><span class="' + badgeClass + '">' + trackerBadgeLabel(r.status) + '</span></td>' +
+        '<td class="tracker-td-delete">' +
+          '<button class="tracker-row-delete" title="Delete this FA record" data-rec-id="' + esc(r.id) + '" data-name="' + esc(r.agreement) + '" onclick="deleteTrackerRow(this)">✕</button>' +
+        '</td>' +
       '</tr>'
     );
   }).join('');
+}
+
+async function deleteTrackerRow(btn) {
+  if (!btn) return;
+  const id   = btn.dataset.recId;
+  const name = btn.dataset.name || 'this record';
+  if (!id) return;
+  if (!confirm('Delete ' + name + ' from FA Tracker?\n\nThis removes the record and its attached file from Airtable. Cannot be undone.')) return;
+
+  const origText = btn.textContent;
+  btn.disabled   = true;
+  btn.textContent = '⋯';
+  try {
+    await atFetch('DELETE', TABLES.faTracker + '/' + id);
+    // Remove row optimistically for instant feedback, then refresh the table
+    const tr = btn.closest('tr');
+    if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
+    await loadTrackerRecords();
+  } catch (err) {
+    console.error('Tracker delete failed:', err);
+    alert('Delete failed: ' + (err && err.message ? err.message : err));
+    btn.disabled   = false;
+    btn.textContent = origText;
+  }
 }
 
 // ── GC DASHBOARD ──────────────────────────────────────────────────────────
