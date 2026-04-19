@@ -646,6 +646,10 @@ header {
 .agr-modal-data-pane { padding: 1.1rem 1.25rem 1.25rem; overflow-y: auto; font-size: 0.82rem; }
 .agr-modal-body { display: flex; flex-direction: column; gap: 0.55rem; }
 .agr-modal-body .agr-submeta { color: var(--mid); font-size: 0.78em; font-weight: 400; }
+.agr-modal-actions { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
+.agr-modal-delete-btn { background: #fff; color: #c0392b; border: 1px solid #c0392b; padding: 0.5rem 0.9rem; font-size: 0.7rem; letter-spacing: 0.08em; font-weight: 700; text-transform: uppercase; cursor: pointer; font-family: inherit; transition: all 0.12s; border-radius: 2px; }
+.agr-modal-delete-btn:hover:not(:disabled) { background: #c0392b; color: #fff; }
+.agr-modal-delete-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .agr-row { display: flex; flex-direction: column; gap: 0.15rem; }
 .agr-row.full { grid-column: 1 / -1; }
 .agr-row .k { font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mid); font-weight: 600; }
@@ -1498,8 +1502,10 @@ const TABLES = {
   locations:        'tbl23K8h2GHqaT2I5',
   leases:           'tblW7M0hdyCs655ty'
 };
-const DOC_FILE_FIELD = 'fldw5S3VPLkxD71Ej';
+const DOC_FILE_FIELD   = 'fldw5S3VPLkxD71Ej';
 const AI_SUMMARY_FIELD = 'fldb3skoTq5M4SN4V';
+const LEASE_FILE_FIELD = 'fldggx2f5yASIEPY5';
+const FA_FILE_FIELD    = 'fld7KovhoSqAcMtIK';
 const DEFAULT_ATTORNEY_EMAIL = 'taylorb@popupbagels.com';
 const ANTHROPIC_KEY = window.ANTHROPIC_KEY || '';
 
@@ -3534,7 +3540,10 @@ function openLeaseModal(leaseId, locationId) {
   let html = rows.map(function(r){ return '<div class="agr-row"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'; }).join('');
   if (f['Notes']) html += '<div class="agr-note"><strong>Notes:</strong> ' + escHtml(f['Notes']) + '</div>';
   document.getElementById('agr-modal-body').innerHTML = html;
-  document.getElementById('agr-modal-overlay').classList.remove('hidden');
+  const _ov = document.getElementById('agr-modal-overlay');
+  _ov.dataset.recId   = lease.id;
+  _ov.dataset.recKind = 'lease';
+  _ov.classList.remove('hidden');
 }
 
 function openFAModal(faId, locationId) {
@@ -3564,7 +3573,34 @@ function openFAModal(faId, locationId) {
   let html = rows.map(function(r){ return '<div class="agr-row"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'; }).join('');
   if (f['Notes']) html += '<div class="agr-note"><strong>Notes:</strong> ' + escHtml(f['Notes']) + '</div>';
   document.getElementById('agr-modal-body').innerHTML = html;
-  document.getElementById('agr-modal-overlay').classList.remove('hidden');
+  const _ov = document.getElementById('agr-modal-overlay');
+  _ov.dataset.recId   = fa.id;
+  _ov.dataset.recKind = 'fa';
+  _ov.classList.remove('hidden');
+}
+
+async function deleteCurrentAgrRecord() {
+  const ov   = document.getElementById('agr-modal-overlay');
+  const id   = ov && ov.dataset.recId;
+  const kind = ov && ov.dataset.recKind;
+  if (!id || !kind) return;
+  const labelMap = { lease: 'Lease', fa: 'Franchise Agreement' };
+  const label    = labelMap[kind] || 'Record';
+  if (!confirm('Delete this ' + label + ' record from the Tracker?\n\nThis removes the record and its attached file from Airtable. This action cannot be undone.')) return;
+  const deleteBtn = document.getElementById('agr-modal-delete');
+  if (deleteBtn) { deleteBtn.disabled = true; deleteBtn.textContent = 'Deleting…'; }
+  try {
+    const tableId = kind === 'lease' ? TABLES.leases : TABLES.faTracker;
+    await atFetch('DELETE', tableId + '/' + id);
+    closeAgrModal();
+    if (typeof loadLocationsData === 'function') {
+      await loadLocationsData();
+      if (typeof renderLocations === 'function') renderLocations();
+    }
+  } catch(err) {
+    alert('Delete failed: ' + (err && err.message ? err.message : err));
+    if (deleteBtn) { deleteBtn.disabled = false; deleteBtn.textContent = 'Delete Record'; }
+  }
 }
 
 function closeAgrModal() {
@@ -3572,9 +3608,88 @@ function closeAgrModal() {
 }
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeAgrModal(); });
 
-async function logFAToTracker(fields) {
+// ---- base64 helper used by FA Tracker attachment uploads ----------
+function blobToBase64(blob) {
+  return new Promise(function(resolve, reject) {
+    const reader = new FileReader();
+    reader.onloadend = function() {
+      const result = reader.result || '';
+      const comma  = result.indexOf(',');
+      resolve(comma >= 0 ? result.substring(comma + 1) : result);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// ---- lazy-load external libs for docx -> PDF conversion -----------
+let _mammothPromise  = null;
+let _html2pdfPromise = null;
+function _loadScriptOnce(src, check) {
+  return new Promise(function(resolve, reject) {
+    if (check()) return resolve();
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = function() { check() ? resolve() : reject(new Error('Script loaded but global missing: ' + src)); };
+    s.onerror = function() { reject(new Error('Failed to load ' + src)); };
+    document.head.appendChild(s);
+  });
+}
+function ensureMammoth()  { return _mammothPromise  || (_mammothPromise  = _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js',  function(){ return !!window.mammoth; })); }
+function ensureHtml2Pdf() { return _html2pdfPromise || (_html2pdfPromise = _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js', function(){ return !!window.html2pdf; })); }
+
+async function docxToPdf(docxBlob, filename) {
+  await Promise.all([ensureMammoth(), ensureHtml2Pdf()]);
+  const arrayBuffer = await docxBlob.arrayBuffer();
+  const result = await window.mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+  const wrapped = '<div style="font-family:Georgia,serif;font-size:11pt;line-height:1.45;color:#111;padding:0.2in;max-width:7.5in;">' + result.value + '</div>';
+  const opts = {
+    margin:      0.6,
+    filename:    (filename || 'document').replace(/\.docx?$/i, '.pdf'),
+    image:       { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF:       { unit: 'in', format: 'letter', orientation: 'portrait' },
+    pagebreak:   { mode: ['css', 'legacy'] }
+  };
+  const container = document.createElement('div');
+  container.style.cssText = 'position:absolute;left:-10000px;top:0;width:7.5in;';
+  container.innerHTML = wrapped;
+  document.body.appendChild(container);
   try {
-    await atFetch('POST', TABLES.faTracker, { records: [{ fields: fields }] });
+    return await window.html2pdf().set(opts).from(container).outputPdf('blob');
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
+// ---- logFAToTracker: create record, optionally upload attachment --
+async function logFAToTracker(fields, blob, filename, contentType) {
+  try {
+    const resp  = await atFetch('POST', TABLES.faTracker, { records: [{ fields: fields }] });
+    const recId = resp && resp.records && resp.records[0] && resp.records[0].id;
+    if (!recId || !blob) return recId;
+
+    const base64 = await blobToBase64(blob);
+    const up = await fetch(
+      'https://content.airtable.com/v0/' + BASE_ID + '/' + recId + '/' + FA_FILE_FIELD + '/uploadAttachment',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + AIRTABLE_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contentType: contentType || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          filename: filename || 'franchise-agreement.docx',
+          file: base64
+        })
+      }
+    );
+    if (!up.ok) {
+      const txt = await up.text();
+      console.warn('FA File upload failed:', up.status, txt);
+    }
+    return recId;
   } catch(err) {
     console.warn('FA Tracker log failed:', err);
   }
@@ -3787,13 +3902,29 @@ async function generateFA(e) {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 5000);
 
-    statusEl.textContent = '✓ ' + filename + ' downloaded successfully.';
-    statusEl.className   = 'genfa-status ok';
+    statusEl.className = 'genfa-status ok';
 
     // Auto-log to FA Tracker (10-year term from execution date)
     const [_ey, _em, _ed] = execDateRaw.split('-').map(Number);
     const expStr = (_ey + 10) + '-' + String(_em).padStart(2,'0') + '-' + String(_ed).padStart(2,'0');
-    logFAToTracker({
+
+    // Convert docx -> PDF for the FA Tracker attachment (docx stays the
+    // authoritative download for the user; PDF is for inline viewing).
+    statusEl.textContent = '✓ ' + filename + ' downloaded. Converting to PDF…';
+    let uploadBlob        = blob;
+    let uploadFilename    = filename;
+    let uploadContentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    try {
+      const pdfBlob     = await docxToPdf(blob, filename);
+      uploadBlob        = pdfBlob;
+      uploadFilename    = filename.replace(/\.docx?$/i, '.pdf');
+      uploadContentType = 'application/pdf';
+    } catch (convErr) {
+      console.warn('docx->PDF conversion failed, falling back to .docx upload:', convErr);
+    }
+
+    statusEl.textContent = '✓ ' + filename + ' downloaded. Saving to FA Tracker…';
+    await logFAToTracker({
       'Agreement Name':    entity + ' — ' + shopName + ' (#' + shopNum + ')',
       'Franchisee Entity': entity,
       'Shop Name':         shopName,
@@ -3802,9 +3933,11 @@ async function generateFA(e) {
       'Execution Date':    execDateRaw,
       'Expiration Date':   expStr,
       'Term Years':        10,
+      'Status':            'Active',
       'Signatory Name':    sigName,
       'Generated By':      currentUser ? currentUser.name : 'Unknown'
-    });
+    }, uploadBlob, uploadFilename, uploadContentType);
+    statusEl.textContent = '✓ ' + filename + ' downloaded and saved to FA Tracker.';
 
   } catch(err) {
     console.error('FA generation failed:', err);
@@ -3827,7 +3960,12 @@ async function generateFA(e) {
     </div>
     <div class="agr-modal-split">
       <div class="agr-modal-pdf-pane" id="agr-modal-pdf-pane"></div>
-      <div class="agr-modal-data-pane"><div class="agr-modal-body" id="agr-modal-body"></div></div>
+      <div class="agr-modal-data-pane">
+        <div class="agr-modal-body" id="agr-modal-body"></div>
+        <div class="agr-modal-actions">
+          <button id="agr-modal-delete" class="agr-modal-delete-btn" onclick="deleteCurrentAgrRecord()" type="button">Delete Record</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
