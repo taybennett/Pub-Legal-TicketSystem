@@ -3504,12 +3504,17 @@ function renderAgrPdfPane(attachmentField) {
     const att = attachments[0];
     const src = att.url;
     const filename = att.filename || 'Document';
+    // Use Mozilla's hosted PDF.js viewer: Chrome blocks inline PDF rendering in
+    // cross-origin iframes without explicit opt-in headers from the PDF host
+    // (Airtable does not set them), so we route through pdf.js which fetches
+    // the PDF via CORS (allowed) and renders client-side.
+    const viewerSrc = 'https://mozilla.github.io/pdf.js/web/viewer.html?file=' + encodeURIComponent(src);
     pane.innerHTML =
       '<div class="agr-modal-pdf-toolbar">' +
         '<span class="agr-modal-pdf-filename" title="' + escHtml(filename) + '">' + escHtml(filename) + '</span>' +
         '<a class="agr-modal-pdf-open" href="' + escHtml(src) + '" target="_blank" rel="noopener">Open in new tab ↗</a>' +
       '</div>' +
-      '<iframe src="' + escHtml(src) + '" title="' + escHtml(filename) + '"></iframe>';
+      '<iframe src="' + escHtml(viewerSrc) + '" title="' + escHtml(filename) + '"></iframe>';
   } else {
     pane.innerHTML =
       '<div class="agr-modal-pdf-placeholder">' +
