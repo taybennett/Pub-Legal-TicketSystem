@@ -3499,7 +3499,12 @@ function renderLocations() {
   grid.innerHTML = items.map(function(loc) {
     const f = loc.fields;
     const lease = allLeases.find(function(l){ return (l.fields['Location'] || []).indexOf(loc.id) !== -1; });
-    const fa    = allFAs.find(function(a){ return (a.fields['Location']    || []).indexOf(loc.id) !== -1; });
+    const fa    = allFAs.find(function(a){
+      // FA Tracker matches Locations by Shop Number text compare (Tracker has no Location link field).
+      const faShop  = String(a.fields['Shop Number'] || '').replace(/^#+/, '').trim();
+      const locShop = String(f['Shop ID'] || '').trim();
+      return faShop !== '' && faShop === locShop;
+    });
     const st    = f['Status'] || 'Active';
     const statusPill = '<span class="pill ' + locStatusPillClass(st) + '">' + escHtml(st) + '</span>';
     const hasLease = lease ? '' : ' disabled';
