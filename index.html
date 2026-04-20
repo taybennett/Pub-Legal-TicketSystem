@@ -2998,6 +2998,15 @@ function resolveEntity(entityLink, legacyValue) {
   return { name: legacy || '-', groupName: '', resolved: false };
 }
 
+// Convenience for Locations: returns the entity display name for a record,
+// resolving the new link first, falling back to the legacy field. Returns
+// empty string when no entity set (filtered out of dropdown).
+function locationEntityName(rec) {
+  const f = (rec && rec.fields) || {};
+  const r = resolveEntity(f['Franchisee Entity'], f['Franchisee Entity (legacy)']);
+  return (r.name && r.name !== '-') ? r.name : '';
+}
+
 function populateGroupDropdown() {
   var sel = document.getElementById('fa-group');
   if (!sel) return;
@@ -3429,7 +3438,7 @@ function populateLocFilters() {
   }
   const entSel = document.getElementById('loc-filter-entity');
   if (entSel) {
-    const ents = Array.from(new Set(allLocations.map(function(r){ return r.fields['Franchisee Entity']; }).filter(Boolean))).sort();
+    const ents = Array.from(new Set(allLocations.map(locationEntityName).filter(Boolean))).sort();
     entSel.innerHTML = '<option value="">All entities</option>' + ents.map(function(e){
       return '<option value="' + escHtml(e) + '"' + (e === locCurrentEntity ? ' selected' : '') + '>' + escHtml(e) + '</option>';
     }).join('');
@@ -3446,12 +3455,12 @@ function renderLocations() {
   let scoped = allLocations.slice();
   if (locCurrentBrand)  scoped = scoped.filter(function(r){ return r.fields['Brand'] === locCurrentBrand; });
   if (locCurrentState)  scoped = scoped.filter(function(r){ return r.fields['State'] === locCurrentState; });
-  if (locCurrentEntity) scoped = scoped.filter(function(r){ return r.fields['Franchisee Entity'] === locCurrentEntity; });
+  if (locCurrentEntity) scoped = scoped.filter(function(r){ return locationEntityName(r) === locCurrentEntity; });
   if (locCurrentSearch) {
     const q = locCurrentSearch.toLowerCase();
     scoped = scoped.filter(function(r){
       const f = r.fields;
-      return [f['Shop ID'], f['Shop Name'], f['Address'], f['City'], f['General Manager'], f['District Manager'], f['Franchisee Entity']]
+      return [f['Shop ID'], f['Shop Name'], f['Address'], f['City'], f['General Manager'], f['District Manager'], locationEntityName(r)]
         .some(function(v){ return (v || '').toLowerCase().includes(q); });
     });
   }
