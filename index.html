@@ -205,6 +205,15 @@ header {
 .form-row { margin-bottom: 0.9rem; }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem; }
 .form-label { display: block; font-size: 0.68rem; font-family: 'FFFAcidGrotesk', sans-serif; letter-spacing: 0.08em; color: var(--mid); margin-bottom: 4px; }
+.login-name-row { display: flex; gap: 0.5rem; align-items: stretch; }
+.login-name-row .form-select { flex: 1; }
+.login-refresh { background: transparent; border: 1px solid var(--mid); color: var(--mid);
+  font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 0.7rem; border-radius: 3px;
+  font-family: inherit; transition: background 0.12s, color 0.12s, border-color 0.12s; }
+.login-refresh:hover:not(:disabled) { background: var(--black); color: var(--white); border-color: var(--black); }
+.login-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+.login-refresh.spinning { animation: login-spin 0.8s linear infinite; }
+@keyframes login-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .form-input, .form-select, .form-textarea {
   width: 100%; padding: 9px 11px;
   border: 1px solid var(--border); background: var(--white);
@@ -722,9 +731,13 @@ header {
     <div class="login-sub">LEGAL OPS PORTAL</div>
     <div class="form-row">
       <label class="form-label">Your Name</label>
-      <select class="form-select" id="login-name" onchange="toggleEmailRow()">
-        <option value="">Loading users…</option>
-      </select>
+      <div class="login-name-row">
+        <select class="form-select" id="login-name" onchange="toggleEmailRow()">
+          <option value="">Loading users…</option>
+        </select>
+        <button type="button" class="login-refresh" id="login-refresh-btn"
+          title="Refresh user list" onclick="loadLoginUsers()" aria-label="Refresh user list">↻</button>
+      </div>
     </div>
     <div class="form-row">
       <label class="form-label">PIN</label>
@@ -1552,15 +1565,27 @@ window.addEventListener('load', () => {
 
 // ── LOGIN ──
 async function loadLoginUsers() {
-  const data = await atFetch('GET', `${TABLES.users}?sort%5B0%5D%5Bfield%5D=Name&sort%5B0%5D%5Bdirection%5D=asc`);
-  allUsers = data?.records || [];
   const sel = document.getElementById('login-name');
-  if (!allUsers.length) {
-    sel.innerHTML = '<option value="">No users found in Airtable</option>';
-    return;
+  const btn = document.getElementById('login-refresh-btn');
+  const prev = sel ? sel.value : '';
+  if (btn) { btn.disabled = true; btn.classList.add('spinning'); }
+  if (sel) sel.innerHTML = '<option value="">Loading users…</option>';
+  try {
+    const bust = Date.now();
+    const data = await atFetch('GET', `${TABLES.users}?sort%5B0%5D%5Bfield%5D=Name&sort%5B0%5D%5Bdirection%5D=asc&_=${bust}`);
+    allUsers = data?.records || [];
+    if (!sel) return;
+    if (!allUsers.length) {
+      sel.innerHTML = '<option value="">No users found in Airtable</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">Select your name…</option>' +
+      allUsers.map(r => `<option value="${r.id}">${escHtml(r.fields['Name']||'')}</option>`).join('');
+    // Preserve prior selection when possible (for the manual refresh flow)
+    if (prev && allUsers.some(r => r.id === prev)) sel.value = prev;
+  } finally {
+    if (btn) { btn.disabled = false; btn.classList.remove('spinning'); }
   }
-  sel.innerHTML = '<option value="">Select your name…</option>' +
-    allUsers.map(r => `<option value="${r.id}">${escHtml(r.fields['Name']||'')}</option>`).join('');
 }
 
 function toggleEmailRow() {
@@ -1958,6 +1983,7 @@ async function atFetch(method, path, body) {
   try {
     const res = await fetch(url, {
       method,
+      cache: 'no-store',
       headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}`, 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined
     });
