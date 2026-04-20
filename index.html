@@ -612,6 +612,7 @@ header {
 .loc-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 0.75rem; font-size: 0.7rem; padding-top: 0.35rem; border-top: 1px dashed var(--border); }
 .loc-card-grid .k { color: var(--mid); font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; }
 .loc-card-grid .v { color: var(--black); font-weight: 500; }
+.loc-card-grid .v .loc-card-group { color: var(--mid); font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
 .loc-card-actions { display: flex; gap: 0.4rem; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border); }
 .loc-btn { flex: 1; background: var(--white); border: 1px solid var(--black); color: var(--black); padding: 0.5rem 0.5rem; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; cursor: pointer; }
 .loc-btn:hover { background: var(--black); color: var(--white); }
@@ -1754,6 +1755,7 @@ function switchAttyView(view) {
     if (isDashboard) renderDashboard();
     if (isDocs) loadDocLibrary();
     if (isGenFA) fetchFranchiseeGroups();
+    fetchFranchiseeEntities();
     if (isTracker) loadTrackerRecords();
     if (isGC) {
       const grid = document.getElementById('gc-grid');
@@ -2922,6 +2924,7 @@ async function fetchFranchiseeGroups() {
       var tokenMap = {};
       try { tokenMap = JSON.parse(f['Token Map'] || '{}'); } catch(e) {}
       return {
+        recId:        r.id,
         id:           f['Group ID']       || '',
         name:         f['Group Name']     || '',
         description:  f['Description']    || '',
@@ -2933,6 +2936,66 @@ async function fetchFranchiseeGroups() {
   } catch(e) {
     console.warn('fetchFranchiseeGroups error:', e);
   }
+}
+
+// ── FRANCHISEE ENTITIES REGISTRY (per-location signing LLCs) ────────────────
+let _franchiseeEntities = [];
+
+async function fetchFranchiseeEntities() {
+  if (_franchiseeEntities.length > 0) return;
+  const token = window.AIRTABLE_TOKEN || '';
+  if (!token) return;
+  try {
+    const base  = BASE_ID;
+    const table = 'tblK4Y3zOQfJvpgtj'; // Franchisee Entities
+    let records = [], offset = null;
+    do {
+      const url = 'https://api.airtable.com/v0/' + base + '/' + table
+        + '?pageSize=100' + (offset ? '&offset=' + offset : '');
+      const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+      const data = await res.json();
+      if (data.records) records = records.concat(data.records);
+      offset = data.offset || null;
+    } while (offset);
+
+    _franchiseeEntities = records.map(function(r) {
+      var f = r.fields || {};
+      return {
+        recId:       r.id,
+        name:        f['Entity Name'] || '',
+        parentIds:   f['Parent Group'] || [],
+        state:       f['Jurisdiction (State)'] || '',
+        signatory:   f['Signatory Name']       || '',
+        signTitle:   f['Signatory Title']      || ''
+      };
+    });
+  } catch(e) {
+    console.warn('fetchFranchiseeEntities error:', e);
+  }
+}
+
+// Resolve an entity-link field value (array of rec IDs) into a display
+// object with name + parent group name. Falls back to the legacy field
+// value if the new link is empty.
+function resolveEntity(entityLink, legacyValue) {
+  // entityLink: array of record IDs from multipleRecordLinks field
+  if (Array.isArray(entityLink) && entityLink.length > 0) {
+    const ent = _franchiseeEntities.find(function(e){ return e.recId === entityLink[0]; });
+    if (ent) {
+      let groupName = '';
+      if (ent.parentIds && ent.parentIds.length > 0) {
+        const grp = _franchiseeGroups.find(function(g){ return g.recId === ent.parentIds[0]; });
+        if (grp) groupName = grp.name;
+      }
+      return { name: ent.name || '(unnamed)', groupName: groupName, resolved: true };
+    }
+    // Linked but entity cache miss (e.g. just linked, haven't reloaded)
+    return { name: '(linked entity)', groupName: '', resolved: true };
+  }
+  // Fall back to legacy value
+  var legacy = legacyValue;
+  if (legacy && typeof legacy === 'object' && legacy.name) legacy = legacy.name; // singleSelect object shape
+  return { name: legacy || '-', groupName: '', resolved: false };
 }
 
 function populateGroupDropdown() {
@@ -3065,15 +3128,18 @@ async function loadTrackerRecords() {
       const exp = f['Expiration Date'] ? new Date(f['Expiration Date']) : null;
       const daysRemaining = exp ? Math.round((exp - today) / 86400000) : null;
       const status = (daysRemaining !== null) ? trackerStatus(daysRemaining) : 'active';
+      const entityDisplay = resolveEntity(f['Franchisee Entity'], f['Franchisee Entity (legacy)']);
       return {
-        id:            rec.id,
-        agreement:     f['Agreement Name'] || '—',
-        draGroup:      f['DRA Group']      || '—',
-        execDate:      f['Execution Date'] || '—',
-        expDate:       f['Expiration Date']|| '—',
-        generatedBy:   f['Generated By']   || '—',
-        daysRemaining: daysRemaining,
-        status:        status
+        id:               rec.id,
+        agreement:        f['Agreement Name'] || '—',
+        draGroup:         f['DRA Group']      || '—',
+        execDate:         f['Execution Date'] || '—',
+        expDate:          f['Expiration Date']|| '—',
+        generatedBy:      f['Generated By']   || '—',
+        franchiseeEntity: entityDisplay.name,
+        franchiseeGroup:  entityDisplay.groupName,
+        daysRemaining:    daysRemaining,
+        status:           status
       };
     });
 
@@ -3441,7 +3507,7 @@ function renderLocations() {
       +     escHtml([f['City'], f['State']].filter(Boolean).join(', ')) + ' ' + escHtml(f['Zip'] || '')
       +   '</div>'
       +   '<div class="loc-card-grid">'
-      +     '<div><div class="k">Franchisee</div><div class="v">' + escHtml(f['Franchisee Entity'] || '-') + '</div></div>'
+      +     '<div><div class="k">Franchisee</div><div class="v">' + (function(){ var r = resolveEntity(f['Franchisee Entity'], f['Franchisee Entity (legacy)']); return escHtml(r.name) + (r.groupName ? '<br><span class="loc-card-group">under ' + escHtml(r.groupName) + '</span>' : ''); })() + '</div></div>'
       +     '<div><div class="k">Phone</div><div class="v">'       + escHtml(f['Phone']             || '-') + '</div></div>'
       +     '<div><div class="k">GM</div><div class="v">'          + escHtml(f['General Manager']   || '-') + '</div></div>'
       +     '<div><div class="k">DM</div><div class="v">'          + escHtml(f['District Manager']  || '-') + '</div></div>'
@@ -3591,7 +3657,7 @@ function openFAModal(faId, locationId) {
   renderAgrPdfPane(f['FA File']);
   const rows = [
     ['Brand',            escHtml(f['Brand']             || '-')],
-    ['Franchisee Entity',escHtml(f['Franchisee Entity'] || '-')],
+    ['Franchisee Entity',(function(){ var r = resolveEntity(f['Franchisee Entity'], f['Franchisee Entity (legacy)']); return escHtml(r.name) + (r.groupName ? ' <span class="agr-submeta">(under ' + escHtml(r.groupName) + ')</span>' : ''); })()],
     ['DRA Group',        escHtml(f['DRA Group']         || '-')],
     ['Execution Date',   escHtml(fmtDate(f['Execution Date']))],
     ['Expiration Date',  escHtml(fmtDate(f['Expiration Date']))],
@@ -3959,7 +4025,7 @@ async function generateFA(e) {
     statusEl.textContent = '✓ ' + filename + ' downloaded. Saving to FA Tracker…';
     await logFAToTracker({
       'Agreement Name':    entity + ' — ' + shopName + ' (#' + shopNum + ')',
-      'Franchisee Entity': entity,
+      'Franchisee Entity (legacy)': entity,
       'Shop Name':         shopName,
       'Shop Number':       shopNum,
       'DRA Group':         selectedGroup ? selectedGroup.name : entity,
