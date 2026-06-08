@@ -37,6 +37,7 @@ export function verify(token: string): SessionClaims {
 
 export const COOKIE_NAME = 'pub_session';
 
+// deploy marker: force Railway to rebuild api with the configurable-cookie code.
 export function cookieOptions(): import('express').CookieOptions {
   // COOKIE_DOMAIN empty → cookie scoped to the API's own host (works for
   // sandbox on .up.railway.app where api & portal are on different sites).
