@@ -38,11 +38,17 @@ export function verify(token: string): SessionClaims {
 export const COOKIE_NAME = 'pub_session';
 
 export function cookieOptions(): import('express').CookieOptions {
+  // COOKIE_DOMAIN empty → cookie scoped to the API's own host (works for
+  // sandbox on .up.railway.app where api & portal are on different sites).
+  // Set to ".popupbagels.com" once custom domains are wired up for prod.
+  const domain = config.NODE_ENV === 'production' && config.COOKIE_DOMAIN
+    ? config.COOKIE_DOMAIN
+    : undefined;
   return {
     httpOnly: true,
     secure: config.NODE_ENV === 'production',
-    sameSite: 'strict',
-    domain: config.NODE_ENV === 'production' ? config.COOKIE_DOMAIN : undefined,
+    sameSite: config.COOKIE_SAMESITE,
+    domain,
     maxAge: EXPIRES_IN_SECONDS * 1000,
     path: '/',
   };
