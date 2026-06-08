@@ -14,8 +14,13 @@ export type DraRecord = AirtableRecord<DraFields>;
 /** All DRA records, sorted by name. PUB Corp and other non-DRA rows
  *  show up here too — the route filters out rows without a Total Obligation. */
 export async function listAll(): Promise<DraRecord[]> {
-  return airtable.list<DraFields>('LEGAL', TABLE.FRANCHISEE_GROUPS, {
-    sort: [{ field: 'DRA Name', direction: 'asc' }],
+  const records = await airtable.list<DraFields>('LEGAL', TABLE.FRANCHISEE_GROUPS, {});
+  // Sort client-side by primary GROUP_NAME field so we don't depend on the
+  // Airtable field's display name (avoids 422 if it gets renamed).
+  return records.sort((a, b) => {
+    const an = (a.fields[FRANCHISEE_GROUPS.GROUP_NAME] as string | undefined) ?? '';
+    const bn = (b.fields[FRANCHISEE_GROUPS.GROUP_NAME] as string | undefined) ?? '';
+    return an.localeCompare(bn);
   });
 }
 
