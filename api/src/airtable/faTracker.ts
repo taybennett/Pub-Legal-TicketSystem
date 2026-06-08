@@ -43,3 +43,7 @@ export async function listByDraName(draName: string): Promise<FaTrackerRecord[]>
 export async function listAll(): Promise<FaTrackerRecord[]> {
   return airtable.list<FaTrackerFields>('LEGAL', TABLE.FA_TRACKER, {});
 }
+
+export async function create(fields: FaTrackerFields): Promise<FaTrackerRecord> {
+  return airtable.create<FaTrackerFields>('LEGAL', TABLE.FA_TRACKER, fields, true);
+}

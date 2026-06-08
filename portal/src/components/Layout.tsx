@@ -23,6 +23,9 @@ export function Layout() {
             {me?.userType === 'Admin' && (
               <NavLink to="/dras" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>DRAs</NavLink>
             )}
+            {me?.userType === 'Admin' && (
+              <NavLink to="/fa" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Generate FA</NavLink>
+            )}
           </nav>
           <div className="topnav-user">
             <span className="user-name">{me?.name}</span>

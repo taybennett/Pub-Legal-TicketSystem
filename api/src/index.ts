@@ -14,6 +14,7 @@ import { ticketsRouter } from './routes/tickets.js';
 import { documentsRouter, uploadErrorHandler } from './routes/documents.js';
 import { adminRouter } from './routes/admin.js';
 import { drasRouter } from './routes/dras.js';
+import { faTrackersRouter } from './routes/faTrackers.js';
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/v1/tickets',   ticketsRouter);
 app.use('/api/v1/documents', documentsRouter);
 app.use('/api/v1/admin',     adminRouter);
 app.use('/api/v1/dras',      drasRouter);
+app.use('/api/v1/fa-trackers', faTrackersRouter);
 
 // Multer-specific error wrapper
 app.use(uploadErrorHandler);

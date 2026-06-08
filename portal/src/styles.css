@@ -248,6 +248,32 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .dra-fa-pill { font-size: 0.6rem !important; }
 .dra-fa-meta { color: var(--mid); font-size: 0.8rem; }
 
+/* ── FA Generator form ────────────────────────────────────── */
+.fa-form { background: var(--white); border: 1px solid var(--border); padding: 1.5rem 1.8rem;
+  margin-bottom: 2rem; }
+.fa-section-label { color: var(--mid); font-size: 0.7rem; letter-spacing: 0.12em;
+  text-transform: uppercase; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border);
+  margin: 1.4rem 0 0.8rem; font-weight: 600; }
+.fa-section-label:first-of-type { margin-top: 0; }
+.fa-hint { font-size: 0.78rem; color: var(--mid); font-style: italic; margin-bottom: 0.6rem; }
+.fa-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.7rem; }
+.fa-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.fa-field label { font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--mid); font-weight: 600; }
+.fa-field input, .fa-field select { border: 1px solid var(--border); background: var(--white);
+  padding: 0.5rem 0.7rem; font-size: 0.85rem; font-family: inherit; color: var(--black); outline: none; }
+.fa-field input:focus, .fa-field select:focus { border-color: var(--black); }
+.fa-field .req { color: #c0392b; }
+.fa-owner-row { display: grid; grid-template-columns: 28px 1fr 100px; gap: 0.5rem;
+  align-items: center; margin-bottom: 0.45rem; }
+.fa-owner-num { font-size: 0.75rem; font-weight: 700; color: var(--mid); text-align: right; }
+.fa-owner-row input { border: 1px solid var(--border); background: var(--white);
+  padding: 0.5rem 0.7rem; font-size: 0.85rem; font-family: inherit; outline: none; }
+.fa-actions { display: flex; align-items: center; gap: 1rem; margin-top: 1.5rem;
+  padding-top: 1.2rem; border-top: 1px solid var(--border); }
+.fa-status { font-size: 0.8rem; color: var(--mid); }
+.fa-status--err { color: #c0392b; }
+
 /* ── Ticket description + docs panel ─────────────────────── */
 .ticket-description { background: var(--white); border: 1px solid var(--border);
   padding: 1rem 1.2rem; margin-bottom: 1.5rem; white-space: pre-wrap;

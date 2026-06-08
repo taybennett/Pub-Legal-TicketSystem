@@ -6,6 +6,7 @@ import { Locations } from './pages/Locations';
 import { LocationDetail } from './pages/LocationDetail';
 import { TicketDetail } from './pages/TicketDetail';
 import { Dras } from './pages/Dras';
+import { FaGenerator } from './pages/FaGenerator';
 
 function Loading() {
   return <div className="state state--loading">Loading…</div>;
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="locations/:id/:tab" element={<LocationDetail />} />
         <Route path="tickets/:id" element={<TicketDetail />} />
         <Route path="dras" element={<Dras />} />
+        <Route path="fa" element={<FaGenerator />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
