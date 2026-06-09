@@ -50,6 +50,10 @@ export interface FaInputs {
   opAddr2:  string;
   opTel:    string;
   opEmail:  string;
+  // Section 25 Notices address (3 free-form lines, displayed on FA page 70)
+  noticeLine1: string;
+  noticeLine2: string;
+  noticeLine3: string;
   // Second director (Exhibit C)
   director2Name:  string;
   director2Title: string;
@@ -148,17 +152,56 @@ function buildGuarantorBlocks(guarantors: FaGuarantor[], execDateFull: string): 
   );
 }
 
-/** Extra franchisee signatory blocks stacked beneath the primary in each signature area. */
+/**
+ * Extra franchisee signatory blocks stacked beneath the primary signatory.
+ * Uses tab + underline (w:u single) for the signature line — matches the
+ * template's existing block style instead of literal underscore chars,
+ * which render unpredictably with compressed letter spacing.
+ */
 function buildFranchiseeSignatoryBlocks(extras: FaSignatory[], execDateFull: string): string {
   if (!extras.length) return '';
-  const para = (text: string) => '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t xml:space="preserve">' + esc(text) + '</w:t></w:r></w:p>';
-  return extras.map(s => (
-    '<w:p/>' +
-    para('________________________________________') +
-    para(`Name: ${s.name}`) +
-    para(`Title: ${s.title}`) +
-    para(`Date: ${execDateFull}`)
-  )).join('');
+  const group = (s: FaSignatory) => (
+    // blank separator
+    '<w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="4104"/></w:tabs><w:jc w:val="both"/><w:rPr><w:szCs w:val="22"/></w:rPr></w:pPr></w:p>' +
+    // By: ____ (underlined tab — produces the horizontal sig line)
+    '<w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="4104"/></w:tabs><w:jc w:val="both"/><w:rPr><w:szCs w:val="22"/></w:rPr></w:pPr>' +
+      '<w:r><w:rPr><w:szCs w:val="22"/></w:rPr><w:t>By:</w:t></w:r>' +
+      '<w:r><w:rPr><w:szCs w:val="22"/><w:u w:val="single"/></w:rPr><w:tab/></w:r></w:p>' +
+    // Name:
+    '<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="360"/><w:tab w:val="right" w:pos="4104"/></w:tabs><w:jc w:val="both"/><w:rPr><w:szCs w:val="22"/></w:rPr></w:pPr>' +
+      '<w:r><w:rPr><w:szCs w:val="22"/></w:rPr><w:tab/><w:t xml:space="preserve">Name: ' + esc(s.name) + '</w:t></w:r></w:p>' +
+    // Title:
+    '<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="360"/><w:tab w:val="right" w:pos="4104"/></w:tabs><w:jc w:val="both"/><w:rPr><w:szCs w:val="22"/></w:rPr></w:pPr>' +
+      '<w:r><w:rPr><w:szCs w:val="22"/></w:rPr><w:tab/><w:t xml:space="preserve">Title: ' + esc(s.title) + '</w:t></w:r></w:p>' +
+    // Date:
+    '<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="360"/><w:tab w:val="right" w:pos="4104"/></w:tabs><w:ind w:firstLine="360"/><w:jc w:val="both"/><w:rPr><w:szCs w:val="22"/></w:rPr></w:pPr>' +
+      '<w:r><w:rPr><w:szCs w:val="22"/></w:rPr><w:t xml:space="preserve">Date: ' + esc(execDateFull) + '</w:t></w:r></w:p>'
+  );
+  return extras.map(group).join('');
+}
+
+/**
+ * Section 25 (Notices) address — the template has three blank-underscore
+ * paragraphs with stable paraIds. Runtime targeted replacement: find the
+ * `_____________________________` placeholder inside each paragraph and
+ * swap it for the user's value. Empty lines are skipped (placeholder stays).
+ */
+function fillNoticesAddress(xml: string, lines: string[]): string {
+  const paraIds = ['20ACC4D7', '1F082D38', '17BB9144'];
+  const UNDERSCORES = '_____________________________';  // 29
+  let out = xml;
+  paraIds.forEach((paraId, i) => {
+    const v = (lines[i] ?? '').trim();
+    if (!v) return;
+    // Match the paragraph with this paraId, then within it find and replace
+    // the underscore <w:t>...</w:t> content. The [\s\S]*? non-greedy chunks
+    // are bounded by the surrounding <w:p> tags to avoid leaking.
+    const re = new RegExp(
+      `(<w:p w14:paraId="${paraId}"[^>]*>[\\s\\S]*?<w:t[^>]*>)${UNDERSCORES}(<\\/w:t>[\\s\\S]*?<\\/w:p>)`,
+    );
+    out = out.replace(re, `$1${esc(v)}$2`);
+  });
+  return out;
 }
 
 // ── Token map ────────────────────────────────────────────────────
@@ -191,8 +234,10 @@ function buildTokens(input: FaInputs): Record<string, string> {
     '{{OP_ADDRESS_LINE2}}':            input.opAddr2,
     '{{OP_TEL}}':                      input.opTel,
     '{{OP_EMAIL}}':                    input.opEmail,
-    '{{DIRECTOR_2_NAME}}':             input.director2Name || '[Director 2 Name]',
-    '{{DIRECTOR_2_TITLE}}':            input.director2Title || '[Director 2 Title]',
+    // Director 2 defaults to the Operating Principal if not explicitly set,
+    // since the OP is most commonly the second director/manager.
+    '{{DIRECTOR_2_NAME}}':             input.director2Name  || input.opName  || '[Director 2 Name]',
+    '{{DIRECTOR_2_TITLE}}':            input.director2Title || 'Manager',
     '{{OWNER_1_NAME}}':                owners[0].name,
     '{{OWNER_1_INTEREST}}':            fmtPct(owners[0].pct) || '[%]',
     '{{OWNER_2_NAME}}':                owners[1].name || '[Owner 2]',
@@ -246,6 +291,14 @@ export async function generateFa(input: FaInputs): Promise<{ blob: Blob; filenam
     }
     for (const [token, value] of inlineTokens) {
       if (content.includes(token)) { content = content.split(token).join(value); changed = true; }
+    }
+    // Notices address — paraId-targeted (document.xml only)
+    if (path === 'word/document.xml') {
+      const lines = [input.noticeLine1, input.noticeLine2, input.noticeLine3];
+      if (lines.some(l => l && l.trim())) {
+        const filled = fillNoticesAddress(content, lines);
+        if (filled !== content) { content = filled; changed = true; }
+      }
     }
     if (changed) zip.file(path, enc.encode(content));
   }

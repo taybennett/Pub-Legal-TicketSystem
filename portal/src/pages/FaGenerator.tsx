@@ -42,6 +42,11 @@ export function FaGenerator() {
   const [director2Name, setDirector2Name]   = useState('');
   const [director2Title, setDirector2Title] = useState('');
 
+  // Section 25 Notices address (page 70)
+  const [noticeLine1, setNoticeLine1] = useState('');
+  const [noticeLine2, setNoticeLine2] = useState('');
+  const [noticeLine3, setNoticeLine3] = useState('');
+
   const [extraSignatories, setExtraSignatories] = useState<FaSignatory[]>([blankSig, blankSig, blankSig]);
   const [owners, setOwners]                     = useState<FaOwner[]>([blankOwn, blankOwn, blankOwn, blankOwn, blankOwn]);
   const [guarantors, setGuarantors]             = useState<FaGuarantor[]>([blankGuar, blankGuar, blankGuar, blankGuar, blankGuar]);
@@ -76,6 +81,7 @@ export function FaGenerator() {
         formationDate,
         opName, opAddr1, opAddr2, opTel, opEmail,
         director2Name, director2Title,
+        noticeLine1, noticeLine2, noticeLine3,
         owners:     owners.filter(o => o.name.trim()),
         guarantors: guarantors.filter(g => g.name.trim()),
       };
@@ -207,8 +213,24 @@ export function FaGenerator() {
           </Field>
         </Row>
 
+        <SectionLabel>Notices to Franchisee (Section 25, page 70)</SectionLabel>
+        <p className="fa-hint">Address where notices to the Franchisee should be sent. Up to 3 lines. Leave blank to keep the underlined blanks in the FA.</p>
+        <Row>
+          <Field label="Notice Line 1">
+            <input value={noticeLine1} onChange={e => setNoticeLine1(e.target.value)} placeholder="e.g. Brian Harrington, Manager" />
+          </Field>
+          <Field label="Notice Line 2">
+            <input value={noticeLine2} onChange={e => setNoticeLine2(e.target.value)} placeholder="e.g. 514 Wyndmoor Avenue" />
+          </Field>
+        </Row>
+        <Row>
+          <Field label="Notice Line 3">
+            <input value={noticeLine3} onChange={e => setNoticeLine3(e.target.value)} placeholder="e.g. Wyndmoor, PA 19038" />
+          </Field>
+        </Row>
+
         <SectionLabel>Second Director / Manager (Exhibit C)</SectionLabel>
-        <p className="fa-hint">The primary signatory is automatically listed as the first director.</p>
+        <p className="fa-hint">Defaults to the Operating Principal if left blank. The primary signatory is automatically the first director.</p>
         <Row>
           <Field label="Name">
             <input value={director2Name} onChange={e => setDirector2Name(e.target.value)} placeholder="e.g. Kevin Kelly" />
