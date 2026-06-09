@@ -55,21 +55,22 @@ drasRouter.get('/', async (_req: Request, res: Response) => {
     }),
   ]);
 
-  // Bucket FAs by DRA name
+  // Bucket FAs by linked DRA record ID — survives DRA renames.
   const fasByDra = new Map<string, faTracker.FaTrackerRecord[]>();
   for (const fa of faRecords) {
-    const draName = fa.fields[FA_TRACKER.DRA_NAME] as string | undefined;
-    if (!draName) continue;
-    const list = fasByDra.get(draName) ?? [];
-    list.push(fa);
-    fasByDra.set(draName, list);
+    const links = (fa.fields[FA_TRACKER.DRA_LINK] as string[] | undefined) ?? [];
+    for (const draId of links) {
+      const list = fasByDra.get(draId) ?? [];
+      list.push(fa);
+      fasByDra.set(draId, list);
+    }
   }
 
   const out = draRecords
     .map(d => {
       const name = (d.fields[FRANCHISEE_GROUPS.GROUP_NAME] as string | undefined) ?? '';
       const totalObligation = (d.fields[FRANCHISEE_GROUPS.TOTAL_OBLIGATION] as number | undefined) ?? 0;
-      const fas = fasByDra.get(name) ?? [];
+      const fas = fasByDra.get(d.id) ?? [];
       let currentlyOpen = 0;
       for (const fa of fas) {
         const shopNum  = (fa.fields[FA_TRACKER.SHOP_NUMBER] as string | undefined) ?? '';
@@ -99,7 +100,7 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
 
   const name = (d.fields[FRANCHISEE_GROUPS.GROUP_NAME] as string | undefined) ?? '';
   const [fas, pipelineStatuses] = await Promise.all([
-    faTracker.listByDraName(name),
+    faTracker.listByDraId(d.id),
     pipeline.listStatusesByShopNumber().catch(err => {
       logger.warn({ err, draName: name }, 'Pipeline status fetch failed; isOpen will be false');
       return new Map<string, pipeline.PipelineCandidate[]>();

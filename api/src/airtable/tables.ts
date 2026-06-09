@@ -212,6 +212,7 @@ export const FA_TRACKER = {
   FILE:           'fld7KovhoSqAcMtIK', // multipleAttachments
   SHOP_NAME:      'fldw0mVNvR0otKOuX', // singleLineText
   TITLE:          'fldGyEBZB08oqRt5n', // computed primary — e.g. "Bagel Bros, LLC — Lincoln Park (Chicago) (#2295)"
+  DRA_LINK:       'fldAXWntc1wHmmMpn', // multipleRecordLinks → Franchisee Groups (DRAs). Source of truth.
 } as const;
 
 // ── FRANCHISEE GROUPS (each row is a Development Rights Agreement / DRA) ─────

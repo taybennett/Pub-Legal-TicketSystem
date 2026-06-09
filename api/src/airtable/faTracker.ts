@@ -12,6 +12,7 @@ export interface FaTrackerFields {
   [FA_TRACKER.DRA_NAME]?: string;
   [FA_TRACKER.ATTORNEY]?: string;
   [FA_TRACKER.FILE]?: { url: string; filename: string; size?: number; type?: string }[];
+  [FA_TRACKER.DRA_LINK]?: string[];
   [key: string]: unknown;
 }
 
@@ -30,13 +31,15 @@ export async function listForShopNumber(shopId: string): Promise<FaTrackerRecord
   });
 }
 
-/** All FA Tracker rows whose DRA Name text matches `draName` exactly.
- *  Filters client-side to avoid filterByFormula 422s if the field's
- *  display name in Airtable doesn't match what we'd hardcode here. */
-export async function listByDraName(draName: string): Promise<FaTrackerRecord[]> {
-  if (!draName) return [];
+/** FA Tracker rows linked to a specific DRA (Franchisee Groups) record ID.
+ *  Uses the new DRA_LINK linked-record field — survives DRA name renames. */
+export async function listByDraId(draRecordId: string): Promise<FaTrackerRecord[]> {
+  if (!draRecordId) return [];
   const all = await airtable.list<FaTrackerFields>('LEGAL', TABLE.FA_TRACKER, {});
-  return all.filter(r => (r.fields[FA_TRACKER.DRA_NAME] as string | undefined) === draName);
+  return all.filter(r => {
+    const links = (r.fields[FA_TRACKER.DRA_LINK] as string[] | undefined) ?? [];
+    return links.includes(draRecordId);
+  });
 }
 
 /** All FA Tracker rows. Used by the DRA list endpoint to bucket per DRA. */
