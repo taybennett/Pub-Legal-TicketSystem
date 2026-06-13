@@ -274,6 +274,35 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .fa-status { font-size: 0.8rem; color: var(--mid); }
 .fa-status--err { color: #c0392b; }
 
+/* ── Lease Upload Modal (AI-assisted) ────────────────────── */
+.lease-upload-bar { margin-bottom: 1.5rem; }
+
+.modal--lease { max-width: 720px; width: 92vw; max-height: 90vh; overflow-y: auto; }
+.lease-modal-body { padding: 1.2rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.lease-modal-warning { margin: 0 1.5rem; padding: 0.75rem 1rem; background: #fff3cd;
+  border: 1px solid #ffeeba; color: #856404; font-size: 0.85rem; }
+.lease-modal-notes { padding: 0.75rem 1rem; background: #e0f7f6; border: 1px solid #b5efee;
+  color: #006064; font-size: 0.85rem; }
+.lease-modal-file { padding: 0.5rem; border: 1px dashed var(--border); background: var(--white); }
+.lease-modal-progress { text-align: center; padding: 2rem; gap: 1rem; }
+.spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--black);
+  border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.lease-modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem 1rem; }
+.lease-modal-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.lease-modal-field label { font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--mid); font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+.lease-modal-field input { border: 1px solid var(--border); background: var(--white);
+  padding: 0.5rem 0.7rem; font-size: 0.9rem; font-family: inherit; outline: none; }
+.lease-modal-field input:focus { border-color: var(--black); }
+
+.conf-pill { font-size: 0.58rem; padding: 0.1rem 0.4rem; border-radius: 2px; text-transform: uppercase;
+  letter-spacing: 0.06em; font-weight: 600; }
+.conf-high   { background: #c8e6c9; color: #1b5e20; }
+.conf-medium { background: #fff3c4; color: #7a5a00; }
+.conf-low    { background: #f8d7da; color: #721c24; }
+
 /* ── Ticket description + docs panel ─────────────────────── */
 .ticket-description { background: var(--white); border: 1px solid var(--border);
   padding: 1rem 1.2rem; margin-bottom: 1.5rem; white-space: pre-wrap;

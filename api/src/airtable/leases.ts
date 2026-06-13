@@ -10,10 +10,23 @@ export interface LeaseFields {
   [LEASES.MONTHLY_RENT]?: number;
   [LEASES.ANNUAL_RENT]?: number;
   [LEASES.FILE]?: { url: string; filename: string; size?: number; type?: string }[];
+  [LEASES.LANDLORD]?: string;
+  [LEASES.RENT_COMMENCEMENT_DATE]?: string;
+  [LEASES.RENEWAL_OPTIONS]?: string;
+  [LEASES.SECURITY_DEPOSIT]?: number;
+  [LEASES.AI_EXTRACTION_LOG]?: string;
   [key: string]: unknown;
 }
 
 export type LeaseRecord = AirtableRecord<LeaseFields>;
+
+export async function create(fields: LeaseFields): Promise<LeaseRecord> {
+  return airtable.create<LeaseFields>('LEGAL', TABLE.LEASES, fields);
+}
+
+export async function attachFile(recordId: string, file: { filename: string; contentType: string; base64: string }): Promise<void> {
+  await airtable.uploadAttachment('LEGAL', recordId, LEASES.FILE, file);
+}
 
 /** Leases linked to a Location, most-recent execution date first. */
 export async function listForLocation(leaseIds: string[]): Promise<LeaseRecord[]> {

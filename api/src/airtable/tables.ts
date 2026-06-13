@@ -196,6 +196,12 @@ export const LEASES = {
   MONTHLY_RENT:   'flduVt4EpOeXBQBgD', // number (currency)
   ANNUAL_RENT:    'fldzC6vDKxG2tpihb', // number (currency)
   FILE:           'fldggx2f5yASIEPY5', // multipleAttachments
+  // AI extraction targets (Phase 1 — Claude reads PDF, admin reviews, then saves)
+  LANDLORD:               'fldNVFM3cKXqqil7P', // singleLineText
+  RENT_COMMENCEMENT_DATE: 'fldkbdyUauIObgxB8', // date (ISO)
+  RENEWAL_OPTIONS:        'fldYvAyLnDEDipSGY', // singleLineText
+  SECURITY_DEPOSIT:       'fldxvOreGk3UJxS98', // currency
+  AI_EXTRACTION_LOG:      'fldulFGcVzfog74JQ', // multilineText — audit trail of raw Claude response
 } as const;
 
 // ── FA TRACKER ──────────────────────────────────────────────────────

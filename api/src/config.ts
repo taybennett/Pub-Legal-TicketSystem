@@ -10,6 +10,7 @@ const schema = z.object({
   COOKIE_DOMAIN:            z.string().default(''),
   COOKIE_SAMESITE:          z.enum(['strict', 'lax', 'none']).default('strict'),
   POSTMARK_TOKEN:           z.string().min(10),
+  ANTHROPIC_API_KEY:        z.string().min(10),
   EMAIL_FROM:               z.string().email(),
   EMAIL_FROM_NAME:          z.string().default('PUB Legal Portal'),
   FRONTEND_URL_LEGAL:       z.string().url(),

@@ -15,6 +15,7 @@ import { documentsRouter, uploadErrorHandler } from './routes/documents.js';
 import { adminRouter } from './routes/admin.js';
 import { drasRouter } from './routes/dras.js';
 import { faTrackersRouter } from './routes/faTrackers.js';
+import { leasesRouter } from './routes/leases.js';
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/v1/documents', documentsRouter);
 app.use('/api/v1/admin',     adminRouter);
 app.use('/api/v1/dras',      drasRouter);
 app.use('/api/v1/fa-trackers', faTrackersRouter);
+app.use('/api/v1/locations',  leasesRouter);  // mounts /:id/leases/extract, /:id/leases/existing, /:id/leases (POST)
 
 // Multer-specific error wrapper
 app.use(uploadErrorHandler);

@@ -74,6 +74,31 @@ export interface Lease {
   file:          { url: string; filename: string }[];
 }
 
+export type Confidence = 'high' | 'medium' | 'low';
+
+export interface ExtractedField<T> {
+  value: T | null;
+  confidence: Confidence;
+}
+
+export interface LeaseExtraction {
+  executionDate:    ExtractedField<string>;
+  commencementDate: ExtractedField<string>;
+  termYears:        ExtractedField<number>;
+  termEnd:          ExtractedField<string>;
+  monthlyRent:      ExtractedField<number>;
+  annualRent:       ExtractedField<number>;
+  landlord:         ExtractedField<string>;
+  renewalOptions:   ExtractedField<string>;
+  securityDeposit:  ExtractedField<number>;
+  notes:            string;
+  model:            string;
+  inputTokens:      number;
+  outputTokens:     number;
+  cacheReadTokens:  number;
+  cacheWriteTokens: number;
+}
+
 export interface FaTracker {
   id: string;
   executionDate: string | null;
