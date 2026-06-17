@@ -24,6 +24,11 @@ export async function create(fields: LeaseFields): Promise<LeaseRecord> {
   return airtable.create<LeaseFields>('LEGAL', TABLE.LEASES, fields);
 }
 
+/** Every Lease record in the base. Used by the compliance check. */
+export async function listAll(): Promise<LeaseRecord[]> {
+  return airtable.list<LeaseFields>('LEGAL', TABLE.LEASES, {});
+}
+
 export async function attachFile(recordId: string, file: { filename: string; contentType: string; base64: string }): Promise<void> {
   await airtable.uploadAttachment('LEGAL', recordId, LEASES.FILE, file);
 }

@@ -74,6 +74,40 @@ export interface Lease {
   file:          { url: string; filename: string }[];
 }
 
+// ── Compliance Check ────────────────────────────────────
+export interface ChecklistItem {
+  ok:    boolean;
+  label: string;
+}
+
+export interface ShopComplianceReport {
+  locationId:     string;
+  shopName:       string;
+  shopId:         string;
+  isPubCorp:      boolean;
+  fullyCompliant: boolean;
+  gapCount:       number;
+  lease: {
+    present:     ChecklistItem;
+    pdfAttached: ChecklistItem;
+    execDate:    ChecklistItem;
+  };
+  fa: {
+    present:     ChecklistItem;
+    pdfAttached: ChecklistItem;
+    execDate:    ChecklistItem;
+  } | null;
+}
+
+export interface ComplianceResponse {
+  summary: {
+    totalOpen:      number;
+    fullyCompliant: number;
+    withGaps:       number;
+  };
+  reports: ShopComplianceReport[];
+}
+
 export type Confidence = 'high' | 'medium' | 'low';
 
 export interface ExtractedField<T> {
