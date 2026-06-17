@@ -50,3 +50,11 @@ export async function listAll(): Promise<FaTrackerRecord[]> {
 export async function create(fields: FaTrackerFields): Promise<FaTrackerRecord> {
   return airtable.create<FaTrackerFields>('LEGAL', TABLE.FA_TRACKER, fields, true);
 }
+
+export async function getById(recordId: string): Promise<FaTrackerRecord> {
+  return airtable.get<FaTrackerFields>('LEGAL', TABLE.FA_TRACKER, recordId);
+}
+
+export async function remove(recordId: string): Promise<void> {
+  await airtable.delete('LEGAL', TABLE.FA_TRACKER, recordId);
+}

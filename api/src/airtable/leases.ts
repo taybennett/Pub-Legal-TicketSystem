@@ -29,6 +29,14 @@ export async function listAll(): Promise<LeaseRecord[]> {
   return airtable.list<LeaseFields>('LEGAL', TABLE.LEASES, {});
 }
 
+export async function getById(recordId: string): Promise<LeaseRecord> {
+  return airtable.get<LeaseFields>('LEGAL', TABLE.LEASES, recordId);
+}
+
+export async function remove(recordId: string): Promise<void> {
+  await airtable.delete('LEGAL', TABLE.LEASES, recordId);
+}
+
 export async function attachFile(recordId: string, file: { filename: string; contentType: string; base64: string }): Promise<void> {
   await airtable.uploadAttachment('LEGAL', recordId, LEASES.FILE, file);
 }

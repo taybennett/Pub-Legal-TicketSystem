@@ -1,22 +1,33 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import { useAuth } from '../hooks/useAuth';
+import { ConfirmDialog } from './ConfirmDialog';
 import type { FaTracker } from '../api/types';
 
 export function CurrentFaPanel({ locationId }: { locationId: string }) {
-  const [items, setItems] = useState<FaTracker[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const { me } = useAuth();
+  const [items, setItems]       = useState<FaTracker[] | null>(null);
+  const [err, setErr]           = useState<string | null>(null);
+  const [reload, setReload]     = useState(0);
+  const [toDelete, setToDelete] = useState<FaTracker | null>(null);
 
   useEffect(() => {
     api.get<{ faTrackers: FaTracker[] }>(`/locations/${locationId}/fa-trackers`)
       .then(r => setItems(r.faTrackers))
       .catch(e => setErr(e.message));
-  }, [locationId]);
+  }, [locationId, reload]);
+
+  async function handleDelete(fa: FaTracker) {
+    await api.delete(`/fa-trackers/${fa.id}`);
+    setReload(k => k + 1);
+  }
 
   if (err) return null;
   if (!items) return null;
   if (items.length === 0) return null;
 
   const [primary, ...rest] = items;
+  const isAdmin = me?.userType === 'Admin';
 
   return (
     <div className="lease-panel">
@@ -24,18 +35,40 @@ export function CurrentFaPanel({ locationId }: { locationId: string }) {
         <div className="lease-panel-title">Current franchise agreement</div>
         {primary.status && <span className={statusPillClass(primary.status)}>{primary.status}</span>}
       </div>
-      <FaRow item={primary} />
+      <FaRow item={primary} isAdmin={isAdmin} onDelete={setToDelete} />
       {rest.length > 0 && (
         <div className="lease-history">
           <div className="lease-history-label">Prior agreements</div>
-          {rest.map(it => <FaRow key={it.id} item={it} compact />)}
+          {rest.map(it => <FaRow key={it.id} item={it} compact isAdmin={isAdmin} onDelete={setToDelete} />)}
         </div>
+      )}
+      {toDelete && (
+        <ConfirmDialog
+          title="Delete FA Tracker record?"
+          destructive
+          confirmLabel="Delete FA"
+          onClose={() => setToDelete(null)}
+          onConfirm={() => handleDelete(toDelete)}
+          message={
+            <>
+              <p style={{ marginTop: 0 }}>
+                This permanently removes the FA Tracker record and its PDF from Airtable. <strong>Cannot be undone.</strong>
+              </p>
+              <ul className="confirm-detail">
+                {toDelete.file[0] && <li><strong>File:</strong> {toDelete.file[0].filename}</li>}
+                {toDelete.entityName    && <li><strong>Entity:</strong> {toDelete.entityName}</li>}
+                {toDelete.executionDate && <li><strong>Executed:</strong> {toDelete.executionDate}</li>}
+                {toDelete.draName       && <li><strong>DRA:</strong> {toDelete.draName}</li>}
+              </ul>
+            </>
+          }
+        />
       )}
     </div>
   );
 }
 
-function FaRow({ item, compact = false }: { item: FaTracker; compact?: boolean }) {
+function FaRow({ item, compact = false, isAdmin, onDelete }: { item: FaTracker; compact?: boolean; isAdmin: boolean; onDelete: (fa: FaTracker) => void }) {
   return (
     <>
       <div className={compact ? 'lease-row lease-row--compact' : 'lease-row'}>
@@ -43,10 +76,19 @@ function FaRow({ item, compact = false }: { item: FaTracker; compact?: boolean }
         <Field label="Term"      value={termText(item.termYears, item.termEnd)} />
         <Field label="Entity"    value={item.entityName} />
         <Field label="Signatory" value={item.signatory} />
-        <div className="lease-row-file">
+        <div className="lease-row-actions">
           {item.file[0]
             ? <a href={item.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary">📎 Open FA</a>
             : <span className="muted">No PDF on file</span>}
+          {isAdmin && (
+            <button
+              type="button"
+              className="btn-trash"
+              title="Delete this FA record"
+              onClick={() => onDelete(item)}>
+              🗑
+            </button>
+          )}
         </div>
       </div>
       {(item.draName || item.attorney) && (

@@ -4,7 +4,8 @@ import { z } from 'zod';
 import * as faTracker from '../airtable/faTracker.js';
 import { FA_TRACKER } from '../airtable/tables.js';
 import { requireAdmin, requireAuth } from '../auth/middleware.js';
-import { BadRequestError } from '../util/errors.js';
+import { logger } from '../util/logger.js';
+import { BadRequestError, NotFoundError } from '../util/errors.js';
 
 export const faTrackersRouter = Router();
 
@@ -44,4 +45,14 @@ faTrackersRouter.post('/', async (req: Request, res: Response) => {
       signatory:     signatoryName,
     },
   });
+});
+
+// DELETE /:id — remove an FA Tracker record + its PDF attachment
+faTrackersRouter.delete('/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const fa = await faTracker.getById(id).catch(() => null);
+  if (!fa) throw new NotFoundError('FA Tracker record not found');
+  await faTracker.remove(id);
+  logger.info({ faId: id, userId: req.user!.sub }, 'FA Tracker record deleted');
+  res.json({ ok: true });
 });

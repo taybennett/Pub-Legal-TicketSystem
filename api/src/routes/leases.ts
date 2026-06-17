@@ -8,7 +8,7 @@ import { LEASES, LOCATIONS } from '../airtable/tables.js';
 import { requireAdmin, requireAuth } from '../auth/middleware.js';
 import { PDF_MAX_BYTES, extractLease, type LeaseExtraction } from '../lib/leaseExtractor.js';
 import { logger } from '../util/logger.js';
-import { BadRequestError, NotFoundError } from '../util/errors.js';
+import { BadRequestError, ForbiddenError, NotFoundError } from '../util/errors.js';
 
 // Mounted under /api/v1/locations — paths include /:id/leases/...
 export const leasesRouter = Router();
@@ -118,6 +118,21 @@ leasesRouter.post('/:id/leases', upload.single('file'), async (req: Request, res
       filename,
     },
   });
+});
+
+// ── DELETE /:id/leases/:leaseId — remove a lease record + its PDF ──
+leasesRouter.delete('/:id/leases/:leaseId', async (req: Request, res: Response) => {
+  const { id, leaseId } = req.params;
+  const lease = await leases.getById(leaseId).catch(() => null);
+  if (!lease) throw new NotFoundError('Lease not found');
+  // Safety: confirm this lease is actually linked to the location in the URL
+  const linkedLocations = (lease.fields[LEASES.LOCATION] as string[] | undefined) ?? [];
+  if (!linkedLocations.includes(id)) {
+    throw new ForbiddenError('Lease is not linked to this Location');
+  }
+  await leases.remove(leaseId);
+  logger.info({ leaseId, locationId: id, userId: req.user!.sub }, 'lease deleted');
+  res.json({ ok: true });
 });
 
 /** Helper: shape extraction → save payload (used by the frontend) */
