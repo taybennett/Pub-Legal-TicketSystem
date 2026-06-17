@@ -100,8 +100,13 @@ export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
     try {
       const fd = new FormData();
       fd.append('file', file);
+      // Numeric fields: strip $ , and whitespace before sending so the backend
+      // zod schema doesn't reject values like "$15,000".
+      const numericKeys = new Set(['termYears', 'monthlyRent', 'annualRent', 'securityDeposit']);
       Object.entries(form).forEach(([k, v]) => {
-        if (v) fd.append(k, v);
+        if (!v) return;
+        const clean = numericKeys.has(k) ? v.replace(/[$,\s]/g, '') : v.trim();
+        if (clean) fd.append(k, clean);
       });
       if (extraction) {
         const log = JSON.stringify({
@@ -132,9 +137,37 @@ export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
       setStage('done');
       setTimeout(() => { onSaved(); onClose(); }, 1200);
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : 'Save failed');
+      setErr(e instanceof ApiError ? formatApiError(e) : 'Save failed');
       setStage('review');
     }
+  }
+
+  function formatApiError(e: ApiError): string {
+    // If the backend returned field-level zod errors, surface them so the
+    // user knows WHICH field is wrong rather than a generic "Invalid payload".
+    const d = e.details as { fieldErrors?: Record<string, string[]> } | undefined;
+    if (d?.fieldErrors) {
+      const parts: string[] = [];
+      for (const [field, msgs] of Object.entries(d.fieldErrors)) {
+        if (msgs && msgs.length) parts.push(`${prettyField(field)}: ${msgs[0]}`);
+      }
+      if (parts.length) return `${e.message} — ${parts.join('; ')}`;
+    }
+    return e.message;
+  }
+
+  function prettyField(k: string): string {
+    return ({
+      executionDate:        'Execution Date',
+      rentCommencementDate: 'Rent Commencement Date',
+      termEnd:              'Term End Date',
+      termYears:            'Term (years)',
+      monthlyRent:          'Monthly Rent',
+      annualRent:           'Annual Rent',
+      landlord:             'Landlord',
+      renewalOptions:       'Renewal Options',
+      securityDeposit:      'Security Deposit',
+    } as Record<string, string>)[k] ?? k;
   }
 
   function field(key: keyof FormState, label: string, type: 'text' | 'date' | 'number' = 'text') {
