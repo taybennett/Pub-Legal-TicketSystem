@@ -3,8 +3,6 @@ import { Link, NavLink, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { CurrentFaPanel } from '../components/CurrentFaPanel';
 import { CurrentLeasePanel } from '../components/CurrentLeasePanel';
-import { LeaseUploadModal } from '../components/LeaseUploadModal';
-import { useAuth } from '../hooks/useAuth';
 import { NewTicketModal } from '../components/NewTicketModal';
 import { StagePill } from '../components/StagePill';
 import type { LocationDetail as LocationDetailType, Ticket, Workstream } from '../api/types';
@@ -111,12 +109,9 @@ function renderKpi(days: number | null) {
 
 function WorkstreamTab({ id, workstream }: { id: string; workstream: Workstream }) {
   const navigate = useNavigate();
-  const { me } = useAuth();
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [showLeaseUpload, setShowLeaseUpload] = useState(false);
-  const [leasePanelReloadKey, setLeasePanelReloadKey] = useState(0);
 
   useEffect(() => {
     api.get<{ tickets: Ticket[] }>(`/locations/${id}/tickets?workstream=${encodeURIComponent(workstream)}`)
@@ -130,25 +125,9 @@ function WorkstreamTab({ id, workstream }: { id: string; workstream: Workstream 
   return (
     <>
       {workstream === 'Real Estate' && (
-        <>
-          <CurrentLeasePanel key={leasePanelReloadKey} locationId={id} />
-          {me?.userType === 'Admin' && (
-            <div className="lease-upload-bar">
-              <button className="btn-secondary" onClick={() => setShowLeaseUpload(true)}>
-                + Upload Lease (AI-assisted)
-              </button>
-            </div>
-          )}
-        </>
+        <CurrentLeasePanel locationId={id} />
       )}
       {workstream === 'Franchise Agreement' && <CurrentFaPanel    locationId={id} />}
-      {showLeaseUpload && (
-        <LeaseUploadModal
-          locationId={id}
-          onClose={() => setShowLeaseUpload(false)}
-          onSaved={() => setLeasePanelReloadKey(k => k + 1)}
-        />
-      )}
 
       <div className="workstream-header">
         <div className="workstream-header-title">Conversations</div>

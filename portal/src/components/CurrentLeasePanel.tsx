@@ -2,14 +2,40 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { ConfirmDialog } from './ConfirmDialog';
+import { LeaseUploadModal } from './LeaseUploadModal';
 import type { Lease, LeaseDocumentType } from '../api/types';
+
+/* ────────────────────────────────────────────────────────────
+   Slot-based UI for lease documents on a Location.
+
+   The underlying storage is still one Leases table with a Document Type
+   per row. This component organizes those rows into explicit slots so the
+   user sees clearly which docs are present vs missing:
+       Original Lease
+       1st Amendment, 2nd Amendment, … (at least 3 visible, more if needed)
+       Landlord Work Letter
+       + Additional documents (Guaranty, Estoppel, Side Letter, Other)
+─────────────────────────────────────────────────────────── */
+
+type SingularKind = 'Original Lease' | 'Landlord Work Letter';
+type Slot =
+  | { kind: 'singular';  docType: SingularKind; lease: Lease | null }
+  | { kind: 'amendment'; number: number;        lease: Lease | null }
+  | { kind: 'other';     lease: Lease };
+
+interface UploadIntent {
+  docType:          LeaseDocumentType;
+  amendmentNumber?: number;
+  lockDocType:      boolean;
+}
 
 export function CurrentLeasePanel({ locationId }: { locationId: string }) {
   const { me } = useAuth();
-  const [leases, setLeases]   = useState<Lease[] | null>(null);
-  const [err, setErr]         = useState<string | null>(null);
-  const [reload, setReload]   = useState(0);
+  const [leases, setLeases]     = useState<Lease[] | null>(null);
+  const [err, setErr]           = useState<string | null>(null);
+  const [reload, setReload]     = useState(0);
   const [toDelete, setToDelete] = useState<Lease | null>(null);
+  const [upload, setUpload]     = useState<UploadIntent | null>(null);
 
   useEffect(() => {
     api.get<{ leases: Lease[] }>(`/locations/${locationId}/leases`)
@@ -22,51 +48,83 @@ export function CurrentLeasePanel({ locationId }: { locationId: string }) {
     setReload(k => k + 1);
   }
 
-  if (err) return null;
-  if (!leases) return null;
-  if (leases.length === 0) return null;
+  const isAdmin = me?.userType === 'Admin';
 
-  // Treat null documentType as "Original Lease" (records created before multi-doc support).
-  const originals = leases.filter(l => l.documentType === 'Original Lease' || l.documentType === null);
-  const related   = leases.filter(l => l.documentType && l.documentType !== 'Original Lease');
-  // Most recent Original first.
-  originals.sort((a, b) => (b.executionDate ?? '').localeCompare(a.executionDate ?? ''));
-  // Related docs: Amendments by number then date, then everything else by date.
-  related.sort(compareRelated);
+  if (err)      return null;
+  if (!leases)  return null;
 
-  const primary  = originals[0];
-  const priorOgs = originals.slice(1);
-  const isAdmin  = me?.userType === 'Admin';
+  const slots         = buildSlots(leases);
+  const singulars     = slots.filter(s => s.kind === 'singular' && s.docType === 'Original Lease');
+  const amendments    = slots.filter(s => s.kind === 'amendment');
+  const workLetter    = slots.find(s => s.kind === 'singular' && s.docType === 'Landlord Work Letter')!;
+  const otherDocs     = slots.filter(s => s.kind === 'other');
 
   return (
     <div className="lease-panel">
-      <div className="lease-panel-head">
-        <div className="lease-panel-title">Original Lease</div>
-        {primary && primary.status && <span className={statusPillClass(primary.status)}>{primary.status}</span>}
+
+      {/* ── Original Lease ── */}
+      {singulars.map((s, i) => (
+        <OriginalSlot
+          key={i}
+          slot={s as Extract<Slot, { kind: 'singular' }>}
+          isAdmin={isAdmin}
+          onDelete={setToDelete}
+          onUpload={() => setUpload({ docType: 'Original Lease', lockDocType: true })}
+        />
+      ))}
+
+      {/* ── Amendments ── */}
+      <SlotGroupLabel>Amendments</SlotGroupLabel>
+      <div className="slot-group">
+        {amendments.map((a, i) => (
+          <AmendmentSlot
+            key={i}
+            slot={a as Extract<Slot, { kind: 'amendment' }>}
+            isAdmin={isAdmin}
+            onDelete={setToDelete}
+            onUpload={n => setUpload({ docType: 'Amendment', amendmentNumber: n, lockDocType: true })}
+          />
+        ))}
       </div>
 
-      {primary
-        ? <LeaseRow lease={primary} isAdmin={isAdmin} onDelete={setToDelete} />
-        : <div className="muted" style={{ padding: '0.5rem 0' }}>No Original Lease on file.</div>}
+      {/* ── Landlord Work Letter ── */}
+      <SlotGroupLabel>Landlord Work Letter</SlotGroupLabel>
+      <div className="slot-group">
+        <SingularSlot
+          slot={workLetter as Extract<Slot, { kind: 'singular' }>}
+          isAdmin={isAdmin}
+          onDelete={setToDelete}
+          onUpload={() => setUpload({ docType: 'Landlord Work Letter', lockDocType: true })}
+        />
+      </div>
 
-      {priorOgs.length > 0 && (
-        <div className="lease-history">
-          <div className="lease-history-label">Prior Original Leases</div>
-          {priorOgs.map(l => <LeaseRow key={l.id} lease={l} compact isAdmin={isAdmin} onDelete={setToDelete} />)}
-        </div>
-      )}
-
-      {related.length > 0 && (
-        <div className="lease-related">
-          <div className="lease-related-label">
-            Related Documents <span className="muted">· {related.length}</span>
+      {/* ── Additional documents (Guaranty, Estoppel, Side Letter, Other) ── */}
+      {(otherDocs.length > 0 || isAdmin) && (
+        <>
+          <SlotGroupLabel>Additional Documents</SlotGroupLabel>
+          <div className="slot-group">
+            {otherDocs.map(s => (
+              <OtherDocRow
+                key={(s as Extract<Slot, { kind: 'other' }>).lease.id}
+                lease={(s as Extract<Slot, { kind: 'other' }>).lease}
+                isAdmin={isAdmin}
+                onDelete={setToDelete}
+              />
+            ))}
+            {isAdmin && (
+              <button
+                type="button"
+                className="slot-add-btn"
+                onClick={() => setUpload({ docType: 'Guaranty', lockDocType: false })}
+              >
+                + Add Guaranty / Estoppel / Side Letter / Other
+              </button>
+            )}
           </div>
-          {related.map(l => (
-            <RelatedDocRow key={l.id} lease={l} isAdmin={isAdmin} onDelete={setToDelete} />
-          ))}
-        </div>
+        </>
       )}
 
+      {/* ── Modals ── */}
       {toDelete && (
         <ConfirmDialog
           title={`Delete ${toDelete.documentType ?? 'lease'} record?`}
@@ -90,13 +148,193 @@ export function CurrentLeasePanel({ locationId }: { locationId: string }) {
           }
         />
       )}
+
+      {upload && (
+        <LeaseUploadModal
+          locationId={locationId}
+          initialDocType={upload.docType}
+          initialAmendmentNumber={upload.amendmentNumber}
+          lockDocType={upload.lockDocType}
+          onClose={() => setUpload(null)}
+          onSaved={() => setReload(k => k + 1)}
+        />
+      )}
     </div>
   );
 }
 
-function LeaseRow({ lease, compact = false, isAdmin, onDelete }: { lease: Lease; compact?: boolean; isAdmin: boolean; onDelete: (l: Lease) => void }) {
+/* ────────────────── slot components ────────────────── */
+
+function OriginalSlot({ slot, isAdmin, onDelete, onUpload }: {
+  slot: Extract<Slot, { kind: 'singular' }>;
+  isAdmin: boolean;
+  onDelete: (l: Lease) => void;
+  onUpload: () => void;
+}) {
+  const l = slot.lease;
+  const isGhost = l && !l.file[0] && !l.executionDate && !l.monthlyRent && !l.termYears;
+
   return (
-    <div className={compact ? 'lease-row lease-row--compact' : 'lease-row'}>
+    <>
+      <div className="lease-panel-head">
+        <div className="lease-panel-title">Original Lease</div>
+        {l?.status && <span className={statusPillClass(l.status)}>{l.status}</span>}
+      </div>
+      {l ? (
+        <>
+          {isGhost && (
+            <div className="slot-warning">
+              ⚠ Placeholder record — no PDF or terms on file. Delete it and re-upload the actual original.
+            </div>
+          )}
+          <LeaseRow lease={l} isAdmin={isAdmin} onDelete={onDelete} />
+        </>
+      ) : (
+        <EmptySlotRow
+          label="No Original Lease on file"
+          uploadLabel="Upload Original Lease"
+          onUpload={onUpload}
+          isAdmin={isAdmin}
+        />
+      )}
+    </>
+  );
+}
+
+function AmendmentSlot({ slot, isAdmin, onDelete, onUpload }: {
+  slot: Extract<Slot, { kind: 'amendment' }>;
+  isAdmin: boolean;
+  onDelete: (l: Lease) => void;
+  onUpload: (n: number) => void;
+}) {
+  const label = `${ordinal(slot.number)} Amendment`;
+  const l = slot.lease;
+  if (l) {
+    const date = l.documentDate ?? l.executionDate ?? null;
+    return (
+      <div className="slot-row slot-row--filled">
+        <span className="slot-label">{label}</span>
+        <span className="slot-date">{date ?? 'No date'}</span>
+        <div className="slot-actions">
+          {l.file[0]
+            ? <a href={l.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary btn-sm">📎 Open</a>
+            : <span className="muted">No PDF</span>}
+          {isAdmin && (
+            <button type="button" className="btn-trash" title={`Delete ${label}`} onClick={() => onDelete(l)}>🗑</button>
+          )}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="slot-row slot-row--empty">
+      <span className="slot-label">{label}</span>
+      <span className="muted slot-empty-msg">Empty</span>
+      <div className="slot-actions">
+        {isAdmin && (
+          <button type="button" className="btn-secondary btn-sm" onClick={() => onUpload(slot.number)}>
+            + Upload {label}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SingularSlot({ slot, isAdmin, onDelete, onUpload }: {
+  slot: Extract<Slot, { kind: 'singular' }>;
+  isAdmin: boolean;
+  onDelete: (l: Lease) => void;
+  onUpload: () => void;
+}) {
+  const label = slot.docType;
+  const l = slot.lease;
+  if (l) {
+    const date = l.documentDate ?? l.executionDate ?? null;
+    return (
+      <div className="slot-row slot-row--filled">
+        <span className="slot-label">{label}</span>
+        <span className="slot-date">{date ?? 'No date'}</span>
+        <div className="slot-actions">
+          {l.file[0]
+            ? <a href={l.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary btn-sm">📎 Open</a>
+            : <span className="muted">No PDF</span>}
+          {isAdmin && (
+            <button type="button" className="btn-trash" title={`Delete ${label}`} onClick={() => onDelete(l)}>🗑</button>
+          )}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="slot-row slot-row--empty">
+      <span className="slot-label">{label}</span>
+      <span className="muted slot-empty-msg">Empty</span>
+      <div className="slot-actions">
+        {isAdmin && (
+          <button type="button" className="btn-secondary btn-sm" onClick={onUpload}>
+            + Upload {label}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OtherDocRow({ lease, isAdmin, onDelete }: {
+  lease: Lease;
+  isAdmin: boolean;
+  onDelete: (l: Lease) => void;
+}) {
+  const type = lease.documentType ?? 'Other';
+  const date = lease.documentDate ?? lease.executionDate ?? null;
+  return (
+    <div className="slot-row slot-row--filled">
+      <span className="slot-label">
+        <span className={`pill ${docTypePillClass(type)}`}>{type}</span>
+      </span>
+      <span className="slot-date">{date ?? 'No date'}</span>
+      <div className="slot-actions">
+        {lease.file[0]
+          ? <a href={lease.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary btn-sm">📎 Open</a>
+          : <span className="muted">No PDF</span>}
+        {isAdmin && (
+          <button type="button" className="btn-trash" title={`Delete ${type}`} onClick={() => onDelete(lease)}>🗑</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EmptySlotRow({ label, uploadLabel, onUpload, isAdmin }: {
+  label: string;
+  uploadLabel: string;
+  onUpload: () => void;
+  isAdmin: boolean;
+}) {
+  return (
+    <div className="slot-row slot-row--empty">
+      <span className="slot-empty-msg muted">{label}</span>
+      {isAdmin && (
+        <div className="slot-actions">
+          <button type="button" className="btn-secondary btn-sm" onClick={onUpload}>
+            + {uploadLabel}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SlotGroupLabel({ children }: { children: React.ReactNode }) {
+  return <div className="slot-group-label">{children}</div>;
+}
+
+/* ────────────────── Original-lease full row (terms grid) ────────────────── */
+
+function LeaseRow({ lease, isAdmin, onDelete }: { lease: Lease; isAdmin: boolean; onDelete: (l: Lease) => void }) {
+  return (
+    <div className="lease-row">
       <Field label="Executed"      value={lease.executionDate} />
       <Field label="Term"          value={termText(lease.termYears, lease.termEnd)} />
       <Field label="Monthly rent"  value={fmtMoney(lease.monthlyRent)} />
@@ -106,41 +344,7 @@ function LeaseRow({ lease, compact = false, isAdmin, onDelete }: { lease: Lease;
           ? <a href={lease.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary">📎 Open lease</a>
           : <span className="muted">No PDF on file</span>}
         {isAdmin && (
-          <button
-            type="button"
-            className="btn-trash"
-            title="Delete this lease record"
-            onClick={() => onDelete(lease)}>
-            🗑
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function RelatedDocRow({ lease, isAdmin, onDelete }: { lease: Lease; isAdmin: boolean; onDelete: (l: Lease) => void }) {
-  const type = lease.documentType ?? 'Other';
-  const label = type === 'Amendment' && lease.amendmentNumber
-    ? `Amendment #${lease.amendmentNumber}`
-    : type;
-  const date = lease.documentDate ?? lease.executionDate;
-  return (
-    <div className="lease-related-row">
-      <span className={`pill ${docTypePillClass(type)}`}>{label}</span>
-      <span className="lease-related-date">{date ?? 'No date'}</span>
-      <div className="lease-related-actions">
-        {lease.file[0]
-          ? <a href={lease.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary btn-sm">📎 Open</a>
-          : <span className="muted">No PDF</span>}
-        {isAdmin && (
-          <button
-            type="button"
-            className="btn-trash"
-            title={`Delete this ${type} record`}
-            onClick={() => onDelete(lease)}>
-            🗑
-          </button>
+          <button type="button" className="btn-trash" title="Delete this lease record" onClick={() => onDelete(lease)}>🗑</button>
         )}
       </div>
     </div>
@@ -154,6 +358,53 @@ function Field({ label, value }: { label: string; value: string | null }) {
       <div className="lease-field-value">{value ?? '—'}</div>
     </div>
   );
+}
+
+/* ────────────────── helpers ────────────────── */
+
+function buildSlots(leases: Lease[]): Slot[] {
+  const slots: Slot[] = [];
+
+  // Original Lease (singular; treat null documentType as Original).
+  const original = leases.find(l => l.documentType === 'Original Lease' || l.documentType === null) ?? null;
+  slots.push({ kind: 'singular', docType: 'Original Lease', lease: original });
+
+  // Amendments — show at least 3 slots; more if any beyond that exist.
+  const amends = leases.filter(l => l.documentType === 'Amendment');
+  const maxN   = amends.reduce((m, a) => Math.max(m, a.amendmentNumber ?? 0), 0);
+  const count  = Math.max(3, maxN);
+  for (let n = 1; n <= count; n++) {
+    const lease = amends.find(a => a.amendmentNumber === n) ?? null;
+    slots.push({ kind: 'amendment', number: n, lease });
+  }
+  // Any unnumbered amendments fall through to "other"
+  const unnumbered = amends.filter(a => a.amendmentNumber == null);
+  for (const u of unnumbered) slots.push({ kind: 'other', lease: u });
+
+  // Landlord Work Letter (singular)
+  slots.push({
+    kind: 'singular',
+    docType: 'Landlord Work Letter',
+    lease: leases.find(l => l.documentType === 'Landlord Work Letter') ?? null,
+  });
+
+  // Everything else
+  const others = leases.filter(l =>
+    l.documentType === 'Guaranty' ||
+    l.documentType === 'Estoppel' ||
+    l.documentType === 'Side Letter' ||
+    l.documentType === 'Other'
+  );
+  others.sort((a, b) => (a.documentType ?? '').localeCompare(b.documentType ?? ''));
+  for (const o of others) slots.push({ kind: 'other', lease: o });
+
+  return slots;
+}
+
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
 function termText(years: number | null, end: string | null): string | null {
@@ -186,21 +437,4 @@ function docTypePillClass(t: LeaseDocumentType): string {
     case 'Other':                return 'pill--gray';
     default:                     return 'pill--blue-soft';
   }
-}
-
-// Amendments first (sorted by amendment number, then by document date), then
-// everything else by document date. Keeps "Amendment #1, #2, #3, Guaranty, …" stable.
-function compareRelated(a: Lease, b: Lease): number {
-  const aIsAmend = a.documentType === 'Amendment';
-  const bIsAmend = b.documentType === 'Amendment';
-  if (aIsAmend && bIsAmend) {
-    const an = a.amendmentNumber ?? 0;
-    const bn = b.amendmentNumber ?? 0;
-    if (an !== bn) return an - bn;
-  }
-  if (aIsAmend && !bIsAmend) return -1;
-  if (!aIsAmend && bIsAmend) return 1;
-  const ad = a.documentDate ?? a.executionDate ?? '';
-  const bd = b.documentDate ?? b.executionDate ?? '';
-  return bd.localeCompare(ad);
 }

@@ -191,16 +191,27 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .lease-history-label { color: var(--mid); font-size: 0.65rem; letter-spacing: 0.1em;
   text-transform: uppercase; margin-top: 0.6rem; }
 
-/* ── Related Documents (Amendments, Guaranties, etc.) ────── */
-.lease-related { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
-.lease-related-label { color: var(--mid); font-size: 0.65rem; letter-spacing: 0.1em;
-  text-transform: uppercase; margin-bottom: 0.6rem; }
-.lease-related-row { display: grid; grid-template-columns: 180px 1fr auto; gap: 0.8rem;
-  align-items: center; padding: 0.55rem 0; border-bottom: 1px dashed var(--border); }
-.lease-related-row:last-child { border-bottom: none; }
-.lease-related-date { font-size: 0.85rem; color: var(--mid); }
-.lease-related-actions { display: flex; align-items: center; gap: 0.5rem; }
-.btn-sm { padding: 0.3rem 0.6rem; font-size: 0.78rem; }
+/* ── Lease document slots (Original / Amendments / Work Letter / Other) ────── */
+.slot-group-label { color: var(--mid); font-size: 0.65rem; letter-spacing: 0.12em;
+  text-transform: uppercase; margin: 1.4rem 0 0.5rem; padding-top: 0.9rem;
+  border-top: 1px solid var(--border); }
+.slot-group { display: flex; flex-direction: column; gap: 0.1rem; }
+.slot-row { display: grid; grid-template-columns: 220px 1fr auto; gap: 0.8rem;
+  align-items: center; padding: 0.6rem 0; border-bottom: 1px dashed var(--border); }
+.slot-row:last-child { border-bottom: none; }
+.slot-row--empty { background: #fafafa; padding-left: 0.6rem; padding-right: 0.6rem;
+  border-bottom: 1px dashed var(--border); }
+.slot-label { font-size: 0.85rem; font-weight: 500; color: var(--black); }
+.slot-date { font-size: 0.85rem; color: var(--mid); }
+.slot-empty-msg { font-size: 0.85rem; font-style: italic; }
+.slot-actions { display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end; }
+.slot-warning { background: #fff3cd; border: 1px solid #ffe69c; color: #7a5a00;
+  padding: 0.5rem 0.7rem; font-size: 0.82rem; margin: 0.5rem 0; }
+.slot-add-btn { margin-top: 0.6rem; background: var(--white); border: 1px dashed var(--border);
+  color: var(--mid); padding: 0.55rem 0.9rem; font-size: 0.82rem; cursor: pointer;
+  text-align: center; }
+.slot-add-btn:hover { border-color: var(--black); color: var(--black); }
+.btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
 
 /* Extra pill colors used by document type badges */
 .pill--teal      { background: #b5efee; color: #006064; }

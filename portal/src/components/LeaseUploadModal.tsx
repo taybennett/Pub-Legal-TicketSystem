@@ -8,6 +8,11 @@ interface Props {
   locationId: string;
   onClose:    () => void;
   onSaved:    () => void;
+  /** When opened from a specific slot, lock the document type so the user
+   *  can't accidentally upload the wrong kind into that slot. */
+  initialDocType?:         LeaseDocumentType;
+  initialAmendmentNumber?: number;
+  lockDocType?:            boolean;
 }
 
 interface FormState {
@@ -37,17 +42,20 @@ const DOC_TYPES: { value: LeaseDocumentType; label: string }[] = [
   { value: 'Other',                label: 'Other' },
 ];
 
-export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
+export function LeaseUploadModal({
+  locationId, onClose, onSaved,
+  initialDocType, initialAmendmentNumber, lockDocType,
+}: Props) {
   const [stage, setStage]         = useState<Stage>('idle');
   const [file, setFile]           = useState<File | null>(null);
-  const [docType, setDocType]     = useState<LeaseDocumentType>('Original Lease');
+  const [docType, setDocType]     = useState<LeaseDocumentType>(initialDocType ?? 'Original Lease');
   const [existingLeases, setExistingLeases] = useState<Lease[] | null>(null);
   const [extraction, setExtraction] = useState<LeaseExtraction | null>(null);
   const [form, setForm]           = useState<FormState>(blank);
   const [confidence, setConfidence] = useState<Partial<Record<keyof FormState, Confidence>>>({});
   // Child-doc form state
   const [documentDate, setDocumentDate]       = useState<string>('');
-  const [amendmentNumber, setAmendmentNumber] = useState<string>('');
+  const [amendmentNumber, setAmendmentNumber] = useState<string>(initialAmendmentNumber != null ? String(initialAmendmentNumber) : '');
   const [parentLeaseId, setParentLeaseId]     = useState<string>('');
   const [err, setErr]             = useState<string | null>(null);
   const [notes, setNotes]         = useState<string>('');
@@ -248,11 +256,15 @@ export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
         {stage === 'idle' && (
           <div className="lease-modal-body">
             <div className="lease-modal-field" style={{ marginBottom: '1rem' }}>
-              <label>Document Type</label>
+              <label>
+                Document Type
+                {lockDocType && <span className="muted" style={{ marginLeft: '0.4rem', fontSize: '0.7rem' }}>(slot)</span>}
+              </label>
               <select
                 value={docType}
                 onChange={e => setDocType(e.target.value as LeaseDocumentType)}
                 style={{ width: '100%' }}
+                disabled={lockDocType}
               >
                 {DOC_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
@@ -349,7 +361,12 @@ export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
               </div>
               {docType === 'Amendment' && (
                 <div className="lease-modal-field">
-                  <label>Amendment Number</label>
+                  <label>
+                    Amendment Number
+                    {lockDocType && initialAmendmentNumber != null && (
+                      <span className="muted" style={{ marginLeft: '0.4rem', fontSize: '0.7rem' }}>(slot)</span>
+                    )}
+                  </label>
                   <input
                     type="number"
                     min={1}
@@ -357,6 +374,7 @@ export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
                     value={amendmentNumber}
                     onChange={e => setAmendmentNumber(e.target.value)}
                     placeholder="e.g. 1"
+                    disabled={lockDocType && initialAmendmentNumber != null}
                   />
                 </div>
               )}
