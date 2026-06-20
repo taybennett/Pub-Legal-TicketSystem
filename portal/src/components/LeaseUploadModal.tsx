@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiError } from '../api/client';
-import type { Confidence, LeaseExtraction } from '../api/types';
+import type { Confidence, Lease, LeaseDocumentType, LeaseExtraction } from '../api/types';
 
-type Stage = 'idle' | 'extracting' | 'review' | 'saving' | 'done' | 'error';
+type Stage = 'idle' | 'extracting' | 'review' | 'review-doc' | 'saving' | 'done' | 'error';
 
 interface Props {
   locationId: string;
@@ -27,23 +27,47 @@ const blank: FormState = {
   monthlyRent: '', annualRent: '', landlord: '', renewalOptions: '', securityDeposit: '',
 };
 
+const DOC_TYPES: { value: LeaseDocumentType; label: string }[] = [
+  { value: 'Original Lease',       label: 'Original Lease' },
+  { value: 'Amendment',            label: 'Amendment' },
+  { value: 'Guaranty',             label: 'Guaranty' },
+  { value: 'Landlord Work Letter', label: 'Landlord Work Letter' },
+  { value: 'Estoppel',             label: 'Estoppel' },
+  { value: 'Side Letter',          label: 'Side Letter' },
+  { value: 'Other',                label: 'Other' },
+];
+
 export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
   const [stage, setStage]         = useState<Stage>('idle');
   const [file, setFile]           = useState<File | null>(null);
-  const [existingCount, setExistingCount] = useState<number | null>(null);
+  const [docType, setDocType]     = useState<LeaseDocumentType>('Original Lease');
+  const [existingLeases, setExistingLeases] = useState<Lease[] | null>(null);
   const [extraction, setExtraction] = useState<LeaseExtraction | null>(null);
   const [form, setForm]           = useState<FormState>(blank);
   const [confidence, setConfidence] = useState<Partial<Record<keyof FormState, Confidence>>>({});
+  // Child-doc form state
+  const [documentDate, setDocumentDate]       = useState<string>('');
+  const [amendmentNumber, setAmendmentNumber] = useState<string>('');
+  const [parentLeaseId, setParentLeaseId]     = useState<string>('');
   const [err, setErr]             = useState<string | null>(null);
   const [notes, setNotes]         = useState<string>('');
   const fileInputRef              = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Check for existing leases (duplicate detection warning)
-    api.get<{ count: number }>(`/locations/${locationId}/leases/existing`)
-      .then(r => setExistingCount(r.count))
-      .catch(() => setExistingCount(0));
+    // Pull existing leases so we can warn about duplicates AND auto-pick the
+    // parent Original Lease when uploading an Amendment/Guaranty/etc.
+    api.get<{ leases: Lease[] }>(`/locations/${locationId}/leases`)
+      .then(r => {
+        setExistingLeases(r.leases);
+        const orig = r.leases.find(l => l.documentType === 'Original Lease' || l.documentType === null);
+        if (orig) setParentLeaseId(orig.id);
+      })
+      .catch(() => setExistingLeases([]));
   }, [locationId]);
+
+  const isOriginal     = docType === 'Original Lease';
+  const originalLeases = (existingLeases ?? []).filter(l => l.documentType === 'Original Lease' || l.documentType === null);
+  const existingCount  = existingLeases?.length ?? 0;
 
   async function handleExtract() {
     if (!file) return;
@@ -93,6 +117,11 @@ export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
     setStage('review');
   }
 
+  function handleProceedDoc() {
+    // For non-Original docs, skip AI entirely — go to the light review form.
+    setStage('review-doc');
+  }
+
   async function handleSave() {
     if (!file) return;
     setStage('saving');
@@ -100,51 +129,60 @@ export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      // Numeric fields: strip $ , and whitespace before sending so the backend
-      // zod schema doesn't reject values like "$15,000".
-      const numericKeys = new Set(['termYears', 'monthlyRent', 'annualRent', 'securityDeposit']);
-      Object.entries(form).forEach(([k, v]) => {
-        if (!v) return;
-        const clean = numericKeys.has(k) ? v.replace(/[$,\s]/g, '') : v.trim();
-        if (clean) fd.append(k, clean);
-      });
-      if (extraction) {
-        const log = JSON.stringify({
-          model: extraction.model,
-          extractedAt: new Date().toISOString(),
-          tokens: {
-            input: extraction.inputTokens,
-            output: extraction.outputTokens,
-            cacheRead: extraction.cacheReadTokens,
-            cacheWrite: extraction.cacheWriteTokens,
-          },
-          fields: {
-            executionDate:    extraction.executionDate,
-            commencementDate: extraction.commencementDate,
-            termYears:        extraction.termYears,
-            termEnd:          extraction.termEnd,
-            monthlyRent:      extraction.monthlyRent,
-            annualRent:       extraction.annualRent,
-            landlord:         extraction.landlord,
-            renewalOptions:   extraction.renewalOptions,
-            securityDeposit:  extraction.securityDeposit,
-          },
-          notes: extraction.notes,
-        }, null, 2);
-        fd.append('aiExtractionLog', log);
+      fd.append('documentType', docType);
+
+      if (isOriginal) {
+        // Original Lease: send the full extracted/edited terms.
+        const numericKeys = new Set(['termYears', 'monthlyRent', 'annualRent', 'securityDeposit']);
+        Object.entries(form).forEach(([k, v]) => {
+          if (!v) return;
+          const clean = numericKeys.has(k) ? v.replace(/[$,\s]/g, '') : v.trim();
+          if (clean) fd.append(k, clean);
+        });
+        if (extraction) {
+          const log = JSON.stringify({
+            model: extraction.model,
+            extractedAt: new Date().toISOString(),
+            tokens: {
+              input: extraction.inputTokens,
+              output: extraction.outputTokens,
+              cacheRead: extraction.cacheReadTokens,
+              cacheWrite: extraction.cacheWriteTokens,
+            },
+            fields: {
+              executionDate:    extraction.executionDate,
+              commencementDate: extraction.commencementDate,
+              termYears:        extraction.termYears,
+              termEnd:          extraction.termEnd,
+              monthlyRent:      extraction.monthlyRent,
+              annualRent:       extraction.annualRent,
+              landlord:         extraction.landlord,
+              renewalOptions:   extraction.renewalOptions,
+              securityDeposit:  extraction.securityDeposit,
+            },
+            notes: extraction.notes,
+          }, null, 2);
+          fd.append('aiExtractionLog', log);
+        }
+      } else {
+        // Child doc: just file + type + date + (optional) amendment# + parent link.
+        if (documentDate)    fd.append('documentDate', documentDate);
+        if (parentLeaseId)   fd.append('parentLeaseId', parentLeaseId);
+        if (docType === 'Amendment' && amendmentNumber.trim()) {
+          fd.append('amendmentNumber', amendmentNumber.trim());
+        }
       }
+
       await api.upload(`/locations/${locationId}/leases`, fd);
       setStage('done');
       setTimeout(() => { onSaved(); onClose(); }, 1200);
     } catch (e) {
       setErr(e instanceof ApiError ? formatApiError(e) : 'Save failed');
-      setStage('review');
+      setStage(isOriginal ? 'review' : 'review-doc');
     }
   }
 
   function formatApiError(e: ApiError): string {
-    // If the backend returned field-level zod errors, surface them so the
-    // user knows WHICH field is wrong rather than a generic "Invalid payload".
     const d = e.details as { fieldErrors?: Record<string, string[]> } | undefined;
     if (d?.fieldErrors) {
       const parts: string[] = [];
@@ -167,6 +205,9 @@ export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
       landlord:             'Landlord',
       renewalOptions:       'Renewal Options',
       securityDeposit:      'Security Deposit',
+      documentDate:         'Document Date',
+      amendmentNumber:      'Amendment Number',
+      parentLeaseId:        'Parent Lease',
     } as Record<string, string>)[k] ?? k;
   }
 
@@ -192,23 +233,42 @@ export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
       <div className="modal modal--lease" onClick={e => e.stopPropagation()}>
 
         <div className="modal-header">
-          <h2 className="modal-title">Upload Lease</h2>
+          <h2 className="modal-title">Upload Lease Document</h2>
           <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
         </div>
 
-        {existingCount != null && existingCount > 0 && stage === 'idle' && (
+        {/* Duplicate-original warning, only shown when uploading another Original and one already exists */}
+        {isOriginal && originalLeases.length > 0 && stage === 'idle' && (
           <div className="lease-modal-warning">
-            ⚠ This shop already has {existingCount} lease record{existingCount === 1 ? '' : 's'} on file.
-            Uploading will add this as an additional record. Remove or rename the old one in Airtable afterward if needed.
+            ⚠ This shop already has {originalLeases.length} Original Lease record{originalLeases.length === 1 ? '' : 's'} on file.
+            If you're adding an Amendment or related document, change the Document Type below instead of uploading another Original.
           </div>
         )}
 
         {stage === 'idle' && (
           <div className="lease-modal-body">
-            <p className="muted">
-              Upload the executed Lease PDF. Claude AI will extract the lease terms in ~10 seconds.
-              You'll review and edit before anything is saved.
-            </p>
+            <div className="lease-modal-field" style={{ marginBottom: '1rem' }}>
+              <label>Document Type</label>
+              <select
+                value={docType}
+                onChange={e => setDocType(e.target.value as LeaseDocumentType)}
+                style={{ width: '100%' }}
+              >
+                {DOC_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+
+            {isOriginal ? (
+              <p className="muted">
+                Upload the executed Lease PDF. Claude AI will extract the lease terms in ~10 seconds.
+                You'll review and edit before anything is saved.
+              </p>
+            ) : (
+              <p className="muted">
+                Upload the {docType} PDF. We'll store it linked to the Original Lease — you'll add a date and (optional) amendment number on the next screen. No AI extraction in this Phase.
+              </p>
+            )}
+
             <input
               ref={fileInputRef}
               type="file"
@@ -217,9 +277,22 @@ export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
               className="lease-modal-file"
             />
             {file && <div className="muted">📎 {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</div>}
+
+            {!isOriginal && originalLeases.length === 0 && existingCount === 0 && (
+              <div className="lease-modal-warning">
+                ⚠ No Original Lease on file yet. You can still upload this document, but it won't be linked to a parent until an Original Lease is added.
+              </div>
+            )}
+
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={handleSkipAI} disabled={!file}>Skip AI · enter manually</button>
-              <button className="btn-primary" onClick={handleExtract} disabled={!file}>Extract with AI</button>
+              {isOriginal ? (
+                <>
+                  <button className="btn-secondary" onClick={handleSkipAI} disabled={!file}>Skip AI · enter manually</button>
+                  <button className="btn-primary" onClick={handleExtract} disabled={!file}>Extract with AI</button>
+                </>
+              ) : (
+                <button className="btn-primary" onClick={handleProceedDoc} disabled={!file}>Next</button>
+              )}
             </div>
           </div>
         )}
@@ -258,6 +331,56 @@ export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
           </div>
         )}
 
+        {stage === 'review-doc' && (
+          <div className="lease-modal-body">
+            {err && <div className="lease-modal-warning">{err}</div>}
+            <p className="muted">
+              Phase 1: we'll save this {docType} as a linked PDF. You can extract terms manually
+              in Airtable later, or wait for AI extraction support in a future phase.
+            </p>
+            <div className="lease-modal-grid">
+              <div className="lease-modal-field">
+                <label>Document Date</label>
+                <input
+                  type="date"
+                  value={documentDate}
+                  onChange={e => setDocumentDate(e.target.value)}
+                />
+              </div>
+              {docType === 'Amendment' && (
+                <div className="lease-modal-field">
+                  <label>Amendment Number</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={amendmentNumber}
+                    onChange={e => setAmendmentNumber(e.target.value)}
+                    placeholder="e.g. 1"
+                  />
+                </div>
+              )}
+              {originalLeases.length > 0 && (
+                <div className="lease-modal-field" style={{ gridColumn: '1 / -1' }}>
+                  <label>Parent Lease</label>
+                  <select value={parentLeaseId} onChange={e => setParentLeaseId(e.target.value)}>
+                    <option value="">— None —</option>
+                    {originalLeases.map(l => (
+                      <option key={l.id} value={l.id}>
+                        Original Lease{l.executionDate ? ` · executed ${l.executionDate}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setStage('idle')}>Back</button>
+              <button className="btn-primary" onClick={handleSave}>Save {docType}</button>
+            </div>
+          </div>
+        )}
+
         {stage === 'saving' && (
           <div className="lease-modal-body lease-modal-progress">
             <div className="spinner" />
@@ -267,7 +390,7 @@ export function LeaseUploadModal({ locationId, onClose, onSaved }: Props) {
 
         {stage === 'done' && (
           <div className="lease-modal-body lease-modal-progress">
-            <p style={{ color: '#1b5e20', fontSize: '1.2rem' }}>✓ Lease saved</p>
+            <p style={{ color: '#1b5e20', fontSize: '1.2rem' }}>✓ Saved</p>
           </div>
         )}
       </div>

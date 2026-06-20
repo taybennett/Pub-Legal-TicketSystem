@@ -59,6 +59,8 @@ leasesRouter.post('/:id/leases/extract', upload.single('file'), async (req: Requ
 
 // ── POST /:id/leases — create the Lease record and attach the PDF ──
 
+const DOCUMENT_TYPES = ['Original Lease', 'Amendment', 'Guaranty', 'Landlord Work Letter', 'Estoppel', 'Side Letter', 'Other'] as const;
+
 const saveSchema = z.object({
   executionDate:          z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
   rentCommencementDate:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
@@ -71,6 +73,11 @@ const saveSchema = z.object({
   securityDeposit:        z.coerce.number().min(0).optional(),
   status:                 z.enum(['Active', 'Expiring Soon', 'Expired', 'On Holdover']).optional(),
   aiExtractionLog:        z.string().max(20000).optional(),
+  // Document hierarchy fields
+  documentType:           z.enum(DOCUMENT_TYPES).optional(),
+  parentLeaseId:          z.string().startsWith('rec').length(17).optional().or(z.literal('')),
+  documentDate:           z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
+  amendmentNumber:        z.coerce.number().int().min(1).max(99).optional(),
 });
 
 leasesRouter.post('/:id/leases', upload.single('file'), async (req: Request, res: Response) => {
@@ -86,10 +93,15 @@ leasesRouter.post('/:id/leases', upload.single('file'), async (req: Request, res
   if (!loc) throw new NotFoundError('Location not found');
 
   const f = parsed.data;
+  const docType = f.documentType ?? 'Original Lease';
   const fields: leases.LeaseFields = {
-    [LEASES.LOCATION]: [id],
-    [LEASES.STATUS]:   f.status ?? 'Active',
+    [LEASES.LOCATION]:      [id],
+    [LEASES.DOCUMENT_TYPE]: docType,
   };
+  // Status only applies to Original Lease records; child docs leave it empty.
+  if (docType === 'Original Lease') {
+    fields[LEASES.STATUS] = f.status ?? 'Active';
+  }
   if (f.executionDate)        fields[LEASES.EXECUTION_DATE]         = f.executionDate;
   if (f.rentCommencementDate) fields[LEASES.RENT_COMMENCEMENT_DATE] = f.rentCommencementDate;
   if (f.termEnd)              fields[LEASES.TERM_END]               = f.termEnd;
@@ -100,6 +112,9 @@ leasesRouter.post('/:id/leases', upload.single('file'), async (req: Request, res
   if (f.renewalOptions)       fields[LEASES.RENEWAL_OPTIONS]        = f.renewalOptions;
   if (f.securityDeposit != null) fields[LEASES.SECURITY_DEPOSIT]    = f.securityDeposit;
   if (f.aiExtractionLog)      fields[LEASES.AI_EXTRACTION_LOG]      = f.aiExtractionLog;
+  if (f.parentLeaseId)        fields[LEASES.PARENT_LEASE]           = [f.parentLeaseId];
+  if (f.documentDate)         fields[LEASES.DOCUMENT_DATE]          = f.documentDate;
+  if (f.amendmentNumber != null) fields[LEASES.AMENDMENT_NUMBER]    = f.amendmentNumber;
 
   const created = await leases.create(fields);
 

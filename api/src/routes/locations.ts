@@ -307,6 +307,11 @@ locationsRouter.get('/:id/leases', async (req: Request, res: Response) => {
       annualRent:    (r.fields[LEASES.ANNUAL_RENT]    as number | undefined) ?? null,
       status:        extractSelectName(r.fields[LEASES.STATUS]),
       file:          (r.fields[LEASES.FILE] as { url: string; filename: string }[] | undefined) ?? [],
+      // Document hierarchy — null Document Type is treated as "Original Lease" client-side
+      documentType:    extractSelectName(r.fields[LEASES.DOCUMENT_TYPE]),
+      parentLeaseIds:  (r.fields[LEASES.PARENT_LEASE] as string[] | undefined) ?? [],
+      documentDate:    (r.fields[LEASES.DOCUMENT_DATE]     as string | undefined) ?? null,
+      amendmentNumber: (r.fields[LEASES.AMENDMENT_NUMBER]  as number | undefined) ?? null,
     })),
   });
 });

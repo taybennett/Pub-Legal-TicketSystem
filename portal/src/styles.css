@@ -190,6 +190,26 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .lease-history { margin-top: 0.6rem; }
 .lease-history-label { color: var(--mid); font-size: 0.65rem; letter-spacing: 0.1em;
   text-transform: uppercase; margin-top: 0.6rem; }
+
+/* ── Related Documents (Amendments, Guaranties, etc.) ────── */
+.lease-related { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.lease-related-label { color: var(--mid); font-size: 0.65rem; letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 0.6rem; }
+.lease-related-row { display: grid; grid-template-columns: 180px 1fr auto; gap: 0.8rem;
+  align-items: center; padding: 0.55rem 0; border-bottom: 1px dashed var(--border); }
+.lease-related-row:last-child { border-bottom: none; }
+.lease-related-date { font-size: 0.85rem; color: var(--mid); }
+.lease-related-actions { display: flex; align-items: center; gap: 0.5rem; }
+.btn-sm { padding: 0.3rem 0.6rem; font-size: 0.78rem; }
+
+/* Extra pill colors used by document type badges */
+.pill--teal      { background: #b5efee; color: #006064; }
+.pill--blue-soft { background: #e3edff; color: #2b4f9c; }
+
+/* Make selects inside the lease modal match the input styling */
+.lease-modal-field select { border: 1px solid var(--border); background: var(--white);
+  padding: 0.5rem 0.6rem; font-size: 0.95rem; font-family: inherit; }
+.lease-modal-field select:focus { border-color: var(--black); outline: none; }
 .fa-secondary-row { display: flex; gap: 1.5rem; margin-top: 0.8rem;
   padding-top: 0.8rem; border-top: 1px solid var(--border);
   font-size: 0.85rem; color: var(--mid); }

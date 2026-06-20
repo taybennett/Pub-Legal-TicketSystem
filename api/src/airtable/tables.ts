@@ -202,7 +202,16 @@ export const LEASES = {
   RENEWAL_OPTIONS:        'fldYvAyLnDEDipSGY', // singleLineText
   SECURITY_DEPOSIT:       'fldxvOreGk3UJxS98', // currency
   AI_EXTRACTION_LOG:      'fldulFGcVzfog74JQ', // multilineText — audit trail of raw Claude response
+  // Multi-document hierarchy: Original Lease + linked Amendments/Guaranties/etc.
+  DOCUMENT_TYPE:          'fldSjENxhRNEYxIdJ', // singleSelect: Original Lease | Amendment | Guaranty | Landlord Work Letter | Estoppel | Side Letter | Other
+  PARENT_LEASE:           'fldexFUV69aInCwYl', // multipleRecordLinks → Leases (self). Child docs point at the Original Lease.
+  DOCUMENT_DATE:          'fld8KgaeWqx36yZYu', // date — effective date of THIS specific document
+  AMENDMENT_NUMBER:       'fldSTAjRWKfyBO3IV', // number — sequence for Amendments
 } as const;
+
+export type LeaseDocumentType =
+  | 'Original Lease' | 'Amendment' | 'Guaranty'
+  | 'Landlord Work Letter' | 'Estoppel' | 'Side Letter' | 'Other';
 
 // ── FA TRACKER ──────────────────────────────────────────────────────
 export const FA_TRACKER = {

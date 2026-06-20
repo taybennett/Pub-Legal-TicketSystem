@@ -15,6 +15,10 @@ export interface LeaseFields {
   [LEASES.RENEWAL_OPTIONS]?: string;
   [LEASES.SECURITY_DEPOSIT]?: number;
   [LEASES.AI_EXTRACTION_LOG]?: string;
+  [LEASES.DOCUMENT_TYPE]?: string | { name: string };
+  [LEASES.PARENT_LEASE]?: string[];
+  [LEASES.DOCUMENT_DATE]?: string;
+  [LEASES.AMENDMENT_NUMBER]?: number;
   [key: string]: unknown;
 }
 

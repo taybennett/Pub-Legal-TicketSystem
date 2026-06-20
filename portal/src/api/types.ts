@@ -63,6 +63,10 @@ export interface Ticket {
   locationIds?: string[];
 }
 
+export type LeaseDocumentType =
+  | 'Original Lease' | 'Amendment' | 'Guaranty'
+  | 'Landlord Work Letter' | 'Estoppel' | 'Side Letter' | 'Other';
+
 export interface Lease {
   id: string;
   executionDate: string | null;
@@ -72,6 +76,11 @@ export interface Lease {
   annualRent:    number | null;
   status:        string | null;
   file:          { url: string; filename: string }[];
+  // Document hierarchy. Null documentType is treated as "Original Lease" by the UI.
+  documentType:    LeaseDocumentType | null;
+  parentLeaseIds:  string[];
+  documentDate:    string | null;
+  amendmentNumber: number | null;
 }
 
 // ── Compliance Check ────────────────────────────────────
