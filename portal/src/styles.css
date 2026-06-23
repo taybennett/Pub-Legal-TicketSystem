@@ -248,6 +248,21 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
   margin-top: 0.1rem;
 }
 .pdf-viewer-actions { display: flex; align-items: center; gap: 0.25rem; }
+.pdf-viewer-toolbar { display: flex; align-items: center; gap: 0.4rem; }
+.pdf-viewer-pager, .pdf-viewer-zoom {
+  display: flex; align-items: center; gap: 0.15rem;
+  padding: 0.1rem 0.3rem; border-radius: 6px;
+  background: rgba(255,255,255,0.05);
+}
+.pdf-viewer-page-readout { color: #ddd; font-size: 0.82rem; padding: 0 0.4rem; display: flex; align-items: center; }
+.pdf-viewer-page-input {
+  width: 2.4rem; padding: 0.15rem 0.3rem; text-align: center;
+  background: rgba(255,255,255,0.08); color: #fff;
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 3px; font-size: 0.82rem;
+}
+.pdf-viewer-page-input:focus { outline: none; border-color: rgba(255,255,255,0.4); }
+.pdf-viewer-zoom-readout { min-width: 3.2rem; }
+.muted-light { color: #aeb1b6; }
 .pdf-viewer-iconbtn {
   background: transparent; border: none; color: #d8d8d8;
   padding: 0.45rem 0.7rem; cursor: pointer; font-size: 0.85rem;
@@ -260,9 +275,31 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
   font-size: 1.3rem; line-height: 1; padding: 0.3rem 0.7rem; margin-left: 0.25rem;
 }
 .pdf-viewer-iconbtn--close:hover { background: #c0392b; color: #fff; }
-.pdf-viewer-body { flex: 1; min-height: 0; background: #525659; }
-.pdf-viewer-frame { width: 100%; height: 100%; border: none; display: block;
-  background: #525659; }
+.pdf-viewer-body {
+  flex: 1; min-height: 0; background: #525659;
+  overflow-y: auto; overflow-x: hidden;
+  padding: 1.5rem 1rem;
+  display: flex; flex-direction: column; align-items: center; gap: 1.2rem;
+}
+.pdf-viewer-page-wrap {
+  background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  display: flex; flex-direction: column; align-items: center;
+}
+.pdf-viewer-page-wrap canvas { display: block; max-width: 100%; }
+.pdf-viewer-page-label {
+  background: rgba(0,0,0,0.6); color: #ddd;
+  font-size: 0.7rem; letter-spacing: 0.05em;
+  padding: 0.2rem 0.6rem; text-transform: uppercase;
+}
+.pdf-viewer-loading, .pdf-viewer-error {
+  color: #ddd; text-align: center; padding: 4rem 1rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.8rem;
+}
+.pdf-viewer-error .muted { color: #888; font-size: 0.85rem; }
+.pdf-viewer-error a.btn-secondary {
+  background: #fff; color: #1f1f1f; padding: 0.45rem 0.9rem;
+  text-decoration: none; border-radius: 3px;
+}
 @media (max-width: 720px) {
   .pdf-viewer-btn-label { display: none; }
   .pdf-viewer-iconbtn { padding: 0.45rem 0.55rem; }
