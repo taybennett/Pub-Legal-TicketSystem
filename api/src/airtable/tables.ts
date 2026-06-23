@@ -28,6 +28,7 @@ export const TABLE = {
   FA_TRACKER:         'tblXDzGFIOywREmfA',
   FRANCHISEE_GROUPS:  'tblBh34FJtZ8J7Ih8',
   FRANCHISEE_ENTITIES:'tblK4Y3zOQfJvpgtj',
+  DRA_DOCUMENTS:      'tblvQUgkRAvsGsdCT', // child documents to a DRA — Amendments, Addendums, Other
   // PUB Development
   PIPELINE:           'tbllofgQwUSIxkMl6',
 } as const;
@@ -254,7 +255,24 @@ export const FRANCHISEE_GROUPS = {
   YEAR_2033:           'fldKAecmcF6SOrI0D',
   YEAR_2034:           'fld7pwxxccrCi83g9',
   YEAR_2035:           'fld1NLA253jENXdpT',
+  // Inverse link auto-created by the DRA Documents table
+  DRA_DOCUMENTS:       'fld5oPOISE5HVEDuQ', // multipleRecordLinks → DRA Documents
 } as const;
+
+// ── DRA DOCUMENTS (amendments + custom-named addendums to a DRA) ────
+export const DRA_DOCUMENTS = {
+  TITLE:            'fldKCeLWwC4IwwJhn', // primary, singleLineText — display label
+  PARENT_DRA:       'fldWrIaXlQhcLAky4', // multipleRecordLinks → Franchisee Groups
+  DOCUMENT_TYPE:    'fldKOnnzjkBnlysqW', // singleSelect: Amendment | Addendum | Other
+  AMENDMENT_NUMBER: 'fld6W3bcmoFs4oDpw', // number — used when DOCUMENT_TYPE = Amendment
+  ADDENDUM_NAME:    'fldlQ5QHDvHRf1u9g', // singleLineText — e.g. "Silent Investor", "Schmear"
+  EFFECTIVE_DATE:   'fld2pIuZovvalllpm', // date (ISO)
+  FILE:             'fldt0EHPBb1HcxGXN', // multipleAttachments
+  NOTES:            'fld8AoapcebDEpToG', // multilineText
+  SIGNATORIES:      'fldyBk55WiANiDGkt', // singleLineText
+} as const;
+
+export type DraDocumentType = 'Amendment' | 'Addendum' | 'Other';
 
 // ── FRANCHISEE ENTITIES ─────────────────────────────────────────────
 export const FRANCHISEE_ENTITIES = {

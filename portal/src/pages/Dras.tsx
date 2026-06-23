@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
-import type { DraDetail, DraFa, DraSummary } from '../api/types';
+import { useAuth } from '../hooks/useAuth';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { DraDocumentUploadModal } from '../components/DraDocumentUploadModal';
+import type { DraDetail, DraDocument, DraDocumentType, DraFa, DraSummary } from '../api/types';
+
+interface UploadIntent {
+  docType:          DraDocumentType;
+  amendmentNumber?: number;
+  lockDocType:      boolean;
+}
 
 export function Dras() {
   const [summaries, setSummaries] = useState<DraSummary[] | null>(null);
@@ -8,6 +17,7 @@ export function Dras() {
   const [detail, setDetail] = useState<DraDetail | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     api.get<{ dras: DraSummary[] }>('/dras')
@@ -26,7 +36,7 @@ export function Dras() {
       .then(r => setDetail(r.dra))
       .catch(e => setErr(e.message))
       .finally(() => setLoadingDetail(false));
-  }, [selectedId]);
+  }, [selectedId, reloadKey]);
 
   if (err) return <div className="state state--error">{err}</div>;
   if (!summaries) return <div className="state state--loading">Loading DRAs…</div>;
@@ -54,12 +64,14 @@ export function Dras() {
       </div>
 
       {loadingDetail && <div className="state state--loading">Loading DRA details…</div>}
-      {detail && <DraDetailView detail={detail} />}
+      {detail && <DraDetailView detail={detail} onChanged={() => setReloadKey(k => k + 1)} />}
     </div>
   );
 }
 
-function DraDetailView({ detail }: { detail: DraDetail }) {
+function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: () => void }) {
+  const { me } = useAuth();
+  const isAdmin = me?.userType === 'Admin';
   const scheduleYears = useMemo(
     () => Object.keys(detail.schedule).sort(),
     [detail.schedule],
@@ -67,6 +79,14 @@ function DraDetailView({ detail }: { detail: DraDetail }) {
   const aheadBehind = detail.outstanding === 0
     ? '✓ Fully executed'
     : `${detail.outstanding} outstanding`;
+
+  const [upload, setUpload]     = useState<UploadIntent | null>(null);
+  const [toDelete, setToDelete] = useState<DraDocument | null>(null);
+
+  async function handleDelete(doc: DraDocument) {
+    await api.delete(`/dras/${detail.id}/documents/${doc.id}`);
+    onChanged();
+  }
 
   return (
     <div className="dra-panel">
@@ -86,8 +106,8 @@ function DraDetailView({ detail }: { detail: DraDetail }) {
 
       <div className="dra-actions">
         {detail.draFile[0]
-          ? <a href={detail.draFile[0].url} target="_blank" rel="noreferrer" className="btn-secondary">📎 Open DRA</a>
-          : <span className="muted">No DRA PDF on file</span>}
+          ? <a href={detail.draFile[0].url} target="_blank" rel="noreferrer" className="btn-secondary">📎 Open original DRA</a>
+          : <span className="muted">No original DRA PDF on file</span>}
       </div>
 
       {scheduleYears.length > 0 && (
@@ -105,6 +125,14 @@ function DraDetailView({ detail }: { detail: DraDetail }) {
         </div>
       )}
 
+      {/* ── DRA Documents (Amendments + Addendums) ── */}
+      <DraDocumentsSection
+        documents={detail.documents}
+        isAdmin={isAdmin}
+        onUpload={intent => setUpload(intent)}
+        onDelete={setToDelete}
+      />
+
       <div className="dra-fas">
         <div className="dra-fas-header">
           <div className="dra-fas-title">Executed franchise agreements</div>
@@ -116,6 +144,177 @@ function DraDetailView({ detail }: { detail: DraDetail }) {
           <div className="dra-fa-list">
             {detail.fas.map(fa => <FaRow key={fa.id} fa={fa} />)}
           </div>
+        )}
+      </div>
+
+      {upload && (
+        <DraDocumentUploadModal
+          draId={detail.id}
+          draName={detail.name}
+          initialDocType={upload.docType}
+          initialAmendmentNumber={upload.amendmentNumber}
+          lockDocType={upload.lockDocType}
+          onClose={() => setUpload(null)}
+          onSaved={onChanged}
+        />
+      )}
+
+      {toDelete && (
+        <ConfirmDialog
+          title="Delete DRA document?"
+          destructive
+          confirmLabel="Delete document"
+          onClose={() => setToDelete(null)}
+          onConfirm={() => handleDelete(toDelete)}
+          message={
+            <>
+              <p style={{ marginTop: 0 }}>
+                This permanently removes the document and its PDF from Airtable. <strong>Cannot be undone.</strong>
+              </p>
+              <ul className="confirm-detail">
+                {toDelete.title         && <li><strong>Title:</strong> {toDelete.title}</li>}
+                {toDelete.documentType  && <li><strong>Type:</strong> {toDelete.documentType}</li>}
+                {toDelete.effectiveDate && <li><strong>Effective:</strong> {toDelete.effectiveDate}</li>}
+                {toDelete.file[0]       && <li><strong>File:</strong> {toDelete.file[0].filename}</li>}
+              </ul>
+            </>
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+function DraDocumentsSection({
+  documents, isAdmin, onUpload, onDelete,
+}: {
+  documents: DraDocument[];
+  isAdmin: boolean;
+  onUpload: (intent: UploadIntent) => void;
+  onDelete: (d: DraDocument) => void;
+}) {
+  const amendments = documents.filter(d => d.documentType === 'Amendment');
+  const addendums  = documents.filter(d => d.documentType === 'Addendum');
+  const others     = documents.filter(d => d.documentType === 'Other' || d.documentType === null);
+
+  const maxAmendN  = amendments.reduce((m, a) => Math.max(m, a.amendmentNumber ?? 0), 0);
+  const slotCount  = Math.max(3, maxAmendN);
+
+  return (
+    <div className="dra-docs">
+      {/* Amendments — fixed slots */}
+      <div className="dra-docs-group">
+        <div className="dra-docs-label">Amendments</div>
+        <div className="slot-group">
+          {Array.from({ length: slotCount }, (_, i) => i + 1).map(n => {
+            const doc = amendments.find(a => a.amendmentNumber === n) ?? null;
+            return doc
+              ? <FilledDocRow key={`amend-${n}`} doc={doc} label={`${ordinal(n)} Amendment`} isAdmin={isAdmin} onDelete={onDelete} />
+              : <EmptyDocRow
+                  key={`amend-${n}-empty`}
+                  label={`${ordinal(n)} Amendment`}
+                  uploadLabel={`Upload ${ordinal(n)} Amendment`}
+                  isAdmin={isAdmin}
+                  onUpload={() => onUpload({ docType: 'Amendment', amendmentNumber: n, lockDocType: true })}
+                />;
+          })}
+          {amendments.filter(a => a.amendmentNumber == null).map(doc => (
+            <FilledDocRow key={doc.id} doc={doc} label="Amendment (unnumbered)" isAdmin={isAdmin} onDelete={onDelete} />
+          ))}
+        </div>
+      </div>
+
+      {/* Addendums — only shown if any exist, plus an add button */}
+      {(addendums.length > 0 || isAdmin) && (
+        <div className="dra-docs-group">
+          <div className="dra-docs-label">Addendums</div>
+          <div className="slot-group">
+            {addendums.length === 0 && (
+              <div className="slot-row slot-row--empty">
+                <span className="slot-empty-msg muted">No addendums on file</span>
+              </div>
+            )}
+            {addendums.map(doc => (
+              <FilledDocRow
+                key={doc.id}
+                doc={doc}
+                label={doc.addendumName ? `${doc.addendumName} Addendum` : (doc.title ?? 'Addendum')}
+                isAdmin={isAdmin}
+                onDelete={onDelete}
+              />
+            ))}
+            {isAdmin && (
+              <button
+                type="button"
+                className="slot-add-btn"
+                onClick={() => onUpload({ docType: 'Addendum', lockDocType: true })}
+              >
+                + Add Addendum (e.g. Silent Investor, Schmear)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Other — only shown if any exist */}
+      {others.length > 0 && (
+        <div className="dra-docs-group">
+          <div className="dra-docs-label">Other Documents</div>
+          <div className="slot-group">
+            {others.map(doc => (
+              <FilledDocRow
+                key={doc.id}
+                doc={doc}
+                label={doc.title ?? 'Document'}
+                isAdmin={isAdmin}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FilledDocRow({ doc, label, isAdmin, onDelete }: {
+  doc: DraDocument;
+  label: string;
+  isAdmin: boolean;
+  onDelete: (d: DraDocument) => void;
+}) {
+  return (
+    <div className="slot-row slot-row--filled dra-doc-row">
+      <span className="slot-label">{label}</span>
+      <span className="slot-date">{doc.effectiveDate ?? 'No date'}</span>
+      <div className="slot-actions">
+        {doc.signatories && <span className="muted dra-doc-sig" title={`Signed by ${doc.signatories}`}>✎ {doc.signatories}</span>}
+        {doc.file[0]
+          ? <a href={doc.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary btn-sm">📎 Open</a>
+          : <span className="muted">No PDF</span>}
+        {isAdmin && (
+          <button type="button" className="btn-trash" title={`Delete ${label}`} onClick={() => onDelete(doc)}>🗑</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EmptyDocRow({ label, uploadLabel, isAdmin, onUpload }: {
+  label: string;
+  uploadLabel: string;
+  isAdmin: boolean;
+  onUpload: () => void;
+}) {
+  return (
+    <div className="slot-row slot-row--empty">
+      <span className="slot-label">{label}</span>
+      <span className="muted slot-empty-msg">Empty</span>
+      <div className="slot-actions">
+        {isAdmin && (
+          <button type="button" className="btn-secondary btn-sm" onClick={onUpload}>
+            + {uploadLabel}
+          </button>
         )}
       </div>
     </div>
@@ -164,4 +363,10 @@ function termText(years: number | null, end: string | null): string | null {
   if (years)        return `${years}yr term`;
   if (end)          return `Ends ${end}`;
   return null;
+}
+
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }

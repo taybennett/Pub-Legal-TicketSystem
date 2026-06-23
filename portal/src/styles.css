@@ -213,6 +213,15 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .slot-add-btn:hover { border-color: var(--black); color: var(--black); }
 .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
 
+/* ── DRA Documents section (Amendments + Addendums on the DRA detail page) ── */
+.dra-docs { margin: 1.4rem 0; }
+.dra-docs-group { margin-bottom: 1.2rem; }
+.dra-docs-label { color: var(--mid); font-size: 0.7rem; letter-spacing: 0.12em;
+  text-transform: uppercase; margin-bottom: 0.5rem; font-weight: 600; }
+.dra-doc-row .slot-actions { gap: 0.6rem; }
+.dra-doc-sig { font-size: 0.78rem; max-width: 240px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+
 /* Extra pill colors used by document type badges */
 .pill--teal      { background: #b5efee; color: #006064; }
 .pill--blue-soft { background: #e3edff; color: #2b4f9c; }

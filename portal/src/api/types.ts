@@ -179,6 +179,20 @@ export interface DraFa {
   isOpen:        boolean;
 }
 
+export type DraDocumentType = 'Amendment' | 'Addendum' | 'Other';
+
+export interface DraDocument {
+  id:              string;
+  title:           string | null;
+  documentType:    DraDocumentType | null;
+  amendmentNumber: number | null;
+  addendumName:    string | null;
+  effectiveDate:   string | null;
+  notes:           string | null;
+  signatories:     string | null;
+  file:            { url: string; filename: string }[];
+}
+
 export interface DraDetail {
   id: string;
   name: string;
@@ -190,6 +204,7 @@ export interface DraDetail {
   currentlyOpen:   number;
   outstanding:     number;
   fas:             DraFa[];
+  documents:       DraDocument[];
 }
 
 export interface Message {
