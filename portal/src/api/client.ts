@@ -36,6 +36,25 @@ async function request<T>(method: string, path: string, body?: unknown, extraIni
   return data as T;
 }
 
+/**
+ * Wrap an Airtable attachment URL with our backend proxy so it gets served
+ * back with `Content-Disposition: inline`. Required to render PDFs in an
+ * iframe — Airtable's raw signed URLs come back as `attachment` and the
+ * browser refuses to display them inline.
+ *
+ * Returns the raw URL unchanged if it isn't an Airtable attachment URL.
+ */
+export function fileProxyUrl(rawUrl: string): string {
+  if (!rawUrl) return rawUrl;
+  try {
+    const host = new URL(rawUrl).hostname;
+    if (!host.endsWith('airtableusercontent.com')) return rawUrl;
+  } catch {
+    return rawUrl;
+  }
+  return `${BASE}/files/proxy?url=${encodeURIComponent(rawUrl)}`;
+}
+
 export const api = {
   get:    <T>(path: string)              => request<T>('GET',    path),
   post:   <T>(path: string, body?: any)  => request<T>('POST',   path, body),

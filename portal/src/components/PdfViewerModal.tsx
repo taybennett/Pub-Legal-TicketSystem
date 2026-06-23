@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { fileProxyUrl } from '../api/client';
 
 interface Props {
   url:       string;
@@ -24,6 +25,10 @@ export function PdfViewerModal({ url, filename, title, onClose }: Props) {
   }, [onClose]);
 
   const heading = title ?? filename ?? 'Document';
+  // Airtable signed URLs come back with Content-Disposition: attachment, which
+  // forces the browser to download instead of rendering inline. Proxy through
+  // our backend to flip it to inline so the iframe can actually render the PDF.
+  const inlineUrl = fileProxyUrl(url);
 
   return (
     <div className="modal-backdrop modal-backdrop--pdf" onClick={onClose}>
@@ -54,7 +59,7 @@ export function PdfViewerModal({ url, filename, title, onClose }: Props) {
         </div>
         <div className="pdf-modal-body">
           <iframe
-            src={url}
+            src={inlineUrl}
             title={heading}
             className="pdf-modal-frame"
           />
