@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { ConfirmDialog } from './ConfirmDialog';
+import { useOpenPdf } from './PdfViewerProvider';
 import type { FaTracker } from '../api/types';
 
 export function CurrentFaPanel({ locationId }: { locationId: string }) {
@@ -69,6 +70,7 @@ export function CurrentFaPanel({ locationId }: { locationId: string }) {
 }
 
 function FaRow({ item, compact = false, isAdmin, onDelete }: { item: FaTracker; compact?: boolean; isAdmin: boolean; onDelete: (fa: FaTracker) => void }) {
+  const openPdf = useOpenPdf();
   return (
     <>
       <div className={compact ? 'lease-row lease-row--compact' : 'lease-row'}>
@@ -78,7 +80,15 @@ function FaRow({ item, compact = false, isAdmin, onDelete }: { item: FaTracker; 
         <Field label="Signatory" value={item.signatory} />
         <div className="lease-row-actions">
           {item.file[0]
-            ? <a href={item.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary">📎 Open FA</a>
+            ? <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => openPdf({
+                  url: item.file[0].url, filename: item.file[0].filename,
+                  title: 'Franchise Agreement',
+                  subtitle: [item.entityName, item.executionDate ? `Executed ${item.executionDate}` : null].filter(Boolean).join(' · '),
+                })}
+              >📎 Open FA</button>
             : <span className="muted">No PDF on file</span>}
           {isAdmin && (
             <button

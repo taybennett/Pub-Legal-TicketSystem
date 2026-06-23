@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { Layout } from './components/Layout';
+import { PdfViewerProvider } from './components/PdfViewerProvider';
 import { Login } from './pages/Login';
 import { Locations } from './pages/Locations';
 import { LocationDetail } from './pages/LocationDetail';
@@ -23,26 +24,28 @@ function RequireAuth({ children }: { children: JSX.Element }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route
-        path="/"
-        element={
-          <RequireAuth>
-            <Layout />
-          </RequireAuth>
-        }
-      >
-        <Route index element={<Navigate to="/locations" replace />} />
-        <Route path="locations" element={<Locations />} />
-        <Route path="locations/:id" element={<LocationDetail />} />
-        <Route path="locations/:id/:tab" element={<LocationDetail />} />
-        <Route path="tickets/:id" element={<TicketDetail />} />
-        <Route path="dras" element={<Dras />} />
-        <Route path="fa" element={<FaGenerator />} />
-        <Route path="compliance" element={<Compliance />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <PdfViewerProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <RequireAuth>
+              <Layout />
+            </RequireAuth>
+          }
+        >
+          <Route index element={<Navigate to="/locations" replace />} />
+          <Route path="locations" element={<Locations />} />
+          <Route path="locations/:id" element={<LocationDetail />} />
+          <Route path="locations/:id/:tab" element={<LocationDetail />} />
+          <Route path="tickets/:id" element={<TicketDetail />} />
+          <Route path="dras" element={<Dras />} />
+          <Route path="fa" element={<FaGenerator />} />
+          <Route path="compliance" element={<Compliance />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </PdfViewerProvider>
   );
 }

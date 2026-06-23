@@ -3,19 +3,13 @@ import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DraDocumentUploadModal } from '../components/DraDocumentUploadModal';
-import { PdfViewerModal } from '../components/PdfViewerModal';
+import { useOpenPdf } from '../components/PdfViewerProvider';
 import type { DraDetail, DraDocument, DraDocumentType, DraFa, DraSummary } from '../api/types';
 
 interface UploadIntent {
   docType:          DraDocumentType;
   amendmentNumber?: number;
   lockDocType:      boolean;
-}
-
-interface PdfTarget {
-  url:      string;
-  filename: string;
-  title:    string;
 }
 
 export function Dras() {
@@ -89,7 +83,7 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
 
   const [upload, setUpload]     = useState<UploadIntent | null>(null);
   const [toDelete, setToDelete] = useState<DraDocument | null>(null);
-  const [viewing, setViewing]   = useState<PdfTarget | null>(null);
+  const openPdf                 = useOpenPdf();
 
   async function handleDelete(doc: DraDocument) {
     await api.delete(`/dras/${detail.id}/documents/${doc.id}`);
@@ -117,10 +111,11 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
           ? <button
               type="button"
               className="btn-secondary"
-              onClick={() => setViewing({
+              onClick={() => openPdf({
                 url:      detail.draFile[0].url,
                 filename: detail.draFile[0].filename,
-                title:    `${detail.name} — Original DRA`,
+                title:    'Original DRA',
+                subtitle: detail.name,
               })}
             >
               📎 Open original DRA
@@ -151,10 +146,11 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
         onDelete={setToDelete}
         onOpen={doc => {
           if (!doc.file[0]) return;
-          setViewing({
+          openPdf({
             url:      doc.file[0].url,
             filename: doc.file[0].filename,
-            title:    `${detail.name} — ${doc.title ?? 'Document'}`,
+            title:    doc.title ?? 'Document',
+            subtitle: detail.name,
           });
         }}
       />
@@ -168,7 +164,21 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
           <div className="state state--empty">No FAs executed under this DRA yet.</div>
         ) : (
           <div className="dra-fa-list">
-            {detail.fas.map(fa => <FaRow key={fa.id} fa={fa} />)}
+            {detail.fas.map(fa => (
+              <FaRow
+                key={fa.id}
+                fa={fa}
+                onOpen={() => {
+                  if (!fa.file[0]) return;
+                  openPdf({
+                    url:      fa.file[0].url,
+                    filename: fa.file[0].filename,
+                    title:    `${fa.shopName || 'Shop'} — Franchise Agreement`,
+                    subtitle: detail.name,
+                  });
+                }}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -182,15 +192,6 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
           lockDocType={upload.lockDocType}
           onClose={() => setUpload(null)}
           onSaved={onChanged}
-        />
-      )}
-
-      {viewing && (
-        <PdfViewerModal
-          url={viewing.url}
-          filename={viewing.filename}
-          title={viewing.title}
-          onClose={() => setViewing(null)}
         />
       )}
 
@@ -360,7 +361,7 @@ function EmptyDocRow({ label, uploadLabel, isAdmin, onUpload }: {
   );
 }
 
-function FaRow({ fa }: { fa: DraFa }) {
+function FaRow({ fa, onOpen }: { fa: DraFa; onOpen: () => void }) {
   const term = termText(fa.termYears, fa.termEnd);
   return (
     <div className="dra-fa">
@@ -380,7 +381,7 @@ function FaRow({ fa }: { fa: DraFa }) {
       </div>
       <div className="dra-fa-actions">
         {fa.file[0]
-          ? <a href={fa.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary">📎 View FA</a>
+          ? <button type="button" className="btn-secondary" onClick={onOpen}>📎 View FA</button>
           : <span className="muted">No PDF</span>}
       </div>
     </div>

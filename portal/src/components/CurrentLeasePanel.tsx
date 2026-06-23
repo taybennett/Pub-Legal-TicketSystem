@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { ConfirmDialog } from './ConfirmDialog';
 import { LeaseUploadModal } from './LeaseUploadModal';
+import { useOpenPdf } from './PdfViewerProvider';
 import type { Lease, LeaseDocumentType } from '../api/types';
 
 /* ────────────────────────────────────────────────────────────
@@ -208,6 +209,7 @@ function AmendmentSlot({ slot, isAdmin, onDelete, onUpload }: {
   onUpload: (n: number) => void;
 }) {
   const label = `${ordinal(slot.number)} Amendment`;
+  const openPdf = useOpenPdf();
   const l = slot.lease;
   if (l) {
     const date = l.documentDate ?? l.executionDate ?? null;
@@ -217,7 +219,14 @@ function AmendmentSlot({ slot, isAdmin, onDelete, onUpload }: {
         <span className="slot-date">{date ?? 'No date'}</span>
         <div className="slot-actions">
           {l.file[0]
-            ? <a href={l.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary btn-sm">📎 Open</a>
+            ? <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => openPdf({
+                  url: l.file[0].url, filename: l.file[0].filename,
+                  title: label, subtitle: 'Lease document',
+                })}
+              >📎 Open</button>
             : <span className="muted">No PDF</span>}
           {isAdmin && (
             <button type="button" className="btn-trash" title={`Delete ${label}`} onClick={() => onDelete(l)}>🗑</button>
@@ -248,6 +257,7 @@ function SingularSlot({ slot, isAdmin, onDelete, onUpload }: {
   onUpload: () => void;
 }) {
   const label = slot.docType;
+  const openPdf = useOpenPdf();
   const l = slot.lease;
   if (l) {
     const date = l.documentDate ?? l.executionDate ?? null;
@@ -257,7 +267,14 @@ function SingularSlot({ slot, isAdmin, onDelete, onUpload }: {
         <span className="slot-date">{date ?? 'No date'}</span>
         <div className="slot-actions">
           {l.file[0]
-            ? <a href={l.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary btn-sm">📎 Open</a>
+            ? <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => openPdf({
+                  url: l.file[0].url, filename: l.file[0].filename,
+                  title: label, subtitle: 'Lease document',
+                })}
+              >📎 Open</button>
             : <span className="muted">No PDF</span>}
           {isAdmin && (
             <button type="button" className="btn-trash" title={`Delete ${label}`} onClick={() => onDelete(l)}>🗑</button>
@@ -288,6 +305,7 @@ function OtherDocRow({ lease, isAdmin, onDelete }: {
 }) {
   const type = lease.documentType ?? 'Other';
   const date = lease.documentDate ?? lease.executionDate ?? null;
+  const openPdf = useOpenPdf();
   return (
     <div className="slot-row slot-row--filled">
       <span className="slot-label">
@@ -296,7 +314,14 @@ function OtherDocRow({ lease, isAdmin, onDelete }: {
       <span className="slot-date">{date ?? 'No date'}</span>
       <div className="slot-actions">
         {lease.file[0]
-          ? <a href={lease.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary btn-sm">📎 Open</a>
+          ? <button
+              type="button"
+              className="btn-secondary btn-sm"
+              onClick={() => openPdf({
+                url: lease.file[0].url, filename: lease.file[0].filename,
+                title: type, subtitle: 'Lease document',
+              })}
+            >📎 Open</button>
           : <span className="muted">No PDF</span>}
         {isAdmin && (
           <button type="button" className="btn-trash" title={`Delete ${type}`} onClick={() => onDelete(lease)}>🗑</button>
@@ -333,6 +358,7 @@ function SlotGroupLabel({ children }: { children: React.ReactNode }) {
 /* ────────────────── Original-lease full row (terms grid) ────────────────── */
 
 function LeaseRow({ lease, isAdmin, onDelete }: { lease: Lease; isAdmin: boolean; onDelete: (l: Lease) => void }) {
+  const openPdf = useOpenPdf();
   return (
     <div className="lease-row">
       <Field label="Executed"      value={lease.executionDate} />
@@ -341,7 +367,14 @@ function LeaseRow({ lease, isAdmin, onDelete }: { lease: Lease; isAdmin: boolean
       <Field label="Annual rent"   value={fmtMoney(lease.annualRent)} />
       <div className="lease-row-actions">
         {lease.file[0]
-          ? <a href={lease.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary">📎 Open lease</a>
+          ? <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => openPdf({
+                url: lease.file[0].url, filename: lease.file[0].filename,
+                title: 'Original Lease', subtitle: 'Lease document',
+              })}
+            >📎 Open lease</button>
           : <span className="muted">No PDF on file</span>}
         {isAdmin && (
           <button type="button" className="btn-trash" title="Delete this lease record" onClick={() => onDelete(lease)}>🗑</button>

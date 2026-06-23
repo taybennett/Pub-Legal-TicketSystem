@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { Composer } from '../components/Composer';
 import { MessageThread } from '../components/MessageThread';
+import { useOpenPdf } from '../components/PdfViewerProvider';
 import { useAuth } from '../hooks/useAuth';
 import type { Message, Ticket } from '../api/types';
 
@@ -24,6 +25,7 @@ export function TicketDetail() {
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [docs, setDocs] = useState<DocumentRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const openPdf = useOpenPdf();
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -84,7 +86,15 @@ export function TicketDetail() {
                   </div>
                 </div>
                 {Array.isArray(d.File) && d.File[0] && (
-                  <a className="doc-row-open" href={d.File[0].url} target="_blank" rel="noreferrer">Open</a>
+                  <button
+                    type="button"
+                    className="doc-row-open"
+                    onClick={() => openPdf({
+                      url: d.File![0].url, filename: d.File![0].filename ?? d.Filename,
+                      title: d.Filename ?? 'Document',
+                      subtitle: [d['Document Type'], d['Uploaded By']].filter(Boolean).join(' · '),
+                    })}
+                  >Open</button>
                 )}
               </div>
             ))}

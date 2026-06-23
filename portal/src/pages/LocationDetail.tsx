@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { CurrentFaPanel } from '../components/CurrentFaPanel';
 import { CurrentLeasePanel } from '../components/CurrentLeasePanel';
 import { NewTicketModal } from '../components/NewTicketModal';
+import { useOpenPdf } from '../components/PdfViewerProvider';
 import { StagePill } from '../components/StagePill';
 import type { LocationDetail as LocationDetailType, Ticket, Workstream } from '../api/types';
 
@@ -217,6 +218,7 @@ function ConstructionTab({ id }: { id: string }) {
 function DocumentsTab({ id }: { id: string }) {
   const [docs, setDocs] = useState<any[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const openPdf = useOpenPdf();
 
   useEffect(() => {
     api.get<{ documents: any[] }>(`/locations/${id}/documents`)
@@ -239,7 +241,15 @@ function DocumentsTab({ id }: { id: string }) {
             </div>
           </div>
           {Array.isArray(d.file) && d.file.length > 0 && (
-            <a className="doc-row-open" href={d.file[0].url} target="_blank" rel="noreferrer">Open</a>
+            <button
+              type="button"
+              className="doc-row-open"
+              onClick={() => openPdf({
+                url: d.file[0].url, filename: d.file[0].filename ?? d.filename,
+                title: d.filename ?? 'Document',
+                subtitle: [d.documentType, d.uploadedBy].filter(Boolean).join(' · '),
+              })}
+            >Open</button>
           )}
         </div>
       ))}

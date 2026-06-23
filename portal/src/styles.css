@@ -213,18 +213,60 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .slot-add-btn:hover { border-color: var(--black); color: var(--black); }
 .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
 
-/* ── PDF Viewer modal (in-app PDF reader) ──────────────── */
-.modal-backdrop--pdf { background: rgba(0,0,0,0.65); }
-.modal--pdf { width: 92vw; max-width: 1200px; height: 92vh; max-height: none;
-  display: flex; flex-direction: column; padding: 0; background: var(--white); }
-.pdf-modal-header { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.pdf-modal-title { font-size: 0.95rem; font-weight: 600; margin: 0; min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.pdf-modal-actions { display: flex; align-items: center; gap: 0.5rem; }
-.pdf-modal-body { flex: 1; min-height: 0; background: #2a2a2a; }
-.pdf-modal-frame { width: 100%; height: 100%; border: none; display: block;
-  background: #2a2a2a; }
+/* ── PDF Viewer (Drive-style full-screen inline reader) ─────────────── */
+.pdf-viewer-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: #1f1f1f;
+  display: flex; flex-direction: column;
+}
+.pdf-viewer-header {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.55rem 1rem;
+  background: #2b2b2b;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  min-height: 56px;
+}
+.pdf-viewer-title-block {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 0.75rem; color: #fff;
+}
+.pdf-viewer-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #d62828; color: #fff; font-size: 0.66rem; font-weight: 700;
+  letter-spacing: 0.04em; padding: 0.3rem 0.5rem; border-radius: 2px;
+  flex: 0 0 auto;
+}
+.pdf-viewer-title-text { min-width: 0; flex: 1; line-height: 1.25; }
+.pdf-viewer-title {
+  font-size: 0.95rem; font-weight: 500; color: #fff;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pdf-viewer-subtitle {
+  font-size: 0.75rem; color: #aeb1b6;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-top: 0.1rem;
+}
+.pdf-viewer-actions { display: flex; align-items: center; gap: 0.25rem; }
+.pdf-viewer-iconbtn {
+  background: transparent; border: none; color: #d8d8d8;
+  padding: 0.45rem 0.7rem; cursor: pointer; font-size: 0.85rem;
+  border-radius: 4px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+}
+.pdf-viewer-iconbtn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.pdf-viewer-btn-label { font-size: 0.8rem; }
+.pdf-viewer-iconbtn--close {
+  font-size: 1.3rem; line-height: 1; padding: 0.3rem 0.7rem; margin-left: 0.25rem;
+}
+.pdf-viewer-iconbtn--close:hover { background: #c0392b; color: #fff; }
+.pdf-viewer-body { flex: 1; min-height: 0; background: #525659; }
+.pdf-viewer-frame { width: 100%; height: 100%; border: none; display: block;
+  background: #525659; }
+@media (max-width: 720px) {
+  .pdf-viewer-btn-label { display: none; }
+  .pdf-viewer-iconbtn { padding: 0.45rem 0.55rem; }
+}
 
 /* ── DRA Documents section (Amendments + Addendums on the DRA detail page) ── */
 .dra-docs { margin: 1.4rem 0; }
