@@ -213,6 +213,19 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .slot-add-btn:hover { border-color: var(--black); color: var(--black); }
 .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
 
+/* ── PDF Viewer modal (in-app PDF reader) ──────────────── */
+.modal-backdrop--pdf { background: rgba(0,0,0,0.65); }
+.modal--pdf { width: 92vw; max-width: 1200px; height: 92vh; max-height: none;
+  display: flex; flex-direction: column; padding: 0; background: var(--white); }
+.pdf-modal-header { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.pdf-modal-title { font-size: 0.95rem; font-weight: 600; margin: 0; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.pdf-modal-actions { display: flex; align-items: center; gap: 0.5rem; }
+.pdf-modal-body { flex: 1; min-height: 0; background: #2a2a2a; }
+.pdf-modal-frame { width: 100%; height: 100%; border: none; display: block;
+  background: #2a2a2a; }
+
 /* ── DRA Documents section (Amendments + Addendums on the DRA detail page) ── */
 .dra-docs { margin: 1.4rem 0; }
 .dra-docs-group { margin-bottom: 1.2rem; }

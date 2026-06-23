@@ -3,12 +3,19 @@ import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DraDocumentUploadModal } from '../components/DraDocumentUploadModal';
+import { PdfViewerModal } from '../components/PdfViewerModal';
 import type { DraDetail, DraDocument, DraDocumentType, DraFa, DraSummary } from '../api/types';
 
 interface UploadIntent {
   docType:          DraDocumentType;
   amendmentNumber?: number;
   lockDocType:      boolean;
+}
+
+interface PdfTarget {
+  url:      string;
+  filename: string;
+  title:    string;
 }
 
 export function Dras() {
@@ -82,6 +89,7 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
 
   const [upload, setUpload]     = useState<UploadIntent | null>(null);
   const [toDelete, setToDelete] = useState<DraDocument | null>(null);
+  const [viewing, setViewing]   = useState<PdfTarget | null>(null);
 
   async function handleDelete(doc: DraDocument) {
     await api.delete(`/dras/${detail.id}/documents/${doc.id}`);
@@ -106,7 +114,17 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
 
       <div className="dra-actions">
         {detail.draFile[0]
-          ? <a href={detail.draFile[0].url} target="_blank" rel="noreferrer" className="btn-secondary">📎 Open original DRA</a>
+          ? <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setViewing({
+                url:      detail.draFile[0].url,
+                filename: detail.draFile[0].filename,
+                title:    `${detail.name} — Original DRA`,
+              })}
+            >
+              📎 Open original DRA
+            </button>
           : <span className="muted">No original DRA PDF on file</span>}
       </div>
 
@@ -131,6 +149,14 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
         isAdmin={isAdmin}
         onUpload={intent => setUpload(intent)}
         onDelete={setToDelete}
+        onOpen={doc => {
+          if (!doc.file[0]) return;
+          setViewing({
+            url:      doc.file[0].url,
+            filename: doc.file[0].filename,
+            title:    `${detail.name} — ${doc.title ?? 'Document'}`,
+          });
+        }}
       />
 
       <div className="dra-fas">
@@ -156,6 +182,15 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
           lockDocType={upload.lockDocType}
           onClose={() => setUpload(null)}
           onSaved={onChanged}
+        />
+      )}
+
+      {viewing && (
+        <PdfViewerModal
+          url={viewing.url}
+          filename={viewing.filename}
+          title={viewing.title}
+          onClose={() => setViewing(null)}
         />
       )}
 
@@ -186,12 +221,13 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
 }
 
 function DraDocumentsSection({
-  documents, isAdmin, onUpload, onDelete,
+  documents, isAdmin, onUpload, onDelete, onOpen,
 }: {
   documents: DraDocument[];
   isAdmin: boolean;
   onUpload: (intent: UploadIntent) => void;
   onDelete: (d: DraDocument) => void;
+  onOpen:   (d: DraDocument) => void;
 }) {
   const amendments = documents.filter(d => d.documentType === 'Amendment');
   const addendums  = documents.filter(d => d.documentType === 'Addendum');
@@ -209,7 +245,7 @@ function DraDocumentsSection({
           {Array.from({ length: slotCount }, (_, i) => i + 1).map(n => {
             const doc = amendments.find(a => a.amendmentNumber === n) ?? null;
             return doc
-              ? <FilledDocRow key={`amend-${n}`} doc={doc} label={`${ordinal(n)} Amendment`} isAdmin={isAdmin} onDelete={onDelete} />
+              ? <FilledDocRow key={`amend-${n}`} doc={doc} label={`${ordinal(n)} Amendment`} isAdmin={isAdmin} onDelete={onDelete} onOpen={onOpen} />
               : <EmptyDocRow
                   key={`amend-${n}-empty`}
                   label={`${ordinal(n)} Amendment`}
@@ -219,7 +255,7 @@ function DraDocumentsSection({
                 />;
           })}
           {amendments.filter(a => a.amendmentNumber == null).map(doc => (
-            <FilledDocRow key={doc.id} doc={doc} label="Amendment (unnumbered)" isAdmin={isAdmin} onDelete={onDelete} />
+            <FilledDocRow key={doc.id} doc={doc} label="Amendment (unnumbered)" isAdmin={isAdmin} onDelete={onDelete} onOpen={onOpen} />
           ))}
         </div>
       </div>
@@ -241,6 +277,7 @@ function DraDocumentsSection({
                 label={doc.addendumName ? `${doc.addendumName} Addendum` : (doc.title ?? 'Addendum')}
                 isAdmin={isAdmin}
                 onDelete={onDelete}
+                onOpen={onOpen}
               />
             ))}
             {isAdmin && (
@@ -268,6 +305,7 @@ function DraDocumentsSection({
                 label={doc.title ?? 'Document'}
                 isAdmin={isAdmin}
                 onDelete={onDelete}
+                onOpen={onOpen}
               />
             ))}
           </div>
@@ -277,11 +315,12 @@ function DraDocumentsSection({
   );
 }
 
-function FilledDocRow({ doc, label, isAdmin, onDelete }: {
+function FilledDocRow({ doc, label, isAdmin, onDelete, onOpen }: {
   doc: DraDocument;
   label: string;
   isAdmin: boolean;
   onDelete: (d: DraDocument) => void;
+  onOpen:   (d: DraDocument) => void;
 }) {
   return (
     <div className="slot-row slot-row--filled dra-doc-row">
@@ -290,7 +329,7 @@ function FilledDocRow({ doc, label, isAdmin, onDelete }: {
       <div className="slot-actions">
         {doc.signatories && <span className="muted dra-doc-sig" title={`Signed by ${doc.signatories}`}>✎ {doc.signatories}</span>}
         {doc.file[0]
-          ? <a href={doc.file[0].url} target="_blank" rel="noreferrer" className="btn-secondary btn-sm">📎 Open</a>
+          ? <button type="button" className="btn-secondary btn-sm" onClick={() => onOpen(doc)}>📎 Open</button>
           : <span className="muted">No PDF</span>}
         {isAdmin && (
           <button type="button" className="btn-trash" title={`Delete ${label}`} onClick={() => onDelete(doc)}>🗑</button>
