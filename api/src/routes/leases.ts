@@ -59,7 +59,15 @@ leasesRouter.post('/:id/leases/extract', upload.single('file'), async (req: Requ
 
 // ── POST /:id/leases — create the Lease record and attach the PDF ──
 
-const DOCUMENT_TYPES = ['Original Lease', 'Amendment', 'Guaranty', 'Landlord Work Letter', 'Estoppel', 'Side Letter', 'Other'] as const;
+const DOCUMENT_TYPES = [
+  'Original Lease', 'Amendment', 'Guaranty', 'Landlord Work Letter',
+  'Estoppel', 'Side Letter',
+  // Ancillary doc types (added 2026-06-24)
+  'Rider', 'Lease Schedule', 'Rent Commencement Letter', 'SNDA',
+  'Memorandum of Lease', 'Possession Letter', 'Assignment of Lease',
+  'Termination Agreement',
+  'Other',
+] as const;
 
 const saveSchema = z.object({
   executionDate:          z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),

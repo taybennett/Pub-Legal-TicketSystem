@@ -127,7 +127,7 @@ export function CurrentLeasePanel({ locationId }: { locationId: string }) {
                 className="slot-add-btn"
                 onClick={() => setUpload({ docType: 'Guaranty', lockDocType: false })}
               >
-                + Add Guaranty / Estoppel / Side Letter / Other
+                + Add Guaranty / Rider / Lease Schedule / SNDA / Memo / Possession / etc.
               </button>
             )}
           </div>
@@ -474,12 +474,15 @@ function buildSlots(leases: Lease[]): Slot[] {
     lease: leases.find(l => l.documentType === 'Landlord Work Letter') ?? null,
   });
 
-  // Everything else
+  // Everything else — Guaranty, Estoppel, Side Letter, ancillary docs, Other.
+  // Anything that isn't an Original Lease, Amendment, or Landlord Work Letter
+  // lives here. New ancillary types added 2026-06-24 (Rider, Lease Schedule, etc.)
+  // fall in automatically.
   const others = leases.filter(l =>
-    l.documentType === 'Guaranty' ||
-    l.documentType === 'Estoppel' ||
-    l.documentType === 'Side Letter' ||
-    l.documentType === 'Other'
+    l.documentType != null &&
+    l.documentType !== 'Original Lease' &&
+    l.documentType !== 'Amendment' &&
+    l.documentType !== 'Landlord Work Letter'
   );
   others.sort((a, b) => (a.documentType ?? '').localeCompare(b.documentType ?? ''));
   for (const o of others) slots.push({ kind: 'other', lease: o });
@@ -515,12 +518,20 @@ function statusPillClass(status: string): string {
 
 function docTypePillClass(t: LeaseDocumentType): string {
   switch (t) {
-    case 'Amendment':            return 'pill--yellow';
-    case 'Guaranty':             return 'pill--purple';
-    case 'Landlord Work Letter': return 'pill--teal';
-    case 'Estoppel':             return 'pill--orange';
-    case 'Side Letter':          return 'pill--gray';
-    case 'Other':                return 'pill--gray';
-    default:                     return 'pill--blue-soft';
+    case 'Amendment':                return 'pill--yellow';
+    case 'Guaranty':                 return 'pill--purple';
+    case 'Landlord Work Letter':     return 'pill--teal';
+    case 'Estoppel':                 return 'pill--orange';
+    case 'Side Letter':              return 'pill--gray';
+    case 'Rider':                    return 'pill--cyan';
+    case 'Lease Schedule':           return 'pill--cyan-soft';
+    case 'Rent Commencement Letter': return 'pill--green-soft';
+    case 'SNDA':                     return 'pill--red';
+    case 'Memorandum of Lease':      return 'pill--lime';
+    case 'Possession Letter':        return 'pill--green';
+    case 'Assignment of Lease':      return 'pill--blue';
+    case 'Termination Agreement':    return 'pill--red';
+    case 'Other':                    return 'pill--gray';
+    default:                         return 'pill--blue-soft';
   }
 }

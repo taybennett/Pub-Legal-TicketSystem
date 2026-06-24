@@ -204,7 +204,7 @@ export const LEASES = {
   SECURITY_DEPOSIT:       'fldxvOreGk3UJxS98', // currency
   AI_EXTRACTION_LOG:      'fldulFGcVzfog74JQ', // multilineText — audit trail of raw Claude response
   // Multi-document hierarchy: Original Lease + linked Amendments/Guaranties/etc.
-  DOCUMENT_TYPE:          'fldSjENxhRNEYxIdJ', // singleSelect: Original Lease | Amendment | Guaranty | Landlord Work Letter | Estoppel | Side Letter | Other
+  DOCUMENT_TYPE:          'fldSjENxhRNEYxIdJ', // singleSelect — see LeaseDocumentType for the full list
   PARENT_LEASE:           'fldexFUV69aInCwYl', // multipleRecordLinks → Leases (self). Child docs point at the Original Lease.
   DOCUMENT_DATE:          'fld8KgaeWqx36yZYu', // date — effective date of THIS specific document
   AMENDMENT_NUMBER:       'fldSTAjRWKfyBO3IV', // number — sequence for Amendments
@@ -212,7 +212,12 @@ export const LEASES = {
 
 export type LeaseDocumentType =
   | 'Original Lease' | 'Amendment' | 'Guaranty'
-  | 'Landlord Work Letter' | 'Estoppel' | 'Side Letter' | 'Other';
+  | 'Landlord Work Letter' | 'Estoppel' | 'Side Letter'
+  // Ancillary doc types added 2026-06-24
+  | 'Rider' | 'Lease Schedule' | 'Rent Commencement Letter'
+  | 'SNDA' | 'Memorandum of Lease' | 'Possession Letter'
+  | 'Assignment of Lease' | 'Termination Agreement'
+  | 'Other';
 
 // ── FA TRACKER ──────────────────────────────────────────────────────
 export const FA_TRACKER = {

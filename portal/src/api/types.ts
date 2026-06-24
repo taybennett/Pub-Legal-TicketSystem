@@ -65,7 +65,12 @@ export interface Ticket {
 
 export type LeaseDocumentType =
   | 'Original Lease' | 'Amendment' | 'Guaranty'
-  | 'Landlord Work Letter' | 'Estoppel' | 'Side Letter' | 'Other';
+  | 'Landlord Work Letter' | 'Estoppel' | 'Side Letter'
+  // Ancillary doc types added 2026-06-24
+  | 'Rider' | 'Lease Schedule' | 'Rent Commencement Letter'
+  | 'SNDA' | 'Memorandum of Lease' | 'Possession Letter'
+  | 'Assignment of Lease' | 'Termination Agreement'
+  | 'Other';
 
 export interface Lease {
   id: string;

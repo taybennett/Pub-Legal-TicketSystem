@@ -33,13 +33,21 @@ const blank: FormState = {
 };
 
 const DOC_TYPES: { value: LeaseDocumentType; label: string }[] = [
-  { value: 'Original Lease',       label: 'Original Lease' },
-  { value: 'Amendment',            label: 'Amendment' },
-  { value: 'Guaranty',             label: 'Guaranty' },
-  { value: 'Landlord Work Letter', label: 'Landlord Work Letter' },
-  { value: 'Estoppel',             label: 'Estoppel' },
-  { value: 'Side Letter',          label: 'Side Letter' },
-  { value: 'Other',                label: 'Other' },
+  { value: 'Original Lease',           label: 'Original Lease' },
+  { value: 'Amendment',                label: 'Amendment' },
+  { value: 'Guaranty',                 label: 'Guaranty' },
+  { value: 'Landlord Work Letter',     label: 'Landlord Work Letter' },
+  { value: 'Rider',                    label: 'Rider' },
+  { value: 'Lease Schedule',           label: 'Lease Schedule / Exhibit' },
+  { value: 'Rent Commencement Letter', label: 'Rent Commencement Letter' },
+  { value: 'SNDA',                     label: 'SNDA (Subordination / Non-Disturbance / Attornment)' },
+  { value: 'Memorandum of Lease',      label: 'Memorandum of Lease' },
+  { value: 'Possession Letter',        label: 'Possession / Delivery Letter' },
+  { value: 'Assignment of Lease',      label: 'Assignment of Lease' },
+  { value: 'Termination Agreement',    label: 'Termination / Surrender Agreement' },
+  { value: 'Estoppel',                 label: 'Estoppel' },
+  { value: 'Side Letter',              label: 'Side Letter' },
+  { value: 'Other',                    label: 'Other' },
 ];
 
 export function LeaseUploadModal({
