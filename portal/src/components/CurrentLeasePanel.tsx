@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { AttachPdfButton } from './AttachPdfButton';
 import { ConfirmDialog } from './ConfirmDialog';
 import { LeaseUploadModal } from './LeaseUploadModal';
 import { useOpenPdf } from './PdfViewerProvider';
@@ -69,6 +70,8 @@ export function CurrentLeasePanel({ locationId }: { locationId: string }) {
           key={i}
           slot={s as Extract<Slot, { kind: 'singular' }>}
           isAdmin={isAdmin}
+          locationId={locationId}
+          onChanged={() => setReload(k => k + 1)}
           onDelete={setToDelete}
           onUpload={() => setUpload({ docType: 'Original Lease', lockDocType: true })}
         />
@@ -82,6 +85,8 @@ export function CurrentLeasePanel({ locationId }: { locationId: string }) {
             key={i}
             slot={a as Extract<Slot, { kind: 'amendment' }>}
             isAdmin={isAdmin}
+            locationId={locationId}
+            onChanged={() => setReload(k => k + 1)}
             onDelete={setToDelete}
             onUpload={n => setUpload({ docType: 'Amendment', amendmentNumber: n, lockDocType: true })}
           />
@@ -94,6 +99,8 @@ export function CurrentLeasePanel({ locationId }: { locationId: string }) {
         <SingularSlot
           slot={workLetter as Extract<Slot, { kind: 'singular' }>}
           isAdmin={isAdmin}
+          locationId={locationId}
+          onChanged={() => setReload(k => k + 1)}
           onDelete={setToDelete}
           onUpload={() => setUpload({ docType: 'Landlord Work Letter', lockDocType: true })}
         />
@@ -109,6 +116,8 @@ export function CurrentLeasePanel({ locationId }: { locationId: string }) {
                 key={(s as Extract<Slot, { kind: 'other' }>).lease.id}
                 lease={(s as Extract<Slot, { kind: 'other' }>).lease}
                 isAdmin={isAdmin}
+                locationId={locationId}
+                onChanged={() => setReload(k => k + 1)}
                 onDelete={setToDelete}
               />
             ))}
@@ -166,9 +175,11 @@ export function CurrentLeasePanel({ locationId }: { locationId: string }) {
 
 /* ────────────────── slot components ────────────────── */
 
-function OriginalSlot({ slot, isAdmin, onDelete, onUpload }: {
+function OriginalSlot({ slot, isAdmin, locationId, onChanged, onDelete, onUpload }: {
   slot: Extract<Slot, { kind: 'singular' }>;
   isAdmin: boolean;
+  locationId: string;
+  onChanged: () => void;
   onDelete: (l: Lease) => void;
   onUpload: () => void;
 }) {
@@ -188,7 +199,13 @@ function OriginalSlot({ slot, isAdmin, onDelete, onUpload }: {
               ⚠ Placeholder record — no PDF or terms on file. Delete it and re-upload the actual original.
             </div>
           )}
-          <LeaseRow lease={l} isAdmin={isAdmin} onDelete={onDelete} />
+          <LeaseRow
+            lease={l}
+            isAdmin={isAdmin}
+            locationId={locationId}
+            onChanged={onChanged}
+            onDelete={onDelete}
+          />
         </>
       ) : (
         <EmptySlotRow
@@ -202,9 +219,11 @@ function OriginalSlot({ slot, isAdmin, onDelete, onUpload }: {
   );
 }
 
-function AmendmentSlot({ slot, isAdmin, onDelete, onUpload }: {
+function AmendmentSlot({ slot, isAdmin, locationId, onChanged, onDelete, onUpload }: {
   slot: Extract<Slot, { kind: 'amendment' }>;
   isAdmin: boolean;
+  locationId: string;
+  onChanged: () => void;
   onDelete: (l: Lease) => void;
   onUpload: (n: number) => void;
 }) {
@@ -227,7 +246,13 @@ function AmendmentSlot({ slot, isAdmin, onDelete, onUpload }: {
                   title: label, subtitle: 'Lease document',
                 })}
               >📎 Open</button>
-            : <span className="muted">No PDF</span>}
+            : isAdmin
+              ? <AttachPdfButton
+                  uploadPath={`/locations/${locationId}/leases/${l.id}/attach`}
+                  label={`Attach ${label} PDF`}
+                  onAttached={onChanged}
+                />
+              : <span className="muted">No PDF</span>}
           {isAdmin && (
             <button type="button" className="btn-trash" title={`Delete ${label}`} onClick={() => onDelete(l)}>🗑</button>
           )}
@@ -250,9 +275,11 @@ function AmendmentSlot({ slot, isAdmin, onDelete, onUpload }: {
   );
 }
 
-function SingularSlot({ slot, isAdmin, onDelete, onUpload }: {
+function SingularSlot({ slot, isAdmin, locationId, onChanged, onDelete, onUpload }: {
   slot: Extract<Slot, { kind: 'singular' }>;
   isAdmin: boolean;
+  locationId: string;
+  onChanged: () => void;
   onDelete: (l: Lease) => void;
   onUpload: () => void;
 }) {
@@ -275,7 +302,13 @@ function SingularSlot({ slot, isAdmin, onDelete, onUpload }: {
                   title: label, subtitle: 'Lease document',
                 })}
               >📎 Open</button>
-            : <span className="muted">No PDF</span>}
+            : isAdmin
+              ? <AttachPdfButton
+                  uploadPath={`/locations/${locationId}/leases/${l.id}/attach`}
+                  label={`Attach ${label} PDF`}
+                  onAttached={onChanged}
+                />
+              : <span className="muted">No PDF</span>}
           {isAdmin && (
             <button type="button" className="btn-trash" title={`Delete ${label}`} onClick={() => onDelete(l)}>🗑</button>
           )}
@@ -298,9 +331,11 @@ function SingularSlot({ slot, isAdmin, onDelete, onUpload }: {
   );
 }
 
-function OtherDocRow({ lease, isAdmin, onDelete }: {
+function OtherDocRow({ lease, isAdmin, locationId, onChanged, onDelete }: {
   lease: Lease;
   isAdmin: boolean;
+  locationId: string;
+  onChanged: () => void;
   onDelete: (l: Lease) => void;
 }) {
   const type = lease.documentType ?? 'Other';
@@ -322,7 +357,13 @@ function OtherDocRow({ lease, isAdmin, onDelete }: {
                 title: type, subtitle: 'Lease document',
               })}
             >📎 Open</button>
-          : <span className="muted">No PDF</span>}
+          : isAdmin
+            ? <AttachPdfButton
+                uploadPath={`/locations/${locationId}/leases/${lease.id}/attach`}
+                label={`Attach ${type} PDF`}
+                onAttached={onChanged}
+              />
+            : <span className="muted">No PDF</span>}
         {isAdmin && (
           <button type="button" className="btn-trash" title={`Delete ${type}`} onClick={() => onDelete(lease)}>🗑</button>
         )}
@@ -357,7 +398,13 @@ function SlotGroupLabel({ children }: { children: React.ReactNode }) {
 
 /* ────────────────── Original-lease full row (terms grid) ────────────────── */
 
-function LeaseRow({ lease, isAdmin, onDelete }: { lease: Lease; isAdmin: boolean; onDelete: (l: Lease) => void }) {
+function LeaseRow({ lease, isAdmin, locationId, onChanged, onDelete }: {
+  lease: Lease;
+  isAdmin: boolean;
+  locationId: string;
+  onChanged: () => void;
+  onDelete: (l: Lease) => void;
+}) {
   const openPdf = useOpenPdf();
   return (
     <div className="lease-row">
@@ -375,7 +422,13 @@ function LeaseRow({ lease, isAdmin, onDelete }: { lease: Lease; isAdmin: boolean
                 title: 'Original Lease', subtitle: 'Lease document',
               })}
             >📎 Open lease</button>
-          : <span className="muted">No PDF on file</span>}
+          : isAdmin
+            ? <AttachPdfButton
+                uploadPath={`/locations/${locationId}/leases/${lease.id}/attach`}
+                label="Attach Lease PDF"
+                onAttached={onChanged}
+              />
+            : <span className="muted">No PDF on file</span>}
         {isAdmin && (
           <button type="button" className="btn-trash" title="Delete this lease record" onClick={() => onDelete(lease)}>🗑</button>
         )}

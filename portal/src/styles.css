@@ -213,6 +213,11 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .slot-add-btn:hover { border-color: var(--black); color: var(--black); }
 .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
 
+/* ── Attach PDF inline button (used on Lease slots without files) ─── */
+.attach-pdf-wrap { display: inline-flex; align-items: center; gap: 0.5rem; }
+.attach-pdf-btn { display: inline-flex; align-items: center; gap: 0.3rem; }
+.attach-pdf-err { font-size: 0.75rem; color: #c0392b; }
+
 /* ── PDF Viewer (Drive-style full-screen inline reader) ─────────────── */
 .pdf-viewer-overlay {
   position: fixed; inset: 0; z-index: 1000;

@@ -135,6 +135,40 @@ leasesRouter.post('/:id/leases', upload.single('file'), async (req: Request, res
   });
 });
 
+// ── POST /:id/leases/:leaseId/attach — attach a PDF to an EXISTING lease record ──
+// Used when the record was created without a file (e.g. bulk-imported from
+// Occupier metadata) and the PDF arrives later. No new record is created.
+leasesRouter.post('/:id/leases/:leaseId/attach', upload.single('file'), async (req: Request, res: Response) => {
+  const { id, leaseId } = req.params;
+  if (!req.file) throw new BadRequestError('Missing PDF file');
+  if (req.file.mimetype !== 'application/pdf') {
+    throw new BadRequestError('Only PDF files are supported');
+  }
+  if (req.file.size > PDF_MAX_BYTES) {
+    throw new BadRequestError(
+      `PDF exceeds ${(PDF_MAX_BYTES / 1024 / 1024).toFixed(0)} MB limit.`,
+    );
+  }
+
+  const lease = await leases.getById(leaseId).catch(() => null);
+  if (!lease) throw new NotFoundError('Lease not found');
+  // Safety: confirm this lease is linked to the Location in the URL
+  const linkedLocations = (lease.fields[LEASES.LOCATION] as string[] | undefined) ?? [];
+  if (!linkedLocations.includes(id)) {
+    throw new ForbiddenError('Lease is not linked to this Location');
+  }
+
+  const filename = req.file.originalname.replace(/[\/\\]/g, '_').slice(0, 255);
+  await leases.attachFile(leaseId, {
+    filename,
+    contentType: req.file.mimetype,
+    base64: req.file.buffer.toString('base64'),
+  });
+
+  logger.info({ leaseId, locationId: id, filename, userId: req.user!.sub }, 'lease PDF attached');
+  res.json({ ok: true, filename });
+});
+
 // ── DELETE /:id/leases/:leaseId — remove a lease record + its PDF ──
 leasesRouter.delete('/:id/leases/:leaseId', async (req: Request, res: Response) => {
   const { id, leaseId } = req.params;
