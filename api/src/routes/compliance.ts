@@ -116,13 +116,23 @@ complianceRouter.get('/', async (req: Request, res: Response) => {
       const entIds   = (loc.fields[LOCATIONS.FRANCHISEE_ENTITY] as string[] | undefined) ?? [];
       const isPubCorp = entIds.some(eid => entityIsPubCorp.get(eid));
 
-      // Lease checks
+      // Lease checks. We evaluate against the ORIGINAL LEASE specifically,
+      // not just locLeases[0] — otherwise an ancillary doc (Amendment,
+      // Guaranty, Possession Letter, etc.) ordered first by Airtable would
+      // fail the exec-date check because those types don't carry an
+      // execution date (they use Document Date). Null documentType is treated
+      // as Original Lease for back-compat with records that predate the
+      // multi-doc support.
       const locLeases = leasesByLocationId.get(loc.id) ?? [];
-      const lease = locLeases[0];
+      const originalLease = locLeases.find(l => {
+        const dt = l.fields[LEASES.DOCUMENT_TYPE];
+        const name = typeof dt === 'string' ? dt : (dt as { name?: string } | undefined)?.name;
+        return name == null || name === 'Original Lease';
+      });
       const leaseChecks = {
-        present:     { ok: locLeases.length > 0,                                                        label: 'Lease record' },
-        pdfAttached: { ok: !!lease && ((lease.fields[LEASES.FILE] as unknown[] | undefined)?.length ?? 0) > 0, label: 'Lease PDF' },
-        execDate:    { ok: !!lease && !!lease.fields[LEASES.EXECUTION_DATE],                            label: 'Lease exec date' },
+        present:     { ok: !!originalLease,                                                                              label: 'Lease record' },
+        pdfAttached: { ok: !!originalLease && ((originalLease.fields[LEASES.FILE] as unknown[] | undefined)?.length ?? 0) > 0, label: 'Lease PDF' },
+        execDate:    { ok: !!originalLease && !!originalLease.fields[LEASES.EXECUTION_DATE],                             label: 'Lease exec date' },
       };
 
       // FA checks (skipped for PUB Corp shops)
