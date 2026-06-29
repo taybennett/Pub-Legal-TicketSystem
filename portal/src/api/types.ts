@@ -184,7 +184,12 @@ export interface DraFa {
   isOpen:        boolean;
 }
 
-export type DraDocumentType = 'Amendment' | 'Addendum' | 'Other';
+export type DraDocumentType =
+  | 'Amendment' | 'Addendum'
+  // Ancillary DRA doc types added 2026-06-29
+  | 'Exhibit' | 'Side Letter' | 'Guaranty' | 'Assignment'
+  | 'Termination Agreement' | 'Memorandum'
+  | 'Other';
 
 export interface DraDocument {
   id:              string;

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { AttachPdfButton } from '../components/AttachPdfButton';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DraDocumentUploadModal } from '../components/DraDocumentUploadModal';
 import { useOpenPdf } from '../components/PdfViewerProvider';
@@ -120,7 +121,13 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
             >
               📎 Open original DRA
             </button>
-          : <span className="muted">No original DRA PDF on file</span>}
+          : isAdmin
+            ? <AttachPdfButton
+                uploadPath={`/dras/${detail.id}/attach`}
+                label="Attach Original DRA"
+                onAttached={onChanged}
+              />
+            : <span className="muted">No original DRA PDF on file</span>}
       </div>
 
       {scheduleYears.length > 0 && (
@@ -232,7 +239,11 @@ function DraDocumentsSection({
 }) {
   const amendments = documents.filter(d => d.documentType === 'Amendment');
   const addendums  = documents.filter(d => d.documentType === 'Addendum');
-  const others     = documents.filter(d => d.documentType === 'Other' || d.documentType === null);
+  // Everything that isn't an Amendment or Addendum lives under "Other Documents".
+  // Exclusion rule so new types added directly in Airtable flow in automatically.
+  const others     = documents.filter(d =>
+    d.documentType !== 'Amendment' && d.documentType !== 'Addendum'
+  );
 
   const maxAmendN  = amendments.reduce((m, a) => Math.max(m, a.amendmentNumber ?? 0), 0);
   const slotCount  = Math.max(3, maxAmendN);

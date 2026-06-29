@@ -277,7 +277,12 @@ export const DRA_DOCUMENTS = {
   SIGNATORIES:      'fldyBk55WiANiDGkt', // singleLineText
 } as const;
 
-export type DraDocumentType = 'Amendment' | 'Addendum' | 'Other';
+export type DraDocumentType =
+  | 'Amendment' | 'Addendum'
+  // Ancillary DRA doc types added 2026-06-29
+  | 'Exhibit' | 'Side Letter' | 'Guaranty' | 'Assignment'
+  | 'Termination Agreement' | 'Memorandum'
+  | 'Other';
 
 // ── FRANCHISEE ENTITIES ─────────────────────────────────────────────
 export const FRANCHISEE_ENTITIES = {

@@ -17,9 +17,15 @@ interface Props {
 }
 
 const DOC_TYPES: { value: DraDocumentType; label: string }[] = [
-  { value: 'Amendment', label: 'Amendment' },
-  { value: 'Addendum',  label: 'Addendum (custom-named, e.g. Silent Investor)' },
-  { value: 'Other',     label: 'Other' },
+  { value: 'Amendment',             label: 'Amendment' },
+  { value: 'Addendum',              label: 'Addendum (custom-named, e.g. Silent Investor)' },
+  { value: 'Exhibit',               label: 'Exhibit / Schedule' },
+  { value: 'Guaranty',              label: 'Guaranty' },
+  { value: 'Side Letter',           label: 'Side Letter' },
+  { value: 'Assignment',            label: 'Assignment of Development Rights' },
+  { value: 'Memorandum',            label: 'Memorandum' },
+  { value: 'Termination Agreement', label: 'Termination / Surrender Agreement' },
+  { value: 'Other',                 label: 'Other' },
 ];
 
 export function DraDocumentUploadModal({

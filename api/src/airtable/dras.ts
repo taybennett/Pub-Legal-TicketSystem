@@ -28,6 +28,14 @@ export async function getById(recordId: string): Promise<DraRecord> {
   return airtable.get<DraFields>('LEGAL', TABLE.FRANCHISEE_GROUPS, recordId);
 }
 
+/** Attach a PDF to the DRA File field on an existing Franchisee Groups row. */
+export async function attachDraFile(
+  recordId: string,
+  file: { filename: string; contentType: string; base64: string },
+): Promise<void> {
+  await airtable.uploadAttachment('LEGAL', recordId, FRANCHISEE_GROUPS.DRA_FILE, file);
+}
+
 export const YEAR_FIELDS: Array<{ year: number; fieldId: string }> = [
   { year: 2025, fieldId: FRANCHISEE_GROUPS.YEAR_2025 },
   { year: 2026, fieldId: FRANCHISEE_GROUPS.YEAR_2026 },

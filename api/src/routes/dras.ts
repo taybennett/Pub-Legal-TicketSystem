@@ -6,7 +6,7 @@ import * as dras from '../airtable/dras.js';
 import * as draDocuments from '../airtable/draDocuments.js';
 import * as faTracker from '../airtable/faTracker.js';
 import * as pipeline from '../airtable/pipeline.js';
-import { DRA_DOCUMENTS, FA_TRACKER, FRANCHISEE_GROUPS } from '../airtable/tables.js';
+import { DRA_DOCUMENTS, FA_TRACKER, FRANCHISEE_GROUPS, type DraDocumentType } from '../airtable/tables.js';
 import { requireAdmin, requireAuth } from '../auth/middleware.js';
 import { lifecycleStageFromPipelineStatus } from '../lib/lifecycleFromPipeline.js';
 import { logger } from '../util/logger.js';
@@ -39,7 +39,7 @@ function shapeDocument(d: draDocuments.DraDocumentRecord) {
   return {
     id:              d.id,
     title:           (d.fields[DRA_DOCUMENTS.TITLE]            as string | undefined) ?? null,
-    documentType:    extractName(d.fields[DRA_DOCUMENTS.DOCUMENT_TYPE]) as 'Amendment' | 'Addendum' | 'Other' | null,
+    documentType:    extractName(d.fields[DRA_DOCUMENTS.DOCUMENT_TYPE]) as DraDocumentType | null,
     amendmentNumber: (d.fields[DRA_DOCUMENTS.AMENDMENT_NUMBER] as number | undefined) ?? null,
     addendumName:    (d.fields[DRA_DOCUMENTS.ADDENDUM_NAME]    as string | undefined) ?? null,
     effectiveDate:   (d.fields[DRA_DOCUMENTS.EFFECTIVE_DATE]   as string | undefined) ?? null,
@@ -186,9 +186,42 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
   });
 });
 
+// ── POST /dras/:id/attach — attach the ORIGINAL DRA PDF to an existing
+//    Franchisee Groups row (DRA File field). Used when the DRA record was
+//    bulk-created from terms but the PDF arrives separately. ───
+drasRouter.post('/:id/attach', upload.single('file'), async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!req.file) throw new BadRequestError('Missing PDF file');
+  if (req.file.mimetype !== 'application/pdf') {
+    throw new BadRequestError('Only PDF files are supported');
+  }
+  if (req.file.size > DRA_DOC_MAX_BYTES) {
+    throw new BadRequestError(`PDF exceeds ${(DRA_DOC_MAX_BYTES / 1024 / 1024).toFixed(0)} MB limit.`);
+  }
+
+  const dra = await dras.getById(id).catch(() => null);
+  if (!dra) throw new NotFoundError('DRA not found');
+
+  const filename = req.file.originalname.replace(/[\/\\]/g, '_').slice(0, 255);
+  await dras.attachDraFile(id, {
+    filename,
+    contentType: req.file.mimetype,
+    base64: req.file.buffer.toString('base64'),
+  });
+
+  logger.info({ draId: id, filename, userId: req.user!.sub }, 'DRA original PDF attached');
+  res.json({ ok: true, filename });
+});
+
 // ── POST /dras/:id/documents — upload an Amendment or Addendum ───
 
-const DOC_TYPES = ['Amendment', 'Addendum', 'Other'] as const;
+const DOC_TYPES = [
+  'Amendment', 'Addendum',
+  // Ancillary DRA doc types (added 2026-06-29)
+  'Exhibit', 'Side Letter', 'Guaranty', 'Assignment',
+  'Termination Agreement', 'Memorandum',
+  'Other',
+] as const;
 
 const docSaveSchema = z.object({
   documentType:    z.enum(DOC_TYPES),
