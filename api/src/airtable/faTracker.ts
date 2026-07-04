@@ -3,6 +3,7 @@ import { FA_TRACKER, TABLE } from './tables.js';
 
 export interface FaTrackerFields {
   [FA_TRACKER.SHOP_NUMBER]?: string;
+  [FA_TRACKER.SHOP_NAME]?: string;
   [FA_TRACKER.EXECUTION_DATE]?: string;
   [FA_TRACKER.TERM_END]?: string;
   [FA_TRACKER.STATUS]?: string | { name: string };
@@ -13,6 +14,11 @@ export interface FaTrackerFields {
   [FA_TRACKER.ATTORNEY]?: string;
   [FA_TRACKER.FILE]?: { url: string; filename: string; size?: number; type?: string }[];
   [FA_TRACKER.DRA_LINK]?: string[];
+  [FA_TRACKER.DOCUMENT_TYPE]?: string | { name: string };
+  [FA_TRACKER.PARENT_FA]?: string[];
+  [FA_TRACKER.DOCUMENT_DATE]?: string;
+  [FA_TRACKER.AMENDMENT_NUMBER]?: number;
+  [FA_TRACKER.ADDENDUM_NAME]?: string;
   [key: string]: unknown;
 }
 
@@ -57,4 +63,8 @@ export async function getById(recordId: string): Promise<FaTrackerRecord> {
 
 export async function remove(recordId: string): Promise<void> {
   await airtable.delete('LEGAL', TABLE.FA_TRACKER, recordId);
+}
+
+export async function attachFile(recordId: string, file: { filename: string; contentType: string; base64: string }): Promise<void> {
+  await airtable.uploadAttachment('LEGAL', recordId, FA_TRACKER.FILE, file);
 }

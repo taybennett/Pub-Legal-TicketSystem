@@ -336,6 +336,12 @@ locationsRouter.get('/:id/fa-trackers', async (req: Request, res: Response) => {
       attorney:      (r.fields[FA_TRACKER.ATTORNEY]       as string | undefined) ?? null,
       status:        extractSelectName(r.fields[FA_TRACKER.STATUS]),
       file:          (r.fields[FA_TRACKER.FILE] as { url: string; filename: string }[] | undefined) ?? [],
+      // Multi-doc hierarchy (added 2026-07-04)
+      documentType:    extractSelectName(r.fields[FA_TRACKER.DOCUMENT_TYPE]),
+      parentFaIds:     (r.fields[FA_TRACKER.PARENT_FA] as string[] | undefined) ?? [],
+      documentDate:    (r.fields[FA_TRACKER.DOCUMENT_DATE]    as string | undefined) ?? null,
+      amendmentNumber: (r.fields[FA_TRACKER.AMENDMENT_NUMBER] as number | undefined) ?? null,
+      addendumName:    (r.fields[FA_TRACKER.ADDENDUM_NAME]    as string | undefined) ?? null,
     })),
   });
 });

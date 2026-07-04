@@ -235,7 +235,18 @@ export const FA_TRACKER = {
   SHOP_NAME:      'fldw0mVNvR0otKOuX', // singleLineText
   TITLE:          'fldGyEBZB08oqRt5n', // computed primary — e.g. "Bagel Bros, LLC — Lincoln Park (Chicago) (#2295)"
   DRA_LINK:       'fldAXWntc1wHmmMpn', // multipleRecordLinks → Franchisee Groups (DRAs). Source of truth.
+  // Multi-document hierarchy (added 2026-07-04) — mirrors the Leases pattern
+  DOCUMENT_TYPE:    'fld9wFo2Q7JnxcfVj', // singleSelect — see FaDocumentType for the full list
+  PARENT_FA:        'fldHwpFPhL2eVGKw0', // multipleRecordLinks → FA Tracker (self). Amendments/etc. point at the primary FA.
+  DOCUMENT_DATE:    'flde9PpspcAq8HQWw', // date — effective date of THIS specific document
+  AMENDMENT_NUMBER: 'fldi24o3RGUqYRowI', // number — sequence for Amendments
+  ADDENDUM_NAME:    'fldnUat9jK48VHG4d', // singleLineText — descriptor for Addendums
 } as const;
+
+export type FaDocumentType =
+  | 'Franchise Agreement' | 'Amendment' | 'Guaranty'
+  | 'Addendum' | 'Renewal Agreement' | 'Assignment'
+  | 'Termination Agreement' | 'Side Letter' | 'Other';
 
 // ── FRANCHISEE GROUPS (each row is a Development Rights Agreement / DRA) ─────
 export const FRANCHISEE_GROUPS = {

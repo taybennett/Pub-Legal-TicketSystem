@@ -147,6 +147,11 @@ export interface LeaseExtraction {
   cacheWriteTokens: number;
 }
 
+export type FaDocumentType =
+  | 'Franchise Agreement' | 'Amendment' | 'Guaranty'
+  | 'Addendum' | 'Renewal Agreement' | 'Assignment'
+  | 'Termination Agreement' | 'Side Letter' | 'Other';
+
 export interface FaTracker {
   id: string;
   executionDate: string | null;
@@ -158,6 +163,12 @@ export interface FaTracker {
   attorney:      string | null;
   status:        string | null;
   file:          { url: string; filename: string }[];
+  // Multi-doc hierarchy — null documentType treated as Franchise Agreement by the UI
+  documentType:    FaDocumentType | null;
+  parentFaIds:     string[];
+  documentDate:    string | null;
+  amendmentNumber: number | null;
+  addendumName:    string | null;
 }
 
 export interface DraSummary {
