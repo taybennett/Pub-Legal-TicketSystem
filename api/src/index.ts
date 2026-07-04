@@ -18,6 +18,7 @@ import { faTrackersRouter } from './routes/faTrackers.js';
 import { leasesRouter } from './routes/leases.js';
 import { complianceRouter } from './routes/compliance.js';
 import { filesRouter } from './routes/files.js';
+import { reportsRouter } from './routes/reports.js';
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use('/api/v1/fa-trackers', faTrackersRouter);
 app.use('/api/v1/locations',  leasesRouter);  // mounts /:id/leases/extract, /:id/leases/existing, /:id/leases (POST)
 app.use('/api/v1/compliance', complianceRouter);
 app.use('/api/v1/files',      filesRouter);
+app.use('/api/v1/reports',    reportsRouter);
 
 // Multer-specific error wrapper
 app.use(uploadErrorHandler);

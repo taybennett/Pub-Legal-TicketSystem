@@ -202,6 +202,7 @@ export const LEASES = {
   RENT_COMMENCEMENT_DATE: 'fldkbdyUauIObgxB8', // date (ISO)
   RENEWAL_OPTIONS:        'fldYvAyLnDEDipSGY', // singleLineText
   SECURITY_DEPOSIT:       'fldxvOreGk3UJxS98', // currency
+  SQUARE_FEET:            'fldVKAHTrXI4NM6i4', // number — usable area for Cost per Sq Ft reports
   AI_EXTRACTION_LOG:      'fldulFGcVzfog74JQ', // multilineText — audit trail of raw Claude response
   // Multi-document hierarchy: Original Lease + linked Amendments/Guaranties/etc.
   DOCUMENT_TYPE:          'fldSjENxhRNEYxIdJ', // singleSelect — see LeaseDocumentType for the full list

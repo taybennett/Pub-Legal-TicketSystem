@@ -42,6 +42,13 @@ export async function listForScope(scope: UserScope): Promise<LocationRecord[]> 
   });
 }
 
+/** Every Location record. Admin-only routes (reports, compliance, etc.). */
+export async function listAll(): Promise<LocationRecord[]> {
+  return airtable.list<LocationFields>('LEGAL', TABLE.LOCATIONS, {
+    sort: [{ field: 'Shop Name', direction: 'asc' }],
+  });
+}
+
 export async function getById(recordId: string): Promise<LocationRecord> {
   return airtable.get<LocationFields>('LEGAL', TABLE.LOCATIONS, recordId);
 }

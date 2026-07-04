@@ -213,6 +213,56 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .slot-add-btn:hover { border-color: var(--black); color: var(--black); }
 .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
 
+/* ── Reports page ─────────────────────────────────────── */
+.reports-page { max-width: 1400px; }
+.reports-nlq { display: flex; align-items: center; gap: 0.6rem;
+  background: linear-gradient(135deg, #f7f5ff 0%, #eef4ff 100%);
+  border: 1px solid #d5d0e8; padding: 0.9rem 1rem; margin-bottom: 1.5rem; }
+.reports-nlq-label { font-size: 0.8rem; font-weight: 600; color: #4a3c8c; letter-spacing: 0.02em;
+  white-space: nowrap; }
+.reports-nlq-input { flex: 1; padding: 0.55rem 0.8rem; border: 1px solid var(--border);
+  background: var(--white); font-size: 0.9rem; }
+.reports-nlq-input:focus { outline: none; border-color: var(--black); }
+.reports-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem;
+  align-items: start; }
+.reports-sidebar { display: flex; flex-direction: column; gap: 0.3rem; }
+.reports-sidebar-label { color: var(--mid); font-size: 0.65rem; letter-spacing: 0.12em;
+  text-transform: uppercase; margin-bottom: 0.6rem; }
+.reports-sidebar-item { background: var(--white); border: 1px solid var(--border);
+  padding: 0.7rem 0.9rem; text-align: left; cursor: pointer;
+  transition: border-color 0.1s; }
+.reports-sidebar-item:hover { border-color: var(--black); }
+.reports-sidebar-item--active { border-color: var(--black);
+  background: #fafafa; box-shadow: -3px 0 0 0 var(--black); }
+.reports-sidebar-item-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.2rem; }
+.reports-sidebar-item-desc { font-size: 0.75rem; color: var(--mid); line-height: 1.35; }
+.reports-main { background: var(--white); border: 1px solid var(--border); padding: 1.2rem 1.5rem;
+  min-height: 400px; }
+.reports-header { display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 0.5rem; }
+.reports-title { font-size: 1.3rem; font-weight: 600; margin: 0 0 0.3rem; }
+.reports-desc { margin: 0; font-size: 0.85rem; max-width: 620px; }
+.reports-query { margin: 0.3rem 0 0; font-size: 0.8rem; }
+.reports-notes { margin-top: 0.5rem; padding: 0.5rem 0.7rem; background: #fffbe6;
+  border: 1px solid #e6d888; font-size: 0.82rem; color: #6a5a1a; }
+.reports-actions { display: flex; align-items: center; gap: 0.5rem; }
+.reports-meta { font-size: 0.75rem; margin-bottom: 0.8rem; }
+.reports-table-wrap { overflow-x: auto; border: 1px solid var(--border); }
+.reports-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.reports-table th { background: #f5f5f5; padding: 0.6rem 0.8rem; text-align: left;
+  font-weight: 600; font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--mid); border-bottom: 1px solid var(--border); cursor: pointer;
+  user-select: none; white-space: nowrap; }
+.reports-table th:hover { background: #ececec; }
+.reports-table td { padding: 0.55rem 0.8rem; border-bottom: 1px solid #f0f0f0;
+  vertical-align: top; }
+.reports-table tr:hover td { background: #fafafa; }
+.reports-table .align-right { text-align: right; }
+@media (max-width: 900px) {
+  .reports-layout { grid-template-columns: 1fr; }
+  .reports-sidebar-item-desc { display: none; }
+}
+
 /* ── Attach PDF inline button (used on Lease slots without files) ─── */
 .attach-pdf-wrap { display: inline-flex; align-items: center; gap: 0.5rem; }
 .attach-pdf-btn { display: inline-flex; align-items: center; gap: 0.3rem; }
