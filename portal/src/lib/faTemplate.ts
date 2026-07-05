@@ -1,6 +1,6 @@
 /**
  * Franchise Agreement generator. Ported from the legacy index.html flow:
- *   - Loads /templates/fa-template.docx (pre-tokenized with {{TOKEN}} markers)
+ *   - Loads /templates/fa-template-v2.7.26.docx (pre-tokenized with {{TOKEN}} markers)
  *   - Token replacement in all .xml/.rels files inside the zip
  *   - Re-packages and returns a Blob for download
  *
@@ -383,7 +383,7 @@ export async function applyTokensToBuffer(
 
 /** Fetches the FA template, fills tokens, returns { blob, filename } for download. */
 export async function generateFa(input: FaInputs): Promise<{ blob: Blob; filename: string }> {
-  const res = await fetch('/templates/fa-template.docx');
+  const res = await fetch('/templates/fa-template-v2.7.26.docx');
   if (!res.ok) throw new Error(`Template fetch failed: ${res.status}`);
   const arrayBuffer = await res.arrayBuffer();
 
