@@ -61,6 +61,14 @@ export interface FaInputs {
   owners: FaOwner[];
   // Guarantors
   guarantors: FaGuarantor[];
+  // Parent DRA (only relevant when generating standing addendums via a DRA-scoped
+  // template). Populated by the FA Generator when the user picks a DRA.
+  dra?: {
+    name:            string;
+    signatoryEntity: string | null;  // "parent company" that signed the DRA
+    executionDate:   string | null;  // ISO YYYY-MM-DD
+    totalObligation: number;         // # of shops in the DRA
+  };
 }
 
 interface DateParts {
@@ -92,6 +100,26 @@ function fmtPct(raw: string): string {
   const v = (raw || '').trim();
   if (!v) return '';
   return /%\s*$/.test(v) ? v : v + '%';
+}
+
+/** Spell out an integer (1-99), returning e.g. "fifteen (15)". Falls back to
+ *  just the numeric string for anything outside 1-99 (rare for DRA shop counts). */
+function spellOutWithNumeric(n: number): string {
+  const abs = Math.abs(Math.floor(n));
+  if (abs < 1 || abs > 99) return String(n);
+  const ones = ['', 'one','two','three','four','five','six','seven','eight','nine',
+                'ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen',
+                'seventeen','eighteen','nineteen'];
+  const tens = ['', '', 'twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+  let words: string;
+  if (abs < 20) {
+    words = ones[abs];
+  } else {
+    const t = Math.floor(abs / 10);
+    const o = abs % 10;
+    words = o === 0 ? tens[t] : `${tens[t]}-${ones[o]}`;
+  }
+  return `${words} (${abs})`;
 }
 
 function esc(s: string): string {
@@ -249,6 +277,12 @@ function buildTokens(input: FaInputs): Record<string, string> {
     '{{OWNER_5_NAME}}':                owners[4].name || '[Owner 5]',
     '{{OWNER_5_INTEREST}}':            fmtPct(owners[4].pct) || '[%]',
     '{{FOOTER_ID}}':                   footerId,
+    // DRA-scoped tokens for standing addendum templates. Empty when no DRA
+    // is selected (standalone FA generation).
+    '{{DRA_NAME}}':                    input.dra?.name ?? '',
+    '{{DRA_ENTITY}}':                  input.dra?.signatoryEntity ?? '',
+    '{{DRA_EXECUTION_DATE_FULL}}':     input.dra?.executionDate ? formatDateFull(input.dra.executionDate).full : '',
+    '{{DRA_TOTAL_OBLIGATION_FULL}}':   input.dra?.totalObligation ? spellOutWithNumeric(input.dra.totalObligation) : '',
     '<w:p><w:r><w:t>{{GUARANTOR_SIGNATURE_BLOCKS}}</w:t></w:r></w:p>':   buildGuarantorBlocks(input.guarantors, dt.full),
     '<w:p><w:r><w:t>{{FRANCHISEE_SIGNATORY_BLOCKS}}</w:t></w:r></w:p>':  buildFranchiseeSignatoryBlocks(input.extraSignatories, dt.full),
   };

@@ -110,6 +110,9 @@ drasRouter.get('/', async (_req: Request, res: Response) => {
         fasExecuted: fas.length,
         currentlyOpen,
         outstanding: Math.max(0, totalObligation - fas.length),
+        // For addendum-template tokenization
+        executionDate:   (d.fields[FRANCHISEE_GROUPS.DRA_EXECUTION_DATE]   as string | undefined) ?? null,
+        signatoryEntity: (d.fields[FRANCHISEE_GROUPS.DRA_SIGNATORY_ENTITY] as string | undefined) ?? null,
       };
     })
     // Hide records without a Total Obligation set (PUB Corp. etc).

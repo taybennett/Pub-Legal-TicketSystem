@@ -262,6 +262,9 @@ export const FRANCHISEE_GROUPS = {
   TOTAL_OBLIGATION:    'fldMNFbAZFWW2Qxmo', // number
   TERM_END_DATE:       'fldHCqWgN1erPNlum', // date (ISO)
   DRA_FILE:            'fldMpQLFrYFqdvzeZ', // multipleAttachments
+  // Feeds tokens in standing addendum templates (2026-07-04)
+  DRA_EXECUTION_DATE:  'fldxn6Xi6A5sTLcNq', // date (ISO) — when the parent DRA was signed
+  DRA_SIGNATORY_ENTITY: 'fldgikBfafPaIqxkS', // singleLineText — "parent company" that signed the DRA
   YEAR_2025:           'fldOoeQdmLQ1Mj2QQ',
   YEAR_2026:           'flddhuu1RRDQikY9d',
   YEAR_2027:           'fldTV31CQyzC13J3f',

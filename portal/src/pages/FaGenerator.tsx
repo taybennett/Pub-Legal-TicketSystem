@@ -2,7 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError, fileProxyUrl } from '../api/client';
 import { downloadBlob, generateFa, generateExecutionPackage, type AddendumTemplate, type FaInputs, type FaOwner, type FaSignatory, type FaGuarantor } from '../lib/faTemplate';
 
-interface DraSummary { id: string; name: string; totalObligation: number }
+interface DraSummary {
+  id: string;
+  name: string;
+  totalObligation: number;
+  executionDate:   string | null;
+  signatoryEntity: string | null;
+}
 interface StandingAddendum {
   id: string;
   name: string;
@@ -95,6 +101,8 @@ export function FaGenerator() {
     });
   }
 
+  const selectedDra = draList.find(d => d.id === selectedDraId) ?? null;
+
   const addendumsToBundle: AddendumTemplate[] = addendums
     .filter(a => includeAddendumIds.has(a.id) && a.file[0])
     .map(a => ({
@@ -132,6 +140,12 @@ export function FaGenerator() {
         noticeLine1, noticeLine2, noticeLine3,
         owners:     owners.filter(o => o.name.trim()),
         guarantors: guarantors.filter(g => g.name.trim()),
+        dra: selectedDra ? {
+          name:            selectedDra.name,
+          signatoryEntity: selectedDra.signatoryEntity,
+          executionDate:   selectedDra.executionDate,
+          totalObligation: selectedDra.totalObligation,
+        } : undefined,
       };
       let blob: Blob;
       let filename: string;
