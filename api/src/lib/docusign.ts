@@ -158,18 +158,41 @@ function buildAnchor(r: EnvelopeRecipient): string {
   return r.role;
 }
 
+/**
+ * Extract a useful error message from a DocuSign SDK / Axios failure. The
+ * generic `err.message` is just "Request failed with status code 400"; the
+ * actual DocuSign response body has an `errorCode` and `message` we can
+ * surface to the operator.
+ */
+function unwrapDocusignError(err: unknown, action: string): Error {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const anyErr = err as any;
+  const body   = anyErr?.response?.body ?? anyErr?.response?.data ?? null;
+  const code   = body?.errorCode ?? body?.error ?? '';
+  const detail = body?.message   ?? body?.error_description ?? '';
+  const status = anyErr?.response?.status ?? anyErr?.status ?? '';
+  const parts  = [action, status ? `HTTP ${status}` : '', code, detail].filter(Boolean);
+  const combined = parts.join(' — ');
+  logger.error({ err, body, code, detail, action }, 'DocuSign API error');
+  return new Error(combined || (err instanceof Error ? err.message : String(err)));
+}
+
 /** Send an envelope. Returns the DocuSign envelope UUID. */
 export async function sendEnvelope(input: CreateEnvelopeInput): Promise<{ envelopeId: string; status: string }> {
   const client = await getApiClient();
   const api = new docusign.EnvelopesApi(client);
   const accountId = config.DOCUSIGN_ACCOUNT_ID!;
   const def = buildEnvelopeDefinition(input);
-  const result = await api.createEnvelope(accountId, { envelopeDefinition: def });
-  logger.info({ envelopeId: result.envelopeId, status: result.status, subject: input.subject }, 'DocuSign envelope sent');
-  return {
-    envelopeId: result.envelopeId ?? '',
-    status:     result.status ?? 'sent',
-  };
+  try {
+    const result = await api.createEnvelope(accountId, { envelopeDefinition: def });
+    logger.info({ envelopeId: result.envelopeId, status: result.status, subject: input.subject }, 'DocuSign envelope sent');
+    return {
+      envelopeId: result.envelopeId ?? '',
+      status:     result.status ?? 'sent',
+    };
+  } catch (err) {
+    throw unwrapDocusignError(err, 'createEnvelope');
+  }
 }
 
 /** Query envelope status. */
@@ -177,12 +200,16 @@ export async function getEnvelope(envelopeId: string): Promise<{ status: string;
   const client = await getApiClient();
   const api = new docusign.EnvelopesApi(client);
   const accountId = config.DOCUSIGN_ACCOUNT_ID!;
-  const env = await api.getEnvelope(accountId, envelopeId, {});
-  return {
-    status:          env.status ?? 'unknown',
-    statusChangedAt: env.statusChangedDateTime ?? undefined,
-    completedAt:     env.completedDateTime ?? undefined,
-  };
+  try {
+    const env = await api.getEnvelope(accountId, envelopeId, {});
+    return {
+      status:          env.status ?? 'unknown',
+      statusChangedAt: env.statusChangedDateTime ?? undefined,
+      completedAt:     env.completedDateTime ?? undefined,
+    };
+  } catch (err) {
+    throw unwrapDocusignError(err, 'getEnvelope');
+  }
 }
 
 /** Verify configuration + JWT auth without sending an envelope. */
