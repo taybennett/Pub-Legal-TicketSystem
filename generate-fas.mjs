@@ -391,7 +391,12 @@ async function generateOne(input, templateBuffer) {
     let content = dec.decode(bytes);
     let changed = false;
     for (const [bareToken, blockXml] of blockTokens) {
-      const paraRegex = new RegExp(`<w:p\\b[^>]*>[\\s\\S]*?${reEscape(bareToken)}[\\s\\S]*?</w:p>`, 'g');
+      // Negative-lookahead middle so we don't chew across </w:p> boundaries
+      // and vaporize every preceding paragraph.
+      const paraRegex = new RegExp(
+        `<w:p\\b[^>]*>(?:(?!</w:p>)[\\s\\S])*?${reEscape(bareToken)}(?:(?!</w:p>)[\\s\\S])*?</w:p>`,
+        'g',
+      );
       const newContent = content.replace(paraRegex, blockXml);
       if (newContent !== content) { content = newContent; changed = true; }
     }

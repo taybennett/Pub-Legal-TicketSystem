@@ -379,11 +379,16 @@ export async function applyTokensToBuffer(
     let changed = false;
     // BLOCK tokens FIRST — swap the whole paragraph so the inline pass
     // never sees the token still wrapped in a stray <w:t>.
+    //
+    // The middle-content matcher uses a negative lookahead so it CAN'T
+    // cross a </w:p> boundary. Without this guard, the regex greedily
+    // consumes from the first <w:p ...> in the document all the way to
+    // the token paragraph and replaces that whole span — wiping every
+    // preceding page.
     for (const [bareToken, blockXml] of blockTokens) {
-      // <w:p ...> [any content] TOKEN [any content] </w:p>
-      // Non-greedy so we match the smallest enclosing paragraph.
+      // <w:p ...> [chars, no </w:p>] TOKEN [chars, no </w:p>] </w:p>
       const paraRegex = new RegExp(
-        `<w:p\\b[^>]*>[\\s\\S]*?${reEscape(bareToken)}[\\s\\S]*?</w:p>`,
+        `<w:p\\b[^>]*>(?:(?!</w:p>)[\\s\\S])*?${reEscape(bareToken)}(?:(?!</w:p>)[\\s\\S])*?</w:p>`,
         'g',
       );
       const newContent = content.replace(paraRegex, blockXml);
