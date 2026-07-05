@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError, fileProxyUrl } from '../api/client';
 import { downloadBlob, generateFa, generateExecutionPackage, type AddendumTemplate, type FaInputs, type FaOwner, type FaSignatory, type FaGuarantor } from '../lib/faTemplate';
+import { DocusignSendModal, type DocusignDocInput, type DocusignDocumentType } from '../components/DocusignSendModal';
 
 interface DraSummary {
   id: string;
@@ -69,6 +70,11 @@ export function FaGenerator() {
   const [busy, setBusy]       = useState(false);
   const [status, setStatus]   = useState<string | null>(null);
   const [error, setError]     = useState<string | null>(null);
+
+  // Last-generated docs held in state so the DocuSign modal can send them.
+  const [lastDocs, setLastDocs] = useState<DocusignDocInput[] | null>(null);
+  const [lastFaId, setLastFaId] = useState<string | null>(null);
+  const [showDocusignModal, setShowDocusignModal] = useState(false);
 
   // DRA selector + standing addendums callout
   const [draList, setDraList] = useState<DraSummary[]>([]);
@@ -150,11 +156,13 @@ export function FaGenerator() {
       let blob: Blob;
       let filename: string;
       let statusMsg: string;
+      let docsForDocusign: DocusignDocInput[];
       if (addendumsToBundle.length > 0) {
         setStatus(`Filling FA + ${addendumsToBundle.length} addendum${addendumsToBundle.length === 1 ? '' : 's'}…`);
         const pkg = await generateExecutionPackage(input, addendumsToBundle);
         blob = pkg.blob;
         filename = pkg.filename;
+        docsForDocusign = pkg.documents.map(d => ({ name: d.filename, blob: d.blob }));
         const failed = pkg.entries.filter(e => !e.ok);
         statusMsg = failed.length === 0
           ? `✓ Generated ${filename} (${pkg.entries.length} documents: FA + ${addendumsToBundle.length} addendum${addendumsToBundle.length === 1 ? '' : 's'}).`
@@ -163,6 +171,7 @@ export function FaGenerator() {
         const fa = await generateFa(input);
         blob = fa.blob;
         filename = fa.filename;
+        docsForDocusign = [{ name: fa.filename, blob: fa.blob }];
         statusMsg = `✓ Generated ${filename} · draft saved to FA Tracker. Upload the executed copy from the shop's FA tab once signed.`;
       }
 
@@ -170,11 +179,16 @@ export function FaGenerator() {
       const draft: DraftPayload = {
         entity, shopName, shopNumber, execDate, signatoryName,
       };
-      await api.post('/fa-trackers', draft);
+      const draftResponse = await api.post<{ fa: { id: string } }>('/fa-trackers', draft);
 
       setStatus('Downloading…');
       downloadBlob(blob, filename);
       setStatus(statusMsg);
+
+      // Hold the generated docs + FA record id so the DocuSign send button
+      // downstream can hand them off to the send modal.
+      setLastDocs(docsForDocusign);
+      setLastFaId(draftResponse.fa.id);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : (err as Error).message ?? 'Generation failed');
       setStatus(null);
@@ -406,10 +420,36 @@ export function FaGenerator() {
               ? `Generate execution package (.zip) — FA + ${addendumsToBundle.length} addendum${addendumsToBundle.length === 1 ? '' : 's'}`
               : 'Generate FA'}
           </button>
+          {lastDocs && !busy && (
+            <button
+              className="btn-primary"
+              type="button"
+              style={{ marginLeft: '0.75rem', background: '#5b3a99' }}
+              onClick={() => setShowDocusignModal(true)}
+            >
+              📧 Send via DocuSign
+            </button>
+          )}
           {status && <span className="fa-status">{status}</span>}
           {error  && <span className="fa-status fa-status--err">{error}</span>}
         </div>
       </form>
+
+      {showDocusignModal && lastDocs && (
+        <DocusignSendModal
+          onClose={() => setShowDocusignModal(false)}
+          onSent={(envelopeId) => {
+            setStatus(`✓ Envelope sent (${envelopeId}). Track status on the Envelopes page.`);
+            setShowDocusignModal(false);
+          }}
+          documents={lastDocs}
+          documentType={(addendumsToBundle.length > 0 ? 'Franchise Agreement Package' : 'Franchise Agreement') as DocusignDocumentType}
+          defaultSubject={`${shopName} — Franchise Agreement${addendumsToBundle.length > 0 ? ' + Standing Addendums' : ''}`}
+          relatedFaId={lastFaId ?? undefined}
+          initialFranchisee={{ name: signatoryName, email: opEmail || '' }}
+          initialGuarantors={guarantors.filter(g => g.name.trim()).map(g => ({ name: g.name, email: '' }))}
+        />
+      )}
     </div>
   );
 }

@@ -376,14 +376,22 @@ export interface AddendumTemplate {
 export async function generateExecutionPackage(
   input:     FaInputs,
   addendums: AddendumTemplate[],
-): Promise<{ blob: Blob; filename: string; entries: Array<{ name: string; filename: string; ok: boolean; error?: string }> }> {
+): Promise<{
+  blob:      Blob;
+  filename:  string;
+  entries:   Array<{ name: string; filename: string; ok: boolean; error?: string }>;
+  /** Individual filled documents in the order they were added to the zip — safe to hand to DocuSign one-by-one. */
+  documents: Array<{ name: string; filename: string; blob: Blob }>;
+}> {
   const bundle = new JSZip();
   const entries: Array<{ name: string; filename: string; ok: boolean; error?: string }> = [];
+  const documents: Array<{ name: string; filename: string; blob: Blob }> = [];
 
   // 1) The FA itself
   const fa = await generateFa(input);
   bundle.file(fa.filename, fa.blob);
   entries.push({ name: 'Franchise Agreement', filename: fa.filename, ok: true });
+  documents.push({ name: 'Franchise Agreement', filename: fa.filename, blob: fa.blob });
 
   // 2) Each standing addendum with a template
   for (const a of addendums) {
@@ -397,6 +405,7 @@ export async function generateExecutionPackage(
       const outName = `${safeFilenamePart(input.shopName)}-${cleanName}.docx`;
       bundle.file(outName, filled);
       entries.push({ name: a.name, filename: outName, ok: true });
+      documents.push({ name: a.name, filename: outName, blob: filled });
     } catch (e) {
       entries.push({
         name: a.name,
@@ -409,7 +418,7 @@ export async function generateExecutionPackage(
 
   const zipName = `${safeFilenamePart(input.shopName)}-${safeFilenamePart(input.entity)}-Execution-Package.zip`;
   const blob = await bundle.generateAsync({ type: 'blob', compression: 'DEFLATE' });
-  return { blob, filename: zipName, entries };
+  return { blob, filename: zipName, entries, documents };
 }
 
 /** Trigger a download of the generated blob. */
