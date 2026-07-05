@@ -29,6 +29,14 @@ export const docusignWebhookRouter = Router();
 docusignWebhookRouter.use(express.json({ limit: '50mb', type: ['application/json'] }));
 docusignWebhookRouter.use(express.text({ limit: '50mb', type: ['application/xml', 'text/xml'] }));
 
+// GET /docusign/health — verify env vars + JWT auth without sending an envelope.
+// Public (no auth) so it's easy to hit from a browser to smoke-test the setup.
+// The endpoint only reveals a boolean + error message; no credentials leak.
+docusignWebhookRouter.get('/health', async (_req: Request, res: Response) => {
+  const result = await docusignLib.healthCheck();
+  res.json(result);
+});
+
 docusignWebhookRouter.post('/webhook', async (req: Request, res: Response) => {
   const hmacKey = config.DOCUSIGN_WEBHOOK_HMAC_KEY;
   if (!hmacKey) {
@@ -77,12 +85,6 @@ docusignRouter.use(requireAuth, requireAdmin);
 // consent. There's nothing to do; just show a success page.
 docusignRouter.get('/callback', (_req: Request, res: Response) => {
   res.status(200).send('<html><body><h2>DocuSign consent granted.</h2><p>You can close this tab.</p></body></html>');
-});
-
-// GET /docusign/health — verify env vars + JWT auth without sending an envelope.
-docusignRouter.get('/health', async (_req: Request, res: Response) => {
-  const result = await docusignLib.healthCheck();
-  res.json(result);
 });
 
 const recipientSchema = z.object({
