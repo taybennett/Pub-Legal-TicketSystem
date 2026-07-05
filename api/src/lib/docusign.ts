@@ -185,6 +185,28 @@ export async function getEnvelope(envelopeId: string): Promise<{ status: string;
   };
 }
 
+/** Verify configuration + JWT auth without sending an envelope. */
+export async function healthCheck(): Promise<{ configured: boolean; jwtWorks: boolean; error?: string }> {
+  const missing: string[] = [];
+  if (!config.DOCUSIGN_INTEGRATION_KEY)  missing.push('DOCUSIGN_INTEGRATION_KEY');
+  if (!config.DOCUSIGN_USER_ID)          missing.push('DOCUSIGN_USER_ID');
+  if (!config.DOCUSIGN_ACCOUNT_ID)       missing.push('DOCUSIGN_ACCOUNT_ID');
+  if (!config.DOCUSIGN_BASE_URL)         missing.push('DOCUSIGN_BASE_URL');
+  if (!config.DOCUSIGN_RSA_PRIVATE_KEY)  missing.push('DOCUSIGN_RSA_PRIVATE_KEY');
+  if (!config.DOCUSIGN_WEBHOOK_HMAC_KEY) missing.push('DOCUSIGN_WEBHOOK_HMAC_KEY');
+  if (missing.length > 0) {
+    return { configured: false, jwtWorks: false, error: `Missing env vars: ${missing.join(', ')}` };
+  }
+  // Bypass the token cache so we exercise the full JWT grant path.
+  cachedAccessToken = null;
+  try {
+    await getAccessToken();
+    return { configured: true, jwtWorks: true };
+  } catch (err) {
+    return { configured: true, jwtWorks: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 /** Download the fully-executed combined PDF for a completed envelope. */
 export async function downloadSignedPdf(envelopeId: string): Promise<Buffer> {
   const client = await getApiClient();

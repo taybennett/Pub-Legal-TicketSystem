@@ -79,6 +79,12 @@ docusignRouter.get('/callback', (_req: Request, res: Response) => {
   res.status(200).send('<html><body><h2>DocuSign consent granted.</h2><p>You can close this tab.</p></body></html>');
 });
 
+// GET /docusign/health — verify env vars + JWT auth without sending an envelope.
+docusignRouter.get('/health', async (_req: Request, res: Response) => {
+  const result = await docusignLib.healthCheck();
+  res.json(result);
+});
+
 const recipientSchema = z.object({
   name:  z.string().min(1).max(200),
   email: z.string().email(),
