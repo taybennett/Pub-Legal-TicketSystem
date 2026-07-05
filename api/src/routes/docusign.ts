@@ -17,7 +17,11 @@ import { config } from '../config.js';
 import { requireAdmin, requireAuth } from '../auth/middleware.js';
 import * as envelopes from '../airtable/docusignEnvelopes.js';
 import * as docusignLib from '../lib/docusign.js';
-import { DOCUSIGN_ENVELOPES } from '../airtable/tables.js';
+import * as faTracker from '../airtable/faTracker.js';
+import * as leases from '../airtable/leases.js';
+import * as dras from '../airtable/dras.js';
+import { airtable } from '../airtable/client.js';
+import { DOCUSIGN_ENVELOPES, FA_TRACKER, TABLE } from '../airtable/tables.js';
 import { logger } from '../util/logger.js';
 import { BadRequestError, NotFoundError } from '../util/errors.js';
 
@@ -189,17 +193,67 @@ async function syncEnvelopeStatus(envelopeId: string): Promise<{ status: string;
   }
   await envelopes.updateById(record.id, patch);
 
-  // On first transition to Completed, download the signed PDF + attach
+  // On first transition to Completed, download the signed PDF + propagate.
+  // The signed PDF lands on THREE places:
+  //   1. The DocuSign Envelopes tracker record (always)
+  //   2. Every linked source record (FA Tracker / Lease / DRA) — the file
+  //      shows up on the shop's Franchise Agreement / Real Estate / DRA tab
+  //   3. For FA Tracker records specifically, we also set Status=Active and
+  //      Execution Date=envelope completedAt. PUB Franchisor signs last, so
+  //      completedAt IS the Effective Date per the FA template.
   if (normalizedStatus === 'Completed' && !alreadyCompleted) {
     try {
       const pdf = await docusignLib.downloadSignedPdf(envelopeId);
-      const filename = safeFilename(String(record.fields[DOCUSIGN_ENVELOPES.SUBJECT] ?? 'Envelope')) + '-Signed.pdf';
-      await envelopes.attachSignedPdf(record.id, {
+      const subject  = String(record.fields[DOCUSIGN_ENVELOPES.SUBJECT] ?? 'Envelope');
+      const filename = safeFilename(subject) + '-Signed.pdf';
+      const file = {
         filename,
         contentType: 'application/pdf',
         base64:      pdf.toString('base64'),
-      });
+      };
+
+      // 1. Envelope tracker record
+      await envelopes.attachSignedPdf(record.id, file);
       logger.info({ envelopeId, filename }, 'Signed PDF attached to envelope record');
+
+      const faLinks    = (record.fields[DOCUSIGN_ENVELOPES.RELATED_FA]    as string[] | undefined) ?? [];
+      const leaseLinks = (record.fields[DOCUSIGN_ENVELOPES.RELATED_LEASE] as string[] | undefined) ?? [];
+      const draLinks   = (record.fields[DOCUSIGN_ENVELOPES.RELATED_DRA]   as string[] | undefined) ?? [];
+
+      // 2 + 3. FA Tracker: attach + flip Status/ExecDate
+      for (const faId of faLinks) {
+        try {
+          await faTracker.attachFile(faId, file);
+          const execDate = (live.completedAt ?? new Date().toISOString()).slice(0, 10);
+          await airtable.update('LEGAL', TABLE.FA_TRACKER, faId, {
+            [FA_TRACKER.STATUS]:         'Active',
+            [FA_TRACKER.EXECUTION_DATE]: execDate,
+          }, true);
+          logger.info({ envelopeId, faId, execDate }, 'Signed PDF attached to FA Tracker record and Status flipped to Active');
+        } catch (err) {
+          logger.error({ err, envelopeId, faId }, 'Failed to attach signed PDF / update FA Tracker record');
+        }
+      }
+
+      // 2. Leases
+      for (const leaseId of leaseLinks) {
+        try {
+          await leases.attachFile(leaseId, file);
+          logger.info({ envelopeId, leaseId }, 'Signed PDF attached to Lease record');
+        } catch (err) {
+          logger.error({ err, envelopeId, leaseId }, 'Failed to attach signed PDF to Lease record');
+        }
+      }
+
+      // 2. DRAs
+      for (const draId of draLinks) {
+        try {
+          await dras.attachDraFile(draId, file);
+          logger.info({ envelopeId, draId }, 'Signed PDF attached to DRA record');
+        } catch (err) {
+          logger.error({ err, envelopeId, draId }, 'Failed to attach signed PDF to DRA record');
+        }
+      }
     } catch (err) {
       logger.error({ err, envelopeId }, 'Failed to download/attach signed PDF');
     }
