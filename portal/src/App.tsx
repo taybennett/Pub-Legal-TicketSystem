@@ -11,6 +11,7 @@ import { FaGenerator } from './pages/FaGenerator';
 import { Compliance } from './pages/Compliance';
 import { Reports } from './pages/Reports';
 import { Envelopes } from './pages/Envelopes';
+import { DocusignTest } from './pages/DocusignTest';
 
 function Loading() {
   return <div className="state state--loading">Loading…</div>;
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="compliance" element={<Compliance />} />
           <Route path="reports" element={<Reports />} />
           <Route path="envelopes" element={<Envelopes />} />
+          <Route path="docusign-test" element={<DocusignTest />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
