@@ -6,7 +6,8 @@ import * as dras from '../airtable/dras.js';
 import * as draDocuments from '../airtable/draDocuments.js';
 import * as faTracker from '../airtable/faTracker.js';
 import * as pipeline from '../airtable/pipeline.js';
-import { DRA_DOCUMENTS, FA_TRACKER, FRANCHISEE_GROUPS, type DraDocumentType } from '../airtable/tables.js';
+import * as standingAddendums from '../airtable/standingAddendums.js';
+import { DRA_DOCUMENTS, FA_TRACKER, FRANCHISEE_GROUPS, STANDING_ADDENDUMS, type DraDocumentType } from '../airtable/tables.js';
 import { requireAdmin, requireAuth } from '../auth/middleware.js';
 import { lifecycleStageFromPipelineStatus } from '../lib/lifecycleFromPipeline.js';
 import { logger } from '../util/logger.js';
@@ -183,6 +184,22 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
       fas: faList,
       documents: docs.map(shapeDocument),
     },
+  });
+});
+
+// ── GET /dras/:id/standing-addendums — list the required-with-FA addendums
+//    for this DRA. Consumed by the FA Generator page to render its callout. ───
+drasRouter.get('/:id/standing-addendums', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const rows = await standingAddendums.listForDra(id);
+  res.json({
+    standingAddendums: rows.map(r => ({
+      id:          r.id,
+      name:        (r.fields[STANDING_ADDENDUMS.NAME]        as string | undefined) ?? '',
+      description: (r.fields[STANDING_ADDENDUMS.DESCRIPTION] as string | undefined) ?? '',
+      notes:       (r.fields[STANDING_ADDENDUMS.NOTES]       as string | undefined) ?? '',
+      file:        (r.fields[STANDING_ADDENDUMS.TEMPLATE_FILE] as { url: string; filename: string }[] | undefined) ?? [],
+    })),
   });
 });
 

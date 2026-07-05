@@ -29,6 +29,7 @@ export const TABLE = {
   FRANCHISEE_GROUPS:  'tblBh34FJtZ8J7Ih8',
   FRANCHISEE_ENTITIES:'tblK4Y3zOQfJvpgtj',
   DRA_DOCUMENTS:      'tblvQUgkRAvsGsdCT', // child documents to a DRA — Amendments, Addendums, Other
+  STANDING_ADDENDUMS: 'tblbq0Z9NQ2TP4SY2', // per-DRA required-with-FA documents (Seeded Capital, Fresh Dining, Silent Investor)
   // PUB Development
   PIPELINE:           'tbllofgQwUSIxkMl6',
 } as const;
@@ -295,6 +296,16 @@ export type DraDocumentType =
   | 'Exhibit' | 'Side Letter' | 'Guaranty' | 'Assignment'
   | 'Termination Agreement' | 'Memorandum'
   | 'Other';
+
+// ── STANDING ADDENDUMS (documents required contemporaneously with an FA
+//    under a specific DRA — e.g., Seeded Capital FA Addendum) ───
+export const STANDING_ADDENDUMS = {
+  NAME:          'fldi0WWbX36f52p9g', // primary, singleLineText
+  DESCRIPTION:   'fld53MTLOAosspPtR', // multilineText
+  APPLIES_TO:    'fldhKLDkSTRrb4Djs', // multipleRecordLinks → Franchisee Groups
+  NOTES:         'flducN8KRBfLu7uBg', // multilineText — optional execution instructions
+  TEMPLATE_FILE: 'fldeeSbKl7kca4Yt9', // multipleAttachments — .docx/.pdf template
+} as const;
 
 // ── FRANCHISEE ENTITIES ─────────────────────────────────────────────
 export const FRANCHISEE_ENTITIES = {

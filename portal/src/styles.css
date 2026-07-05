@@ -213,6 +213,31 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .slot-add-btn:hover { border-color: var(--black); color: var(--black); }
 .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
 
+/* ── FA Generator: DRA picker + Standing Addendums callout ─── */
+.fa-dra-picker { display: flex; flex-direction: column; gap: 0.4rem;
+  padding: 0.9rem 1rem; margin-bottom: 1.25rem;
+  background: #fafafa; border: 1px solid var(--border); }
+.fa-dra-picker-label { font-weight: 600; font-size: 0.85rem; }
+.fa-dra-picker-select { padding: 0.5rem 0.75rem; border: 1px solid var(--border);
+  background: var(--white); font-size: 0.9rem; }
+.fa-dra-picker-select:focus { outline: none; border-color: var(--black); }
+
+.fa-addendums-callout { background: #fffbe6; border: 2px solid #e6c95c;
+  padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+.fa-addendums-callout-title { font-weight: 700; font-size: 0.95rem; color: #6a5a1a;
+  margin-bottom: 0.75rem; }
+.fa-addendums-list { list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 0.85rem; }
+.fa-addendums-list > li { padding: 0.7rem 0.9rem; background: var(--white);
+  border: 1px solid #e6c95c; }
+.fa-addendum-name { font-weight: 600; font-size: 0.92rem; margin-bottom: 0.25rem; }
+.fa-addendum-desc { font-size: 0.83rem; color: #4a4a4a; margin-bottom: 0.25rem; }
+.fa-addendum-notes { font-size: 0.78rem; color: #6b6b6b; margin-bottom: 0.35rem; }
+.fa-addendum-download { display: inline-block; margin-top: 0.35rem;
+  color: var(--black); font-size: 0.83rem; font-weight: 600;
+  text-decoration: underline; }
+.fa-addendum-download:hover { color: #5a5a5a; }
+
 /* ── Reports page ─────────────────────────────────────── */
 .reports-page { max-width: 1400px; }
 .reports-nlq { display: flex; align-items: center; gap: 0.6rem;

@@ -1,6 +1,15 @@
-import { useState, type FormEvent } from 'react';
-import { api, ApiError } from '../api/client';
+import { useEffect, useState, type FormEvent } from 'react';
+import { api, ApiError, fileProxyUrl } from '../api/client';
 import { downloadBlob, generateFa, type FaInputs, type FaOwner, type FaSignatory, type FaGuarantor } from '../lib/faTemplate';
+
+interface DraSummary { id: string; name: string; totalObligation: number }
+interface StandingAddendum {
+  id: string;
+  name: string;
+  description: string;
+  notes: string;
+  file: { url: string; filename: string }[];
+}
 
 interface DraftPayload {
   entity:      string;
@@ -54,6 +63,24 @@ export function FaGenerator() {
   const [busy, setBusy]       = useState(false);
   const [status, setStatus]   = useState<string | null>(null);
   const [error, setError]     = useState<string | null>(null);
+
+  // DRA selector + standing addendums callout
+  const [draList, setDraList] = useState<DraSummary[]>([]);
+  const [selectedDraId, setSelectedDraId] = useState<string>('');
+  const [addendums, setAddendums] = useState<StandingAddendum[]>([]);
+
+  useEffect(() => {
+    api.get<{ dras: DraSummary[] }>('/dras')
+      .then(r => setDraList(r.dras.filter(d => d.totalObligation > 0)))
+      .catch(() => setDraList([]));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedDraId) { setAddendums([]); return; }
+    api.get<{ standingAddendums: StandingAddendum[] }>(`/dras/${selectedDraId}/standing-addendums`)
+      .then(r => setAddendums(r.standingAddendums))
+      .catch(() => setAddendums([]));
+  }, [selectedDraId]);
 
   function patchExtraSig(i: number, patch: Partial<FaSignatory>) {
     setExtraSignatories(prev => prev.map((s, idx) => idx === i ? { ...s, ...patch } : s));
@@ -115,6 +142,48 @@ export function FaGenerator() {
         A draft record is saved to the FA Tracker; upload the fully-executed copy from
         the shop's FA tab once all parties have signed.
       </p>
+
+      <div className="fa-dra-picker">
+        <label className="fa-dra-picker-label">
+          DRA / Franchisee Group <span className="muted">(optional — surfaces required standing addendums)</span>
+        </label>
+        <select
+          value={selectedDraId}
+          onChange={e => setSelectedDraId(e.target.value)}
+          className="fa-dra-picker-select"
+        >
+          <option value="">— None / Standalone FA —</option>
+          {draList.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+      </div>
+
+      {addendums.length > 0 && (
+        <div className="fa-addendums-callout">
+          <div className="fa-addendums-callout-title">
+            ⚠ This FA requires {addendums.length === 1 ? 'the following document' : `${addendums.length} additional documents`} to be executed contemporaneously:
+          </div>
+          <ul className="fa-addendums-list">
+            {addendums.map(a => (
+              <li key={a.id}>
+                <div className="fa-addendum-name">{a.name}</div>
+                {a.description && <div className="fa-addendum-desc">{a.description}</div>}
+                {a.notes && <div className="fa-addendum-notes"><em>{a.notes}</em></div>}
+                {a.file[0] && (
+                  <a
+                    href={fileProxyUrl(a.file[0].url)}
+                    download={a.file[0].filename}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="fa-addendum-download"
+                  >
+                    ⬇ Download {a.file[0].filename}
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="fa-form">
 
