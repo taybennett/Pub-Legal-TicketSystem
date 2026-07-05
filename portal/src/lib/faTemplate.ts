@@ -247,6 +247,9 @@ function buildTokens(input: FaInputs): Record<string, string> {
     '{{FRANCHISEE_STATE}}':            input.state,
     '{{ENTITY_TYPE}}':                 input.entityType,
     '{{SHOP_NUMBER}}':                 input.shopNumber,
+    // Shop name is available under both conventions so authors can use either.
+    '{{SHOP_NAME}}':                   input.shopName,
+    '{{Shop Name}}':                   input.shopName,
     '{{SHOP_ADDRESS_LINE1}}':          input.addr1,
     '{{SHOP_ADDRESS_LINE2}}':          input.addr2,
     '{{SHOP_ADDRESS_INLINE}}':         addrInline,
