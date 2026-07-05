@@ -235,7 +235,7 @@ export const FA_TRACKER = {
   ATTORNEY:       'fldw6RH9XpWFEdZVj', // singleLineText
   FILE:           'fld7KovhoSqAcMtIK', // multipleAttachments
   SHOP_NAME:      'fldw0mVNvR0otKOuX', // singleLineText
-  TITLE:          'fldGyEBZB08oqRt5n', // computed primary — e.g. "Bagel Bros, LLC — Lincoln Park (Chicago) (#2295)"
+  TITLE:          'fldGyEBZB08oqRt5n', // primary — formula: {Franchisee Entity} & " — " & {Shop Name} & " (#" & {Shop Number} & ")"
   DRA_LINK:       'fldAXWntc1wHmmMpn', // multipleRecordLinks → Franchisee Groups (DRAs). Source of truth.
   // Multi-document hierarchy (added 2026-07-04) — mirrors the Leases pattern
   DOCUMENT_TYPE:    'fld9wFo2Q7JnxcfVj', // singleSelect — see FaDocumentType for the full list
