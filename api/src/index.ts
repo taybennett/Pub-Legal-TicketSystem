@@ -19,6 +19,7 @@ import { leasesRouter } from './routes/leases.js';
 import { complianceRouter } from './routes/compliance.js';
 import { filesRouter } from './routes/files.js';
 import { reportsRouter } from './routes/reports.js';
+import { docusignRouter, docusignWebhookRouter } from './routes/docusign.js';
 
 const app = express();
 
@@ -51,6 +52,10 @@ app.use('/api/v1/locations',  faTrackersLocationRouter); // mounts /:id/fa-track
 app.use('/api/v1/compliance', complianceRouter);
 app.use('/api/v1/files',      filesRouter);
 app.use('/api/v1/reports',    reportsRouter);
+// DocuSign — webhook must mount first (public, no auth). The admin router
+// handles the authenticated /envelope endpoints.
+app.use('/api/v1/docusign', docusignWebhookRouter);
+app.use('/api/v1/docusign', docusignRouter);
 
 // Multer-specific error wrapper
 app.use(uploadErrorHandler);

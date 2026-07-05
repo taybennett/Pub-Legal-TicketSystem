@@ -18,6 +18,14 @@ const schema = z.object({
   NODE_ENV:                 z.enum(['development', 'production', 'test']).default('development'),
   PORT:                     z.string().default('8080').transform(Number),
   LOG_LEVEL:                z.enum(['fatal','error','warn','info','debug','trace']).default('info'),
+  // DocuSign — optional so the app boots without them; each envelope route
+  // fails fast with a clear error if any are missing.
+  DOCUSIGN_INTEGRATION_KEY:  z.string().optional(),
+  DOCUSIGN_USER_ID:          z.string().optional(),
+  DOCUSIGN_ACCOUNT_ID:       z.string().optional(),
+  DOCUSIGN_BASE_URL:         z.string().optional(),
+  DOCUSIGN_RSA_PRIVATE_KEY:  z.string().optional(),
+  DOCUSIGN_WEBHOOK_HMAC_KEY: z.string().optional(),
 });
 
 // Trim whitespace and CR/LF from all env vars — Windows .env saves often leave

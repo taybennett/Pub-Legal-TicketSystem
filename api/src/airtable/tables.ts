@@ -30,6 +30,7 @@ export const TABLE = {
   FRANCHISEE_ENTITIES:'tblK4Y3zOQfJvpgtj',
   DRA_DOCUMENTS:      'tblvQUgkRAvsGsdCT', // child documents to a DRA — Amendments, Addendums, Other
   STANDING_ADDENDUMS: 'tblbq0Z9NQ2TP4SY2', // per-DRA required-with-FA documents (Seeded Capital, Fresh Dining, Silent Investor)
+  DOCUSIGN_ENVELOPES: 'tblwFDUF9e9r9VIJf', // tracks every DocuSign envelope sent from the portal
   // PUB Development
   PIPELINE:           'tbllofgQwUSIxkMl6',
 } as const;
@@ -309,6 +310,29 @@ export const STANDING_ADDENDUMS = {
   NOTES:         'flducN8KRBfLu7uBg', // multilineText — optional execution instructions
   TEMPLATE_FILE: 'fldeeSbKl7kca4Yt9', // multipleAttachments — .docx/.pdf template
 } as const;
+
+// ── DOCUSIGN ENVELOPES (tracked send + receive state) ───
+export const DOCUSIGN_ENVELOPES = {
+  SUBJECT:          'fldQKkRWgR8mk5hQh', // primary, singleLineText
+  ENVELOPE_ID:      'fldAXlimsQgfR7Igz', // singleLineText — DocuSign UUID
+  STATUS:           'fldjI8zzEeCAk1TZ1', // singleSelect: Created|Sent|Delivered|Completed|Declined|Voided
+  DOCUMENT_TYPE:    'fldixNgWjdiyRsv9r', // singleSelect
+  RECIPIENTS:       'fldTCn0vveqGQLhg7', // multilineText — JSON
+  RELATED_LOCATION: 'fld02DfQe64GuoFlF', // multipleRecordLinks → Locations
+  RELATED_FA:       'fldrxjPxQ3Ke15qQG', // multipleRecordLinks → FA Tracker
+  RELATED_LEASE:    'fldzE0mz2Zsi940AO', // multipleRecordLinks → Leases
+  RELATED_DRA:      'fldd0nlgXEuyzlUb1', // multipleRecordLinks → Franchisee Groups
+  SENT_AT:          'fldyjSm7DykurgqRj', // dateTime
+  COMPLETED_AT:     'fldgeTFhQSenqd66h', // dateTime
+  SIGNED_DOCUMENTS: 'fldL088tr0SqJAs1o', // multipleAttachments — signed PDFs from DocuSign
+  NOTES:            'fldcd0AaGjltsxogO', // multilineText — audit log
+  SENT_BY:          'fldP5FTCEeCG3ZTL2', // singleLineText — portal user name
+} as const;
+
+export type DocusignEnvelopeStatus = 'Created' | 'Sent' | 'Delivered' | 'Completed' | 'Declined' | 'Voided';
+export type DocusignDocumentType =
+  | 'Franchise Agreement' | 'Franchise Agreement Package'
+  | 'Lease' | 'DRA' | 'Standing Addendum' | 'Other';
 
 // ── FRANCHISEE ENTITIES ─────────────────────────────────────────────
 export const FRANCHISEE_ENTITIES = {
