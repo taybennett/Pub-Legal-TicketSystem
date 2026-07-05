@@ -128,6 +128,24 @@ function esc(s: string): string {
 
 // ── Block builders (port of legacy buildGuarantorBlocks / buildFranchiseeSignatoryBlocks) ──
 
+/**
+ * Invisible white 1pt paragraph carrying a DocuSign anchor string. When the
+ * generated docx is sent through DocuSign, the SDK's anchor matcher finds
+ * the string in the PDF text stream and places a signature/date tab exactly
+ * where the paragraph is positioned. The paragraph renders as a hairline
+ * of blank space in wet-sign scenarios.
+ */
+function docusignAnchor(anchor: string): string {
+  return (
+    '<w:p>' +
+      '<w:r>' +
+        '<w:rPr><w:color w:val="FFFFFF"/><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr>' +
+        '<w:t>' + esc(anchor) + '</w:t>' +
+      '</w:r>' +
+    '</w:p>'
+  );
+}
+
 function buildGuarantorBlocks(guarantors: FaGuarantor[], execDateFull: string): string {
   const list = guarantors.length ? guarantors : [{ name: '[Guarantor Name]', pct: '' }];
   const noBorder =
@@ -137,7 +155,7 @@ function buildGuarantorBlocks(guarantors: FaGuarantor[], execDateFull: string): 
       '<w:bottom w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
       '<w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
     '</w:tcBorders>';
-  const cell = (g: FaGuarantor) => {
+  const cell = (g: FaGuarantor, idx: number) => {
     const pct = fmtPct(g.pct);
     const ownLine = pct
       ? '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t xml:space="preserve">Ownership: ' + esc(pct) + '</w:t></w:r></w:p>'
@@ -149,8 +167,12 @@ function buildGuarantorBlocks(guarantors: FaGuarantor[], execDateFull: string): 
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t xml:space="preserve">' + esc(g.name) + '</w:t></w:r></w:p>' +
         ownLine +
         '<w:p/>' +
+        // DocuSign anchor for THIS guarantor's signature.
+        docusignAnchor('\\sig_guarantor_' + idx + '\\') +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t>________________________________________</w:t></w:r></w:p>' +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t>[Signature]</w:t></w:r></w:p>' +
+        // DocuSign anchor for THIS guarantor's auto-date.
+        docusignAnchor('\\date_guarantor_' + idx + '\\') +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t xml:space="preserve">Date: ' + esc(execDateFull) + '</w:t></w:r></w:p>' +
         '<w:p/>' +
       '</w:tc>'
@@ -159,8 +181,9 @@ function buildGuarantorBlocks(guarantors: FaGuarantor[], execDateFull: string): 
   const emptyCell = '<w:tc><w:tcPr><w:tcW w:w="4500" w:type="dxa"/>' + noBorder + '</w:tcPr><w:p/></w:tc>';
   const rows: string[] = [];
   for (let i = 0; i < list.length; i += 2) {
-    const right = (i + 1 < list.length) ? cell(list[i + 1]) : emptyCell;
-    rows.push('<w:tr>' + cell(list[i]) + right + '</w:tr>');
+    // guarantor indices are 1-based to match \sig_guarantor_1\ / \sig_guarantor_2\ etc.
+    const right = (i + 1 < list.length) ? cell(list[i + 1], i + 2) : emptyCell;
+    rows.push('<w:tr>' + cell(list[i], i + 1) + right + '</w:tr>');
   }
   return (
     '<w:tbl>' +
@@ -188,9 +211,16 @@ function buildGuarantorBlocks(guarantors: FaGuarantor[], execDateFull: string): 
  */
 function buildFranchiseeSignatoryBlocks(extras: FaSignatory[], execDateFull: string): string {
   if (!extras.length) return '';
+  // Every extra franchisee-side signatory signs as the franchisee recipient
+  // (routing order 1). Since `anchorIgnoreIfNotPresent: true` is set on the
+  // tab config and each block emits `\sig_franchisee\` again, DocuSign
+  // places one signature tab per block — the franchisee sees a stack of
+  // tabs to sign, one per person listed here (typically B-2 Owner blocks).
   const group = (s: FaSignatory) => (
     // blank separator
     '<w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="4104"/></w:tabs><w:jc w:val="both"/><w:rPr><w:szCs w:val="22"/></w:rPr></w:pPr></w:p>' +
+    // DocuSign anchor at the top of THIS block.
+    docusignAnchor('\\sig_franchisee\\') +
     // By: ____ (underlined tab — produces the horizontal sig line)
     '<w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="4104"/></w:tabs><w:jc w:val="both"/><w:rPr><w:szCs w:val="22"/></w:rPr></w:pPr>' +
       '<w:r><w:rPr><w:szCs w:val="22"/></w:rPr><w:t>By:</w:t></w:r>' +
@@ -201,6 +231,8 @@ function buildFranchiseeSignatoryBlocks(extras: FaSignatory[], execDateFull: str
     // Title:
     '<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="360"/><w:tab w:val="right" w:pos="4104"/></w:tabs><w:jc w:val="both"/><w:rPr><w:szCs w:val="22"/></w:rPr></w:pPr>' +
       '<w:r><w:rPr><w:szCs w:val="22"/></w:rPr><w:tab/><w:t xml:space="preserve">Title: ' + esc(s.title) + '</w:t></w:r></w:p>' +
+    // DocuSign anchor for THIS block's auto-date.
+    docusignAnchor('\\date_franchisee\\') +
     // Date:
     '<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="360"/><w:tab w:val="right" w:pos="4104"/></w:tabs><w:ind w:firstLine="360"/><w:jc w:val="both"/><w:rPr><w:szCs w:val="22"/></w:rPr></w:pPr>' +
       '<w:r><w:rPr><w:szCs w:val="22"/></w:rPr><w:t xml:space="preserve">Date: ' + esc(execDateFull) + '</w:t></w:r></w:p>'
