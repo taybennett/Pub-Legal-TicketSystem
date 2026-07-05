@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError, fileProxyUrl } from '../api/client';
-import { downloadBlob, generateFa, type FaInputs, type FaOwner, type FaSignatory, type FaGuarantor } from '../lib/faTemplate';
+import { downloadBlob, generateFa, generateExecutionPackage, type AddendumTemplate, type FaInputs, type FaOwner, type FaSignatory, type FaGuarantor } from '../lib/faTemplate';
 
 interface DraSummary { id: string; name: string; totalObligation: number }
 interface StandingAddendum {
@@ -68,6 +68,7 @@ export function FaGenerator() {
   const [draList, setDraList] = useState<DraSummary[]>([]);
   const [selectedDraId, setSelectedDraId] = useState<string>('');
   const [addendums, setAddendums] = useState<StandingAddendum[]>([]);
+  const [includeAddendumIds, setIncludeAddendumIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     api.get<{ dras: DraSummary[] }>('/dras')
@@ -76,11 +77,31 @@ export function FaGenerator() {
   }, []);
 
   useEffect(() => {
-    if (!selectedDraId) { setAddendums([]); return; }
+    if (!selectedDraId) { setAddendums([]); setIncludeAddendumIds(new Set()); return; }
     api.get<{ standingAddendums: StandingAddendum[] }>(`/dras/${selectedDraId}/standing-addendums`)
-      .then(r => setAddendums(r.standingAddendums))
-      .catch(() => setAddendums([]));
+      .then(r => {
+        setAddendums(r.standingAddendums);
+        // Default-check every addendum that has a template file on record.
+        setIncludeAddendumIds(new Set(r.standingAddendums.filter(a => a.file[0]).map(a => a.id)));
+      })
+      .catch(() => { setAddendums([]); setIncludeAddendumIds(new Set()); });
   }, [selectedDraId]);
+
+  function toggleIncludeAddendum(id: string) {
+    setIncludeAddendumIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  const addendumsToBundle: AddendumTemplate[] = addendums
+    .filter(a => includeAddendumIds.has(a.id) && a.file[0])
+    .map(a => ({
+      name:             a.name,
+      templateUrl:      fileProxyUrl(a.file[0].url),
+      templateFilename: a.file[0].filename,
+    }));
 
   function patchExtraSig(i: number, patch: Partial<FaSignatory>) {
     setExtraSignatories(prev => prev.map((s, idx) => idx === i ? { ...s, ...patch } : s));
@@ -112,7 +133,24 @@ export function FaGenerator() {
         owners:     owners.filter(o => o.name.trim()),
         guarantors: guarantors.filter(g => g.name.trim()),
       };
-      const { blob, filename } = await generateFa(input);
+      let blob: Blob;
+      let filename: string;
+      let statusMsg: string;
+      if (addendumsToBundle.length > 0) {
+        setStatus(`Filling FA + ${addendumsToBundle.length} addendum${addendumsToBundle.length === 1 ? '' : 's'}…`);
+        const pkg = await generateExecutionPackage(input, addendumsToBundle);
+        blob = pkg.blob;
+        filename = pkg.filename;
+        const failed = pkg.entries.filter(e => !e.ok);
+        statusMsg = failed.length === 0
+          ? `✓ Generated ${filename} (${pkg.entries.length} documents: FA + ${addendumsToBundle.length} addendum${addendumsToBundle.length === 1 ? '' : 's'}).`
+          : `⚠ Generated ${filename} — ${pkg.entries.length - failed.length}/${pkg.entries.length} documents succeeded. Failed: ${failed.map(f => f.name).join(', ')}`;
+      } else {
+        const fa = await generateFa(input);
+        blob = fa.blob;
+        filename = fa.filename;
+        statusMsg = `✓ Generated ${filename} · draft saved to FA Tracker. Upload the executed copy from the shop's FA tab once signed.`;
+      }
 
       setStatus('Saving draft to FA Tracker…');
       const draft: DraftPayload = {
@@ -122,7 +160,7 @@ export function FaGenerator() {
 
       setStatus('Downloading…');
       downloadBlob(blob, filename);
-      setStatus(`✓ Generated ${filename} · draft saved to FA Tracker. Upload the executed copy from the shop's FA tab once signed.`);
+      setStatus(statusMsg);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : (err as Error).message ?? 'Generation failed');
       setStatus(null);
@@ -163,24 +201,43 @@ export function FaGenerator() {
             ⚠ This FA requires {addendums.length === 1 ? 'the following document' : `${addendums.length} additional documents`} to be executed contemporaneously:
           </div>
           <ul className="fa-addendums-list">
-            {addendums.map(a => (
-              <li key={a.id}>
-                <div className="fa-addendum-name">{a.name}</div>
-                {a.description && <div className="fa-addendum-desc">{a.description}</div>}
-                {a.notes && <div className="fa-addendum-notes"><em>{a.notes}</em></div>}
-                {a.file[0] && (
-                  <a
-                    href={fileProxyUrl(a.file[0].url)}
-                    download={a.file[0].filename}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="fa-addendum-download"
-                  >
-                    ⬇ Download {a.file[0].filename}
-                  </a>
-                )}
-              </li>
-            ))}
+            {addendums.map(a => {
+              const hasTemplate = !!a.file[0];
+              return (
+                <li key={a.id}>
+                  <div className="fa-addendum-row">
+                    {hasTemplate && (
+                      <label className="fa-addendum-check">
+                        <input
+                          type="checkbox"
+                          checked={includeAddendumIds.has(a.id)}
+                          onChange={() => toggleIncludeAddendum(a.id)}
+                        />
+                        <span>Include in execution package</span>
+                      </label>
+                    )}
+                    <div className="fa-addendum-name">{a.name}</div>
+                    {a.description && <div className="fa-addendum-desc">{a.description}</div>}
+                    {a.notes && <div className="fa-addendum-notes"><em>{a.notes}</em></div>}
+                    {hasTemplate ? (
+                      <a
+                        href={fileProxyUrl(a.file[0].url)}
+                        download={a.file[0].filename}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="fa-addendum-download"
+                      >
+                        ⬇ Download blank template ({a.file[0].filename})
+                      </a>
+                    ) : (
+                      <div className="fa-addendum-no-template muted">
+                        No template on file in Airtable — upload a tokenized .docx to the Standing Addendums record to enable auto-generation.
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -331,7 +388,9 @@ export function FaGenerator() {
 
         <div className="fa-actions">
           <button className="btn-primary" type="submit" disabled={busy}>
-            {busy ? 'Generating…' : 'Generate FA'}
+            {busy ? 'Generating…' : addendumsToBundle.length > 0
+              ? `Generate execution package (.zip) — FA + ${addendumsToBundle.length} addendum${addendumsToBundle.length === 1 ? '' : 's'}`
+              : 'Generate FA'}
           </button>
           {status && <span className="fa-status">{status}</span>}
           {error  && <span className="fa-status fa-status--err">{error}</span>}

@@ -237,6 +237,13 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
   color: var(--black); font-size: 0.83rem; font-weight: 600;
   text-decoration: underline; }
 .fa-addendum-download:hover { color: #5a5a5a; }
+.fa-addendum-row { position: relative; padding-right: 0.5rem; }
+.fa-addendum-check { display: flex; align-items: center; gap: 0.4rem;
+  float: right; font-size: 0.78rem; color: #6a5a1a; font-weight: 600;
+  padding: 0.25rem 0.5rem; background: #fff9d6;
+  border: 1px solid #d4bf40; margin-left: 0.75rem; }
+.fa-addendum-check input { margin: 0; cursor: pointer; }
+.fa-addendum-no-template { font-size: 0.78rem; margin-top: 0.35rem; font-style: italic; }
 
 /* ── Reports page ─────────────────────────────────────── */
 .reports-page { max-width: 1400px; }

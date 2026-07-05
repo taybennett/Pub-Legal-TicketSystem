@@ -254,24 +254,29 @@ function buildTokens(input: FaInputs): Record<string, string> {
   };
 }
 
-// ── Public generator ───────────────────────────────────────────
+// ── Reusable token application ─────────────────────────────────
 
-/** Fetches the template, fills tokens, returns { blob, filename } for download. */
-export async function generateFa(input: FaInputs): Promise<{ blob: Blob; filename: string }> {
+/** Sanitize a string for use in a filename (letters, digits, spaces → hyphens). */
+export function safeFilenamePart(s: string): string {
+  return s.replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
+}
+
+/**
+ * Apply the FA token map to an arbitrary docx buffer. Works for the primary
+ * FA template AND for any standing-addendum template that shares the same
+ * {{TOKEN}} conventions. Notice-address paraId targeting is FA-template-specific
+ * so is only applied when `applyNoticesFill` is true (default true).
+ */
+export async function applyTokensToBuffer(
+  buffer: ArrayBuffer,
+  input: FaInputs,
+  opts: { applyNoticesFill?: boolean } = {},
+): Promise<Blob> {
   const tokens = buildTokens(input);
-
-  const res = await fetch('/templates/fa-template.docx');
-  if (!res.ok) throw new Error(`Template fetch failed: ${res.status}`);
-  const arrayBuffer = await res.arrayBuffer();
-
-  const zip = await JSZip.loadAsync(arrayBuffer);
+  const zip = await JSZip.loadAsync(buffer);
   const dec = new TextDecoder('utf-8');
   const enc = new TextEncoder();
 
-  // Iterate every XML / rels file in the docx and run token replacement.
-  // Order matters: the multi-line block tokens (which include enclosing
-  // <w:p>...</w:p>) must be replaced before the bare-token versions, since
-  // both forms can appear and one substring contains the other.
   const blockTokens: Array<[string, string]> = [];
   const inlineTokens: Array<[string, string]> = [];
   for (const [k, v] of Object.entries(tokens)) {
@@ -292,8 +297,7 @@ export async function generateFa(input: FaInputs): Promise<{ blob: Blob; filenam
     for (const [token, value] of inlineTokens) {
       if (content.includes(token)) { content = content.split(token).join(value); changed = true; }
     }
-    // Notices address — paraId-targeted (document.xml only)
-    if (path === 'word/document.xml') {
+    if ((opts.applyNoticesFill ?? true) && path === 'word/document.xml') {
       const lines = [input.noticeLine1, input.noticeLine2, input.noticeLine3];
       if (lines.some(l => l && l.trim())) {
         const filled = fillNoticesAddress(content, lines);
@@ -303,10 +307,72 @@ export async function generateFa(input: FaInputs): Promise<{ blob: Blob; filenam
     if (changed) zip.file(path, enc.encode(content));
   }
 
-  const safe = (s: string) => s.replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
-  const filename = `${safe(input.shopName)}-${safe(input.entity)}-Franchise-Agreement.docx`;
-  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+  return zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+}
+
+// ── Public generator ───────────────────────────────────────────
+
+/** Fetches the FA template, fills tokens, returns { blob, filename } for download. */
+export async function generateFa(input: FaInputs): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetch('/templates/fa-template.docx');
+  if (!res.ok) throw new Error(`Template fetch failed: ${res.status}`);
+  const arrayBuffer = await res.arrayBuffer();
+
+  const blob = await applyTokensToBuffer(arrayBuffer, input);
+  const filename = `${safeFilenamePart(input.shopName)}-${safeFilenamePart(input.entity)}-Franchise-Agreement.docx`;
   return { blob, filename };
+}
+
+// ── Execution package (FA + standing addendums) ────────────────
+
+export interface AddendumTemplate {
+  name:            string;   // e.g. "Seeded Capital FA Addendum"
+  templateUrl:     string;   // full URL to the .docx (usually via /files/proxy)
+  templateFilename: string;  // e.g. "seeded-capital-fa-addendum.docx"
+}
+
+/**
+ * Build a single .zip containing the FA plus every addendum whose template
+ * we can fetch and token-fill. Addendums are shipped as separate files so
+ * you can drag each one into DocuSign independently.
+ */
+export async function generateExecutionPackage(
+  input:     FaInputs,
+  addendums: AddendumTemplate[],
+): Promise<{ blob: Blob; filename: string; entries: Array<{ name: string; filename: string; ok: boolean; error?: string }> }> {
+  const bundle = new JSZip();
+  const entries: Array<{ name: string; filename: string; ok: boolean; error?: string }> = [];
+
+  // 1) The FA itself
+  const fa = await generateFa(input);
+  bundle.file(fa.filename, fa.blob);
+  entries.push({ name: 'Franchise Agreement', filename: fa.filename, ok: true });
+
+  // 2) Each standing addendum with a template
+  for (const a of addendums) {
+    try {
+      const res = await fetch(a.templateUrl, { credentials: 'include' });
+      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+      const buf = await res.arrayBuffer();
+      // Addendums use only FA tokens; skip FA-specific notices paraId fill.
+      const filled = await applyTokensToBuffer(buf, input, { applyNoticesFill: false });
+      const cleanName = safeFilenamePart(a.name);
+      const outName = `${safeFilenamePart(input.shopName)}-${cleanName}.docx`;
+      bundle.file(outName, filled);
+      entries.push({ name: a.name, filename: outName, ok: true });
+    } catch (e) {
+      entries.push({
+        name: a.name,
+        filename: a.templateFilename,
+        ok: false,
+        error: e instanceof Error ? e.message : 'Unknown error',
+      });
+    }
+  }
+
+  const zipName = `${safeFilenamePart(input.shopName)}-${safeFilenamePart(input.entity)}-Execution-Package.zip`;
+  const blob = await bundle.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+  return { blob, filename: zipName, entries };
 }
 
 /** Trigger a download of the generated blob. */
