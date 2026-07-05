@@ -186,7 +186,7 @@ export async function getEnvelope(envelopeId: string): Promise<{ status: string;
 }
 
 /** Verify configuration + JWT auth without sending an envelope. */
-export async function healthCheck(): Promise<{ configured: boolean; jwtWorks: boolean; error?: string }> {
+export async function healthCheck(): Promise<{ configured: boolean; jwtWorks: boolean; error?: string; hint?: string; baseUrl?: string; keyPrefix?: string }> {
   const missing: string[] = [];
   if (!config.DOCUSIGN_INTEGRATION_KEY)  missing.push('DOCUSIGN_INTEGRATION_KEY');
   if (!config.DOCUSIGN_USER_ID)          missing.push('DOCUSIGN_USER_ID');
@@ -203,7 +203,34 @@ export async function healthCheck(): Promise<{ configured: boolean; jwtWorks: bo
     await getAccessToken();
     return { configured: true, jwtWorks: true };
   } catch (err) {
-    return { configured: true, jwtWorks: false, error: err instanceof Error ? err.message : String(err) };
+    // DocuSign SDK throws Axios-style errors — dig out the actual response body.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyErr = err as any;
+    const responseBody = anyErr?.response?.data ?? anyErr?.response?.body ?? null;
+    const errorCode = responseBody?.error ?? '';
+    const errorDesc = responseBody?.error_description ?? '';
+    const combined  = errorCode ? `${errorCode}${errorDesc ? ': ' + errorDesc : ''}` : (err instanceof Error ? err.message : String(err));
+
+    // Map common DocuSign JWT grant errors to concrete fixes.
+    let hint: string | undefined;
+    if (errorCode === 'consent_required') {
+      hint = 'You have not granted JWT consent. Visit https://account.docusign.com/oauth/auth?response_type=code&scope=signature%20impersonation&client_id=' + (config.DOCUSIGN_INTEGRATION_KEY ?? '') + '&redirect_uri=https://pub-legal-api-production.up.railway.app/api/v1/docusign/callback in a browser and click Accept.';
+    } else if (errorCode === 'invalid_grant' || errorCode === 'invalid_signature') {
+      hint = 'The RSA private key in Railway does not match the public key DocuSign has for this app. Regenerate the keypair in DocuSign admin (delete the old one first), copy the NEW private key including BEGIN/END lines, and paste it into Railway.';
+    } else if (errorCode === 'invalid_client') {
+      hint = 'DOCUSIGN_INTEGRATION_KEY is wrong. Copy it from the app you registered in Settings → Apps and Keys.';
+    } else if (errorCode === 'invalid_request') {
+      hint = 'DOCUSIGN_USER_ID is likely wrong. It must be the API Username UUID (Settings → Users → click your user → API Username), NOT your login email address.';
+    }
+
+    return {
+      configured: true,
+      jwtWorks: false,
+      error: combined,
+      hint,
+      baseUrl:   config.DOCUSIGN_BASE_URL ?? undefined,
+      keyPrefix: config.DOCUSIGN_RSA_PRIVATE_KEY?.slice(0, 40) ?? undefined,
+    };
   }
 }
 
