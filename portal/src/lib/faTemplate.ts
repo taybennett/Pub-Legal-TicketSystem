@@ -318,8 +318,13 @@ function buildTokens(input: FaInputs): Record<string, string> {
     '{{DRA_ENTITY}}':                  input.dra?.signatoryEntity ?? '',
     '{{DRA_EXECUTION_DATE_FULL}}':     input.dra?.executionDate ? formatDateFull(input.dra.executionDate).full : '',
     '{{DRA_TOTAL_OBLIGATION_FULL}}':   input.dra?.totalObligation ? spellOutWithNumeric(input.dra.totalObligation) : '',
-    '<w:p><w:r><w:t>{{GUARANTOR_SIGNATURE_BLOCKS}}</w:t></w:r></w:p>':   buildGuarantorBlocks(input.guarantors, dt.full),
-    '<w:p><w:r><w:t>{{FRANCHISEE_SIGNATORY_BLOCKS}}</w:t></w:r></w:p>':  buildFranchiseeSignatoryBlocks(input.extraSignatories, dt.full),
+    // Block-paragraph tokens — applyTokensToBuffer swaps the ENTIRE containing
+    // <w:p ...>{{TOKEN}}</w:p> paragraph (including attributes like paraId,
+    // rsid, etc. that Word adds automatically) for the generated block XML.
+    // A previous version required an exact-match on <w:p><w:r>...</w:p> with
+    // no attributes, which silently failed on any template Word had touched.
+    'BLOCK:{{GUARANTOR_SIGNATURE_BLOCKS}}':  buildGuarantorBlocks(input.guarantors, dt.full),
+    'BLOCK:{{FRANCHISEE_SIGNATORY_BLOCKS}}': buildFranchiseeSignatoryBlocks(input.extraSignatories, dt.full),
   };
 }
 
@@ -346,12 +351,24 @@ export async function applyTokensToBuffer(
   const dec = new TextDecoder('utf-8');
   const enc = new TextEncoder();
 
+  // Two flavors of token:
+  //  - BLOCK:{{TOKEN}} — replace the entire <w:p ...>...{{TOKEN}}...</w:p>
+  //    paragraph (including Word-added paraId/rsid attributes) with a block
+  //    of XML (e.g. a full <w:tbl> of guarantor signature cells)
+  //  - {{TOKEN}} — plain string substitution
   const blockTokens: Array<[string, string]> = [];
   const inlineTokens: Array<[string, string]> = [];
   for (const [k, v] of Object.entries(tokens)) {
-    if (k.startsWith('<w:p>')) blockTokens.push([k, v]);
-    else inlineTokens.push([k, v]);
+    if (k.startsWith('BLOCK:')) {
+      const bareToken = k.slice('BLOCK:'.length);   // e.g. {{GUARANTOR_SIGNATURE_BLOCKS}}
+      blockTokens.push([bareToken, v]);
+    } else {
+      inlineTokens.push([k, v]);
+    }
   }
+
+  // Escape a literal string for safe use inside a RegExp.
+  const reEscape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   for (const path of Object.keys(zip.files)) {
     if (!(path.endsWith('.xml') || path.endsWith('.rels'))) continue;
@@ -360,8 +377,17 @@ export async function applyTokensToBuffer(
     const bytes = await file.async('uint8array');
     let content = dec.decode(bytes);
     let changed = false;
-    for (const [token, value] of blockTokens) {
-      if (content.includes(token)) { content = content.split(token).join(value); changed = true; }
+    // BLOCK tokens FIRST — swap the whole paragraph so the inline pass
+    // never sees the token still wrapped in a stray <w:t>.
+    for (const [bareToken, blockXml] of blockTokens) {
+      // <w:p ...> [any content] TOKEN [any content] </w:p>
+      // Non-greedy so we match the smallest enclosing paragraph.
+      const paraRegex = new RegExp(
+        `<w:p\\b[^>]*>[\\s\\S]*?${reEscape(bareToken)}[\\s\\S]*?</w:p>`,
+        'g',
+      );
+      const newContent = content.replace(paraRegex, blockXml);
+      if (newContent !== content) { content = newContent; changed = true; }
     }
     for (const [token, value] of inlineTokens) {
       if (content.includes(token)) { content = content.split(token).join(value); changed = true; }

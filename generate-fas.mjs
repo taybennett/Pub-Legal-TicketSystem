@@ -345,8 +345,10 @@ function buildTokens(input) {
     '{{OWNER_5_NAME}}':               ownerName(4, '[Owner 5]'),
     '{{OWNER_5_INTEREST}}':           ownerPct(4),
     '{{FOOTER_ID}}':                  footerId,
-    '<w:p><w:r><w:t>{{GUARANTOR_SIGNATURE_BLOCKS}}</w:t></w:r></w:p>':  buildGuarantorBlocks(input.guarantors ?? [], dt.full),
-    '<w:p><w:r><w:t>{{FRANCHISEE_SIGNATORY_BLOCKS}}</w:t></w:r></w:p>': '',
+    // BLOCK: prefix swaps the whole containing <w:p ...>...{{TOKEN}}...</w:p>
+    // paragraph (regex-based) so Word-added paraId/rsid attributes don't break it.
+    'BLOCK:{{GUARANTOR_SIGNATURE_BLOCKS}}':  buildGuarantorBlocks(input.guarantors ?? [], dt.full),
+    'BLOCK:{{FRANCHISEE_SIGNATORY_BLOCKS}}': '',
   };
 }
 
@@ -375,9 +377,11 @@ async function generateOne(input, templateBuffer) {
   const blockTokens  = [];
   const inlineTokens = [];
   for (const [k, v] of Object.entries(tokens)) {
-    if (k.startsWith('<w:p>')) blockTokens.push([k, v]);
+    if (k.startsWith('BLOCK:')) blockTokens.push([k.slice('BLOCK:'.length), v]);
     else inlineTokens.push([k, v]);
   }
+
+  const reEscape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   for (const filePath of Object.keys(zip.files)) {
     if (!(filePath.endsWith('.xml') || filePath.endsWith('.rels'))) continue;
@@ -386,8 +390,10 @@ async function generateOne(input, templateBuffer) {
     const bytes = await file.async('uint8array');
     let content = dec.decode(bytes);
     let changed = false;
-    for (const [token, value] of blockTokens) {
-      if (content.includes(token)) { content = content.split(token).join(value); changed = true; }
+    for (const [bareToken, blockXml] of blockTokens) {
+      const paraRegex = new RegExp(`<w:p\\b[^>]*>[\\s\\S]*?${reEscape(bareToken)}[\\s\\S]*?</w:p>`, 'g');
+      const newContent = content.replace(paraRegex, blockXml);
+      if (newContent !== content) { content = newContent; changed = true; }
     }
     for (const [token, value] of inlineTokens) {
       if (content.includes(token)) { content = content.split(token).join(value); changed = true; }
