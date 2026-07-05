@@ -215,7 +215,9 @@ export async function healthCheck(): Promise<{ configured: boolean; jwtWorks: bo
     let hint: string | undefined;
     if (errorCode === 'consent_required') {
       hint = 'You have not granted JWT consent. Visit https://account.docusign.com/oauth/auth?response_type=code&scope=signature%20impersonation&client_id=' + (config.DOCUSIGN_INTEGRATION_KEY ?? '') + '&redirect_uri=https://pub-legal-api-production.up.railway.app/api/v1/docusign/callback in a browser and click Accept.';
-    } else if (errorCode === 'invalid_grant' || errorCode === 'invalid_signature') {
+    } else if (errorCode === 'invalid_grant' && errorDesc.includes('issuer_not_found')) {
+      hint = 'DocuSign cannot find your Integration Key in the environment we are calling. Either (a) the Integration Key was created in a DIFFERENT environment than DOCUSIGN_BASE_URL points to (e.g., created in the developer sandbox but base URL is production, or vice versa) or (b) the Integration Key was deleted. Verify at https://account.docusign.com (production) or https://account-d.docusign.com (sandbox) → Settings → Apps and Keys — the key must be visible in the environment matching DOCUSIGN_BASE_URL.';
+    } else if (errorCode === 'invalid_grant' || errorCode === 'invalid_signature' || (errorCode === 'invalid_grant' && errorDesc.includes('signature'))) {
       hint = 'The RSA private key in Railway does not match the public key DocuSign has for this app. Regenerate the keypair in DocuSign admin (delete the old one first), copy the NEW private key including BEGIN/END lines, and paste it into Railway.';
     } else if (errorCode === 'invalid_client') {
       hint = 'DOCUSIGN_INTEGRATION_KEY is wrong. Copy it from the app you registered in Settings → Apps and Keys.';
