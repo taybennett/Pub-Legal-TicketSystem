@@ -370,20 +370,32 @@ function fillNoticesAddress(xml, lines) {
 
 /**
  * Repair {{TOKEN}} boundaries that Word has fragmented across multiple
- * <w:r> runs (rPr change, autocorrect, grammar markers, etc.). Handles:
- *   - `{{TOKEN_</w:t>...<w:t>NAME}}`   name split across two runs
- *   - `{{TOKEN_NAME</w:t>...<w:t>}}*`  closing braces in second run
- *   - `{{</w:t>...<w:t>TOKEN_NAME}}`   whole body in second run
- * Middle content can't cross <w:t>/<w:p>/}} boundaries so we never
- * over-join across unrelated runs. Loops until stable for 3+ way splits.
+ * <w:r> runs. Two-pass:
+ *   A) Strict — second run has closing }}, no over-join risk.
+ *   B) Name-only — second run has more name chars but no }} yet.
+ *      Only accepted when the joined name is still a valid prefix of a
+ *      known token, so we don't grab an unrelated uppercase word.
+ * Loops until stable for 3+ way splits (e.g. {{ + OP_ + TEL}} needs
+ * two passes to converge).
  */
-function defragmentTokens(xml) {
-  const fragmentRe =
+function defragmentTokens(xml, knownTokenNames) {
+  const twoWayRe =
     /(\{\{[A-Z_0-9]*)<\/w:t>((?:(?!<w:t\b|<w:p\b|<\/w:p\b|\}\})[\s\S])*?)<w:t\b[^>]*>([A-Z_0-9]*\}\})/g;
+  const nameOnlyRe =
+    /(\{\{[A-Z_0-9]*)<\/w:t>((?:(?!<w:t\b|<w:p\b|<\/w:p\b|\}\})[\s\S])*?)<w:t\b[^>]*>([A-Z_0-9]+)(?!\}\})/g;
+  const isValidJoin = (prefix, suffix) => {
+    const joinedName = (prefix + suffix).slice(2);
+    if (!joinedName) return false;
+    return knownTokenNames.some(name => name.startsWith(joinedName));
+  };
+
   let previous;
   do {
     previous = xml;
-    xml = xml.replace(fragmentRe, '$1$3');
+    xml = xml.replace(twoWayRe, '$1$3');
+    xml = xml.replace(nameOnlyRe, (match, prefix, _middle, suffix) =>
+      isValidJoin(prefix, suffix) ? prefix + suffix : match,
+    );
   } while (xml !== previous);
   return xml;
 }
@@ -403,6 +415,11 @@ async function generateOne(input, templateBuffer) {
 
   const reEscape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+  // Token-name whitelist for the defragmenter's name-only join validator.
+  const knownTokenNames = Object.keys(tokens).map(k =>
+    (k.startsWith('BLOCK:') ? k.slice('BLOCK:'.length) : k).slice(2, -2),
+  );
+
   for (const filePath of Object.keys(zip.files)) {
     if (!(filePath.endsWith('.xml') || filePath.endsWith('.rels'))) continue;
     const file = zip.files[filePath];
@@ -412,7 +429,7 @@ async function generateOne(input, templateBuffer) {
     let changed = false;
     // Merge Word runs that fragmented {{TOKEN}} boundaries before we try to
     // replace anything — see defragmentTokens() below.
-    const defragmented = defragmentTokens(content);
+    const defragmented = defragmentTokens(content, knownTokenNames);
     if (defragmented !== content) { content = defragmented; changed = true; }
     for (const [bareToken, blockXml] of blockTokens) {
       // Negative-lookahead middle so we don't chew across </w:p> boundaries

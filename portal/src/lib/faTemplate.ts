@@ -362,14 +362,33 @@ export function safeFilenamePart(s: string): string {
  *  - Only merges TWO adjacent runs per iteration; 3+ way splits need
  *    the loop to converge
  */
-function defragmentTokens(xml: string): string {
-  // {{ + [name chars]? + </w:t> + [safe middle] + <w:t ...> + [name chars]? + }}
-  const fragmentRe =
+function defragmentTokens(xml: string, knownTokenNames: string[]): string {
+  // Pass A: strict two-way. Second run has the closing }}, so we know the
+  // join is at a real token boundary and there's no risk of over-joining.
+  //   Pattern A ({{TOKEN_ split)  : {{TOKEN_}</w:t>...<w:t>NAME}}
+  //   Pattern B ({{ split alone)  : {{</w:t>...<w:t>TOKEN_NAME}}
+  //   Pattern C ({{NAME_END split) : {{TOKEN_NAME</w:t>...<w:t>}}*
+  const twoWayRe =
     /(\{\{[A-Z_0-9]*)<\/w:t>((?:(?!<w:t\b|<w:p\b|<\/w:p\b|\}\})[\s\S])*?)<w:t\b[^>]*>([A-Z_0-9]*\}\})/g;
+  // Pass B: three-plus-way. Second run has more name chars but NO }} yet.
+  // We only accept the join if the resulting joined name is still a valid
+  // prefix of some known token — otherwise we risk grabbing an uppercase
+  // word from unrelated content (e.g. joining {{FRANCHISEE_ with LLC).
+  const nameOnlyRe =
+    /(\{\{[A-Z_0-9]*)<\/w:t>((?:(?!<w:t\b|<w:p\b|<\/w:p\b|\}\})[\s\S])*?)<w:t\b[^>]*>([A-Z_0-9]+)(?!\}\})/g;
+  const isValidJoin = (prefix: string, suffix: string): boolean => {
+    const joinedName = (prefix + suffix).slice(2); // strip leading {{
+    if (!joinedName) return false;
+    return knownTokenNames.some(name => name.startsWith(joinedName));
+  };
+
   let previous: string;
   do {
     previous = xml;
-    xml = xml.replace(fragmentRe, '$1$3');
+    xml = xml.replace(twoWayRe, '$1$3');
+    xml = xml.replace(nameOnlyRe, (match, prefix, _middle, suffix) =>
+      isValidJoin(prefix, suffix) ? prefix + suffix : match,
+    );
   } while (xml !== previous);
   return xml;
 }
@@ -409,6 +428,13 @@ export async function applyTokensToBuffer(
   // Escape a literal string for safe use inside a RegExp.
   const reEscape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+  // Every token name (stripped of {{ }}) that the defragmenter should
+  // accept as a valid join target. Includes BLOCK tokens too so their
+  // fragmented occurrences (if any) get merged.
+  const knownTokenNames = Object.keys(tokens).map(k =>
+    (k.startsWith('BLOCK:') ? k.slice('BLOCK:'.length) : k).slice(2, -2),
+  );
+
   for (const path of Object.keys(zip.files)) {
     if (!(path.endsWith('.xml') || path.endsWith('.rels'))) continue;
     const file = zip.files[path];
@@ -422,7 +448,7 @@ export async function applyTokensToBuffer(
     // across runs, so we merge fragmented tokens back together first.
     // Verified against fa-template-v2.7.26.docx: many exhibit-page
     // tokens like {{FRANCHISEE_SIGNATORY_NAME}} exist ONLY in fragments.
-    const defragmented = defragmentTokens(content);
+    const defragmented = defragmentTokens(content, knownTokenNames);
     if (defragmented !== content) { content = defragmented; changed = true; }
     // BLOCK tokens next — swap the whole paragraph so the inline pass
     // never sees the token still wrapped in a stray <w:t>.
