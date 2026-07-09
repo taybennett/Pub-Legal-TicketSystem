@@ -368,6 +368,26 @@ function fillNoticesAddress(xml, lines) {
   return out;
 }
 
+/**
+ * Repair {{TOKEN}} boundaries that Word has fragmented across multiple
+ * <w:r> runs (rPr change, autocorrect, grammar markers, etc.). Handles:
+ *   - `{{TOKEN_</w:t>...<w:t>NAME}}`   name split across two runs
+ *   - `{{TOKEN_NAME</w:t>...<w:t>}}*`  closing braces in second run
+ *   - `{{</w:t>...<w:t>TOKEN_NAME}}`   whole body in second run
+ * Middle content can't cross <w:t>/<w:p>/}} boundaries so we never
+ * over-join across unrelated runs. Loops until stable for 3+ way splits.
+ */
+function defragmentTokens(xml) {
+  const fragmentRe =
+    /(\{\{[A-Z_0-9]*)<\/w:t>((?:(?!<w:t\b|<w:p\b|<\/w:p\b|\}\})[\s\S])*?)<w:t\b[^>]*>([A-Z_0-9]*\}\})/g;
+  let previous;
+  do {
+    previous = xml;
+    xml = xml.replace(fragmentRe, '$1$3');
+  } while (xml !== previous);
+  return xml;
+}
+
 async function generateOne(input, templateBuffer) {
   const tokens = buildTokens(input);
   const zip = await JSZip.loadAsync(templateBuffer);
@@ -390,6 +410,10 @@ async function generateOne(input, templateBuffer) {
     const bytes = await file.async('uint8array');
     let content = dec.decode(bytes);
     let changed = false;
+    // Merge Word runs that fragmented {{TOKEN}} boundaries before we try to
+    // replace anything — see defragmentTokens() below.
+    const defragmented = defragmentTokens(content);
+    if (defragmented !== content) { content = defragmented; changed = true; }
     for (const [bareToken, blockXml] of blockTokens) {
       // Negative-lookahead middle so we don't chew across </w:p> boundaries
       // and vaporize every preceding paragraph.

@@ -336,6 +336,45 @@ export function safeFilenamePart(s: string): string {
 }
 
 /**
+ * Merge Word runs that have fragmented a `{{TOKEN}}` boundary. Word will
+ * split a run mid-token when editing history introduces an rPr change,
+ * autocorrect tweak, comment anchor, or grammar-check marker in the
+ * middle of the token — producing XML like:
+ *   <w:t>{{EXEC_DATE_</w:t></w:r>
+ *   <w:r ...><w:t>FULL}}</w:t>       (Pattern A: name chars split)
+ * or:
+ *   <w:t>Date: {{EXEC_DATE_FULL</w:t></w:r>
+ *   <w:r ...><w:t>}}*</w:t>          (Pattern B: closing }} in next run)
+ * or:
+ *   <w:t>Date: {{</w:t></w:r>
+ *   <w:r ...><w:t>EXEC_DATE_FULL}}</w:t>   (Pattern C: entire body in next run)
+ *
+ * The downstream inline-token pass is a plain string replace, so a
+ * fragmented token can never match. This pass strips the intermediate
+ * XML between the two runs, yielding a contiguous `{{TOKEN}}`.
+ *
+ * REQUIREMENTS on the pattern to avoid false-positive merges:
+ *  - `{{` and `}}` must both be involved — no over-joining across
+ *    unrelated content
+ *  - The intermediate XML can't cross a `<w:t>` (would skip a valid
+ *    token boundary), `<w:p>` / `</w:p>` (paragraph boundary), or
+ *    a stray `}}` (token close somewhere unexpected)
+ *  - Only merges TWO adjacent runs per iteration; 3+ way splits need
+ *    the loop to converge
+ */
+function defragmentTokens(xml: string): string {
+  // {{ + [name chars]? + </w:t> + [safe middle] + <w:t ...> + [name chars]? + }}
+  const fragmentRe =
+    /(\{\{[A-Z_0-9]*)<\/w:t>((?:(?!<w:t\b|<w:p\b|<\/w:p\b|\}\})[\s\S])*?)<w:t\b[^>]*>([A-Z_0-9]*\}\})/g;
+  let previous: string;
+  do {
+    previous = xml;
+    xml = xml.replace(fragmentRe, '$1$3');
+  } while (xml !== previous);
+  return xml;
+}
+
+/**
  * Apply the FA token map to an arbitrary docx buffer. Works for the primary
  * FA template AND for any standing-addendum template that shares the same
  * {{TOKEN}} conventions. Notice-address paraId targeting is FA-template-specific
@@ -377,7 +416,15 @@ export async function applyTokensToBuffer(
     const bytes = await file.async('uint8array');
     let content = dec.decode(bytes);
     let changed = false;
-    // BLOCK tokens FIRST — swap the whole paragraph so the inline pass
+    // Word fragments {{TOKEN}} across multiple <w:r> runs as editing
+    // history accumulates (e.g. an rPr change mid-token, autocorrect,
+    // review pass). Plain content.includes() cannot find a token split
+    // across runs, so we merge fragmented tokens back together first.
+    // Verified against fa-template-v2.7.26.docx: many exhibit-page
+    // tokens like {{FRANCHISEE_SIGNATORY_NAME}} exist ONLY in fragments.
+    const defragmented = defragmentTokens(content);
+    if (defragmented !== content) { content = defragmented; changed = true; }
+    // BLOCK tokens next — swap the whole paragraph so the inline pass
     // never sees the token still wrapped in a stray <w:t>.
     //
     // The middle-content matcher uses a negative lookahead so it CAN'T
