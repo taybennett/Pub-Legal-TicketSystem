@@ -134,10 +134,17 @@ function esc(s: string): string {
  * the string in the PDF text stream and places a signature/date tab exactly
  * where the paragraph is positioned. The paragraph renders as a hairline
  * of blank space in wet-sign scenarios.
+ *
+ * The explicit pPr forces line=20 (1pt exact) with zero before/after spacing
+ * so the paragraph collapses to a true 1pt hairline. Without this, Word
+ * would apply the default paragraph height (~11pt line + ~8pt after) even
+ * though the RUN text is 1pt — leaving unwanted whitespace under every
+ * signature and date anchor.
  */
 function docusignAnchor(anchor: string): string {
   return (
     '<w:p>' +
+      '<w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr>' +
       '<w:r>' +
         '<w:rPr><w:color w:val="FFFFFF"/><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr>' +
         '<w:t>' + esc(anchor) + '</w:t>' +
