@@ -568,6 +568,63 @@ export async function generateExecutionPackage(
   return { blob, filename: zipName, entries, documents };
 }
 
+// ── Minimal test docs (for DocuSign layout iteration) ──────────
+
+/**
+ * Build a tiny standalone .docx containing ONLY the Exhibit B-1 guarantor
+ * signature table. Used by the /guarantor-test page so we can iterate on
+ * signature-block layout via DocuSign without regenerating the full FA
+ * each time. The doc uses the same buildGuarantorBlocks() the real FA
+ * generator uses, so any spacing / anchor tweak takes effect here too.
+ */
+export async function generateGuarantorTestDoc(
+  guarantors:    FaGuarantor[],
+  execDateISO:   string,
+): Promise<{ blob: Blob; filename: string }> {
+  const dt = formatDateFull(execDateISO);
+  const guarantorTable = buildGuarantorBlocks(guarantors, dt.full);
+
+  const documentXml =
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">` +
+      `<w:body>` +
+        `<w:p><w:pPr><w:jc w:val="center"/></w:pPr>` +
+          `<w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr>` +
+            `<w:t>Exhibit B-1 — Layout Test</w:t></w:r></w:p>` +
+        `<w:p/>` +
+        `<w:p><w:r><w:t xml:space="preserve">` +
+          `IN WITNESS WHEREOF, each of the undersigned has affixed his or her signature ` +
+          `on the same day and year as the Agreement was executed.` +
+          `</w:t></w:r></w:p>` +
+        `<w:p/>` +
+        guarantorTable +
+        `<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>` +
+      `</w:body>` +
+    `</w:document>`;
+
+  const contentTypes =
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+      `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
+      `<Default Extension="xml" ContentType="application/xml"/>` +
+      `<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>` +
+    `</Types>`;
+
+  const rootRels =
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>` +
+    `</Relationships>`;
+
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', contentTypes);
+  zip.file('_rels/.rels', rootRels);
+  zip.file('word/document.xml', documentXml);
+
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+  return { blob, filename: 'guarantor-layout-test.docx' };
+}
+
 /** Trigger a download of the generated blob. */
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);

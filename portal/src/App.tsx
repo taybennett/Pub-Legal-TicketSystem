@@ -12,6 +12,7 @@ import { Compliance } from './pages/Compliance';
 import { Reports } from './pages/Reports';
 import { Envelopes } from './pages/Envelopes';
 import { DocusignTest } from './pages/DocusignTest';
+import { GuarantorTest } from './pages/GuarantorTest';
 
 function Loading() {
   return <div className="state state--loading">Loading…</div>;
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="reports" element={<Reports />} />
           <Route path="envelopes" element={<Envelopes />} />
           <Route path="docusign-test" element={<DocusignTest />} />
+          <Route path="guarantor-test" element={<GuarantorTest />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
