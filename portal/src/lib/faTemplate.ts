@@ -160,18 +160,29 @@ function buildGuarantorBlocks(guarantors: FaGuarantor[], execDateFull: string): 
     const ownLine = pct
       ? '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t xml:space="preserve">Ownership: ' + esc(pct) + '</w:t></w:r></w:p>'
       : '';
+    // Layout (top to bottom):
+    //   ______________     ← identifier line
+    //   <Name>
+    //   Ownership: X%
+    //   [blank × 3]        ← breathing room so the DocuSign "Signed by"
+    //                        caption doesn't overlap the Ownership line
+    //   \sig_guarantor_N\  ← invisible anchor; sig image lands here,
+    //                        drawing DOWN into the empty space
+    //   [blank × 2]
+    //   ______________________  ← sig underline
+    //   \date_guarantor_N\ ← invisible date anchor
+    //   Date: <full>
+    //   [blank]
     return (
       '<w:tc>' +
         '<w:tcPr><w:tcW w:w="4500" w:type="dxa"/>' + noBorder + '</w:tcPr>' +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t>_______________</w:t></w:r></w:p>' +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t xml:space="preserve">' + esc(g.name) + '</w:t></w:r></w:p>' +
         ownLine +
-        '<w:p/>' +
-        // DocuSign anchor for THIS guarantor's signature.
+        '<w:p/><w:p/><w:p/>' +
         docusignAnchor('\\sig_guarantor_' + idx + '\\') +
+        '<w:p/><w:p/>' +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t>________________________________________</w:t></w:r></w:p>' +
-        '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t>[Signature]</w:t></w:r></w:p>' +
-        // DocuSign anchor for THIS guarantor's auto-date.
         docusignAnchor('\\date_guarantor_' + idx + '\\') +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t xml:space="preserve">Date: ' + esc(execDateFull) + '</w:t></w:r></w:p>' +
         '<w:p/>' +
