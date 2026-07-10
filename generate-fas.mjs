@@ -270,7 +270,7 @@ function buildGuarantorBlocks(guarantors, execDateFull) {
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t>_______________</w:t></w:r></w:p>' +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t xml:space="preserve">' + esc(g.name) + '</w:t></w:r></w:p>' +
         ownLine +
-        '<w:p/><w:p/><w:p/><w:p/><w:p/>' +
+        '<w:p/><w:p/>' +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t>________________________________________</w:t></w:r></w:p>' +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t xml:space="preserve">Date: ' + esc(execDateFull) + '</w:t></w:r></w:p>' +
         '<w:p/>' +

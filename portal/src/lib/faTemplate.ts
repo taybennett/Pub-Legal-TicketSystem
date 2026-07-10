@@ -164,11 +164,10 @@ function buildGuarantorBlocks(guarantors: FaGuarantor[], execDateFull: string): 
     //   ______________     ← identifier line
     //   <Name>
     //   Ownership: X%
-    //   [blank × 3]        ← breathing room so the DocuSign "Signed by"
-    //                        caption doesn't overlap the Ownership line
-    //   \sig_guarantor_N\  ← invisible anchor; sig image lands here,
-    //                        drawing DOWN into the empty space
-    //   [blank × 2]
+    //   [blank]            ← just enough room for the DocuSign "Signed by"
+    //                        caption not to overlap the Ownership line
+    //   \sig_guarantor_N\  ← invisible anchor; sig image lands here
+    //   [blank]
     //   ______________________  ← sig underline
     //   \date_guarantor_N\ ← invisible date anchor
     //   Date: <full>
@@ -179,9 +178,9 @@ function buildGuarantorBlocks(guarantors: FaGuarantor[], execDateFull: string): 
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t>_______________</w:t></w:r></w:p>' +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t xml:space="preserve">' + esc(g.name) + '</w:t></w:r></w:p>' +
         ownLine +
-        '<w:p/><w:p/><w:p/>' +
+        '<w:p/>' +
         docusignAnchor('\\sig_guarantor_' + idx + '\\') +
-        '<w:p/><w:p/>' +
+        '<w:p/>' +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t>________________________________________</w:t></w:r></w:p>' +
         docusignAnchor('\\date_guarantor_' + idx + '\\') +
         '<w:p><w:r><w:rPr><w:spacing w:val="-2"/></w:rPr><w:t xml:space="preserve">Date: ' + esc(execDateFull) + '</w:t></w:r></w:p>' +
