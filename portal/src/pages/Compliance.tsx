@@ -86,6 +86,8 @@ export function Compliance() {
 
   const total = data.summary.totalOpen;
   const rate  = total > 0 ? Math.round((data.summary.fullyCompliant / total) * 100) : 0;
+  const refreshedLabel = data.refreshedAt ? relativeTime(data.refreshedAt) : null;
+  const missing = data.missingFromLocations ?? [];
 
   return (
     <div className="page">
@@ -96,6 +98,44 @@ export function Compliance() {
           <button className="btn-secondary" onClick={load} disabled={busy}>{busy ? 'Refreshing…' : 'Refresh'}</button>
         </div>
       </div>
+
+      {refreshedLabel && (
+        <div style={{ fontSize: '0.85rem', color: 'var(--muted, #6b7280)', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+          Last refreshed {refreshedLabel} · Scope: {total} operating {total === 1 ? 'shop' : 'shops'} pulled live from Pipeline
+        </div>
+      )}
+
+      {missing.length > 0 && (
+        <div
+          style={{
+            background:   '#FEF3C7',
+            border:       '1px solid #F59E0B',
+            borderRadius: 4,
+            padding:      '0.85rem 1.1rem',
+            marginBottom: '1.5rem',
+            fontSize:     '0.9rem',
+            lineHeight:   1.55,
+          }}
+        >
+          <strong style={{ color: '#92400E' }}>
+            ⚠ {missing.length} operating {missing.length === 1 ? 'shop' : 'shops'} in the Pipeline
+            {missing.length === 1 ? ' is' : ' are'} missing from your Locations table
+          </strong>
+          <div style={{ marginTop: '0.35rem', color: '#78350F' }}>
+            {missing.length === 1 ? 'It is' : 'They are'} excluded from this report until added.
+            Add {missing.length === 1 ? 'a Locations record' : 'Locations records'} in Airtable to pull {missing.length === 1 ? 'it' : 'them'} into scope:
+          </div>
+          <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.25rem', color: '#78350F' }}>
+            {missing.map(m => (
+              <li key={m.shopId} style={{ marginBottom: '0.15rem' }}>
+                <strong>{m.shopName}</strong> <code style={{ fontSize: '0.85em' }}>#{m.shopId}</code>
+                {' '}
+                <span style={{ opacity: 0.75 }}>· Pipeline status: {m.status}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Compliance rate bar */}
       <div className="comp-hero">
@@ -216,4 +256,19 @@ function CheckCell({ items }: { items: ChecklistItem[] | null }) {
 
 function b(ok: boolean): string {
   return ok ? '✓' : '✗';
+}
+
+function relativeTime(iso: string): string {
+  const then  = new Date(iso).getTime();
+  const now   = Date.now();
+  const delta = Math.max(0, now - then);
+  const s = Math.floor(delta / 1000);
+  if (s < 5)   return 'just now';
+  if (s < 60)  return `${s} seconds ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60)  return `${m} minute${m === 1 ? '' : 's'} ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24)  return `${h} hour${h === 1 ? '' : 's'} ago`;
+  const d = Math.floor(h / 24);
+  return `${d} day${d === 1 ? '' : 's'} ago`;
 }

@@ -113,13 +113,21 @@ export interface ShopComplianceReport {
   } | null;
 }
 
+export interface MissingShop {
+  shopId:   string;
+  shopName: string;
+  status:   string;
+}
+
 export interface ComplianceResponse {
   summary: {
     totalOpen:      number;
     fullyCompliant: number;
     withGaps:       number;
   };
-  reports: ShopComplianceReport[];
+  reports:              ShopComplianceReport[];
+  missingFromLocations: MissingShop[];
+  refreshedAt:          string;
 }
 
 export type Confidence = 'high' | 'medium' | 'low';

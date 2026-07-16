@@ -48,6 +48,12 @@ interface ShopComplianceReport {
   } | null;  // null when isPubCorp = true
 }
 
+interface MissingShop {
+  shopId:   string;
+  shopName: string;
+  status:   string;  // raw Pipeline development status
+}
+
 complianceRouter.get('/', async (req: Request, res: Response) => {
   const me = req.user!;
   const [locs, pipelineMap, allLeases, allFAs, allEntities] = await Promise.all([
@@ -171,6 +177,24 @@ complianceRouter.get('/', async (req: Request, res: Response) => {
   const compliant = reports.filter(r => r.fullyCompliant).length;
   const withGaps  = reports.length - compliant;
 
+  // Diagnostic: shops the Pipeline says are Operating but that don't have a
+  // Locations record in the LEGAL base. These are silently excluded from the
+  // compliance report today — surfacing them so ops can add the missing
+  // Location record and pull the shop into scope.
+  const knownLocationShopIds = new Set(
+    locs.map(l => (l.fields[LOCATIONS.SHOP_ID] as string | undefined) ?? '').filter(Boolean),
+  );
+  const missingFromLocations: MissingShop[] = [];
+  for (const [shopId, candidates] of pipelineMap.entries()) {
+    if (knownLocationShopIds.has(shopId)) continue;
+    for (const c of candidates) {
+      if (lifecycleStageFromPipelineStatus(c.status) !== 'Operating') continue;
+      missingFromLocations.push({ shopId, shopName: c.shopName, status: c.status });
+      break; // one entry per shopId is enough
+    }
+  }
+  missingFromLocations.sort((a, b) => a.shopName.localeCompare(b.shopName));
+
   res.json({
     summary: {
       totalOpen: reports.length,
@@ -178,5 +202,7 @@ complianceRouter.get('/', async (req: Request, res: Response) => {
       withGaps,
     },
     reports,
+    missingFromLocations,
+    refreshedAt: new Date().toISOString(),
   });
 });
