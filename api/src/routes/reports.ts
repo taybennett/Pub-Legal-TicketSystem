@@ -156,33 +156,69 @@ const REPORTS: ReportTemplate[] = [
   {
     slug:        'dra-progress',
     title:       'DRA Progress',
-    description: 'Every DRA with total obligation, executed FAs, currently open shops, outstanding, and on-track status.',
+    description: 'Every DRA with total obligation, executed FAs, currently open shops, outstanding, on-track status, and per-year opening schedule.',
     run: bundle => {
+      // Only surface year columns that have at least one non-zero value across
+      // any DRA — keeps the report tight instead of showing empty 2033/34/35
+      // columns for every reader.
+      const ALL_YEARS = [2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035];
+      const yearsWithData = ALL_YEARS.filter(y =>
+        bundle.dras.some(d => (d.yearSchedule?.[String(y)] ?? 0) > 0),
+      );
+
       const rows = bundle.dras
         .sort((a, b) => a.name.localeCompare(b.name))
-        .map(d => ({
-          name:            d.name,
-          totalObligation: d.totalObligation,
-          executed:        d.executed,
-          open:            d.open,
-          outstanding:     d.outstanding,
-          termEnd:         d.termEnd,
-          onSchedule:      d.onSchedule ? 'On track' : 'Behind',
-        }));
+        .map(d => {
+          const row: Record<string, unknown> = {
+            name:            d.name,
+            totalObligation: d.totalObligation,
+            executed:        d.executed,
+            open:            d.open,
+            outstanding:     d.outstanding,
+            termEnd:         d.termEnd,
+            onSchedule:      d.onSchedule ? 'On track' : 'Behind',
+          };
+          for (const y of yearsWithData) {
+            row[`y${y}`] = d.yearSchedule?.[String(y)] ?? 0;
+          }
+          return row;
+        });
+
+      // Totals row across the entire portfolio — a scan-friendly "how many
+      // shops do we owe in 2027 total" answer without doing mental math.
+      const totalsRow: Record<string, unknown> = {
+        name:            'ALL DRAs (total)',
+        totalObligation: rows.reduce((s, r) => s + (r.totalObligation as number), 0),
+        executed:        rows.reduce((s, r) => s + (r.executed        as number), 0),
+        open:            rows.reduce((s, r) => s + (r.open            as number), 0),
+        outstanding:     rows.reduce((s, r) => s + (r.outstanding     as number), 0),
+        termEnd:         null,
+        onSchedule:      '',
+      };
+      for (const y of yearsWithData) {
+        totalsRow[`y${y}`] = rows.reduce((s, r) => s + ((r[`y${y}`] as number) ?? 0), 0);
+      }
+
       return {
         slug: 'dra-progress',
         title: 'DRA Progress',
-        description: 'Every DRA with total obligation, executed FAs, currently open shops, and outstanding count.',
+        description: 'Every DRA with total obligation, executed FAs, currently open shops, outstanding count, and per-year opening schedule.',
         columns: [
           { key: 'name',            label: 'DRA' },
           { key: 'totalObligation', label: 'Total',       type: 'number', align: 'right' },
           { key: 'executed',        label: 'Executed',    type: 'number', align: 'right' },
           { key: 'open',            label: 'Open',        type: 'number', align: 'right' },
           { key: 'outstanding',     label: 'Outstanding', type: 'number', align: 'right' },
+          ...yearsWithData.map(y => ({
+            key:   `y${y}`,
+            label: String(y),
+            type:  'number' as const,
+            align: 'right' as const,
+          })),
           { key: 'termEnd',         label: 'Term End',    type: 'date' },
           { key: 'onSchedule',      label: 'Schedule' },
         ],
-        rows,
+        rows: [...rows, totalsRow],
       };
     },
   },
