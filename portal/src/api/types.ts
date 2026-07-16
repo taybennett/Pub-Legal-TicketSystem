@@ -119,15 +119,21 @@ export interface MissingShop {
   status:   string;
 }
 
+export interface LocationMissingShopId {
+  locationId: string;
+  shopName:   string;
+}
+
 export interface ComplianceResponse {
   summary: {
     totalOpen:      number;
     fullyCompliant: number;
     withGaps:       number;
   };
-  reports:              ShopComplianceReport[];
-  missingFromLocations: MissingShop[];
-  refreshedAt:          string;
+  reports:                ShopComplianceReport[];
+  missingFromLocations:   MissingShop[];
+  locationsMissingShopId: LocationMissingShopId[];
+  refreshedAt:            string;
 }
 
 export type Confidence = 'high' | 'medium' | 'low';

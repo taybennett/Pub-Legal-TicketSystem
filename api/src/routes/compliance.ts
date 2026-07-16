@@ -177,23 +177,48 @@ complianceRouter.get('/', async (req: Request, res: Response) => {
   const compliant = reports.filter(r => r.fullyCompliant).length;
   const withGaps  = reports.length - compliant;
 
-  // Diagnostic: shops the Pipeline says are Operating but that don't have a
-  // Locations record in the LEGAL base. These are silently excluded from the
+  // Diagnostic A: shops the Pipeline says are Operating but that don't have
+  // a Locations record in the LEGAL base at all. Silently excluded from the
   // compliance report today — surfacing them so ops can add the missing
-  // Location record and pull the shop into scope.
+  // Location record. Match on BOTH Shop ID and Shop Name (case-insensitive)
+  // so a Locations record with a name-match but no Shop ID doesn't produce
+  // a false-positive "missing" flag.
   const knownLocationShopIds = new Set(
     locs.map(l => (l.fields[LOCATIONS.SHOP_ID] as string | undefined) ?? '').filter(Boolean),
+  );
+  const knownLocationShopNames = new Set(
+    locs.map(l => ((l.fields[LOCATIONS.SHOP_NAME] as string | undefined) ?? '').trim().toLowerCase())
+        .filter(Boolean),
   );
   const missingFromLocations: MissingShop[] = [];
   for (const [shopId, candidates] of pipelineMap.entries()) {
     if (knownLocationShopIds.has(shopId)) continue;
     for (const c of candidates) {
       if (lifecycleStageFromPipelineStatus(c.status) !== 'Operating') continue;
+      // Skip if a Locations record with the same name exists — it's really
+      // present, just with a blank Shop ID (surfaced separately below).
+      if (knownLocationShopNames.has(c.shopName.trim().toLowerCase())) continue;
       missingFromLocations.push({ shopId, shopName: c.shopName, status: c.status });
-      break; // one entry per shopId is enough
+      break;
     }
   }
   missingFromLocations.sort((a, b) => a.shopName.localeCompare(b.shopName));
+
+  // Diagnostic B: Locations records where Shop ID is empty. These silently
+  // fail the FA check because the FA-tracker join uses Shop ID as the key.
+  // A shop can look "compliant" here purely because we're pulling zero FAs
+  // to check against.
+  const locationsMissingShopId = locs
+    .filter(l => {
+      const id   = (l.fields[LOCATIONS.SHOP_ID]   as string | undefined) ?? '';
+      const name = (l.fields[LOCATIONS.SHOP_NAME] as string | undefined) ?? '';
+      return !id.trim() && !!name.trim();
+    })
+    .map(l => ({
+      locationId: l.id,
+      shopName:   (l.fields[LOCATIONS.SHOP_NAME] as string | undefined) ?? '',
+    }))
+    .sort((a, b) => a.shopName.localeCompare(b.shopName));
 
   res.json({
     summary: {
@@ -203,6 +228,7 @@ complianceRouter.get('/', async (req: Request, res: Response) => {
     },
     reports,
     missingFromLocations,
+    locationsMissingShopId,
     refreshedAt: new Date().toISOString(),
   });
 });

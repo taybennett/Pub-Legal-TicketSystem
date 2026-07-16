@@ -87,7 +87,8 @@ export function Compliance() {
   const total = data.summary.totalOpen;
   const rate  = total > 0 ? Math.round((data.summary.fullyCompliant / total) * 100) : 0;
   const refreshedLabel = data.refreshedAt ? relativeTime(data.refreshedAt) : null;
-  const missing = data.missingFromLocations ?? [];
+  const missing        = data.missingFromLocations ?? [];
+  const missingShopId  = data.locationsMissingShopId ?? [];
 
   return (
     <div className="page">
@@ -112,7 +113,7 @@ export function Compliance() {
             border:       '1px solid #F59E0B',
             borderRadius: 4,
             padding:      '0.85rem 1.1rem',
-            marginBottom: '1.5rem',
+            marginBottom: '1rem',
             fontSize:     '0.9rem',
             lineHeight:   1.55,
           }}
@@ -131,6 +132,41 @@ export function Compliance() {
                 <strong>{m.shopName}</strong> <code style={{ fontSize: '0.85em' }}>#{m.shopId}</code>
                 {' '}
                 <span style={{ opacity: 0.75 }}>· Pipeline status: {m.status}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {missingShopId.length > 0 && (
+        <div
+          style={{
+            background:   '#FEE2E2',
+            border:       '1px solid #EF4444',
+            borderRadius: 4,
+            padding:      '0.85rem 1.1rem',
+            marginBottom: '1.5rem',
+            fontSize:     '0.9rem',
+            lineHeight:   1.55,
+          }}
+        >
+          <strong style={{ color: '#991B1B' }}>
+            ⚠ {missingShopId.length} Location {missingShopId.length === 1 ? 'record has' : 'records have'} no Shop ID
+          </strong>
+          <div style={{ marginTop: '0.35rem', color: '#7F1D1D' }}>
+            The FA compliance check joins on Shop ID, so the FA-side checks silently return "no FA found" for
+            {' '}{missingShopId.length === 1 ? 'this shop' : 'these shops'}. Populate the Shop ID field on
+            {' '}{missingShopId.length === 1 ? 'the' : 'each'} Locations record so the report reflects reality:
+          </div>
+          <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.25rem', color: '#7F1D1D' }}>
+            {missingShopId.map(l => (
+              <li key={l.locationId} style={{ marginBottom: '0.15rem' }}>
+                <Link
+                  to={`/locations/${l.locationId}`}
+                  style={{ color: '#7F1D1D', textDecoration: 'underline' }}
+                >
+                  <strong>{l.shopName}</strong>
+                </Link>
               </li>
             ))}
           </ul>
