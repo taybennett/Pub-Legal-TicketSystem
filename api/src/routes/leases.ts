@@ -47,11 +47,66 @@ leasesRouter.post('/:id/leases/extract', upload.single('file'), async (req: Requ
     const extraction = await extractLease(pdfBase64);
     res.json({ extraction });
   } catch (err) {
-    logger.error({ err, locationId: req.params.id, filename: req.file.originalname }, 'lease AI extraction failed');
-    res.status(502).json({
+    // Dig out useful diagnostic info that pino would otherwise drop.
+    // Anthropic SDK errors are Anthropic.APIError subclasses carrying
+    // .status, .headers, .error.error.type, .error.error.message,
+    // and .request_id — all of which are essential for triage.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyErr = err as any;
+    const status  = anyErr?.status;
+    const apiBody = anyErr?.error?.error ?? anyErr?.error;
+    const apiType = apiBody?.type;
+    const apiMsg  = apiBody?.message;
+    const reqId   = anyErr?.request_id ?? anyErr?.headers?.['request-id'];
+    const stopReason = anyErr?.stopReason;
+    const usage      = anyErr?.usage;
+
+    logger.error({
+      err,
+      status, apiType, apiMsg, reqId, stopReason, usage,
+      locationId: req.params.id,
+      filename:   req.file.originalname,
+      sizeBytes:  req.file.size,
+    }, 'lease AI extraction failed');
+
+    // Classify the failure so the UI can render a specific hint.
+    let code    = 'extraction_failed';
+    let message = 'AI extraction failed. You can still enter the lease fields manually.';
+    let hint: string | undefined;
+
+    if (status === 429) {
+      code    = 'rate_limited';
+      message = 'AI extraction is being rate-limited by Anthropic right now.';
+      hint    = 'Wait a minute and try again, or enter the lease fields manually.';
+    } else if (status === 529 || status === 503) {
+      code    = 'overloaded';
+      message = 'Anthropic API is overloaded right now.';
+      hint    = 'Try again in a few minutes.';
+    } else if (status && status >= 500) {
+      code    = 'upstream_5xx';
+      message = `AI extraction upstream error (HTTP ${status}).`;
+      hint    = apiMsg ?? 'Try again in a moment.';
+    } else if (status === 400 && typeof apiMsg === 'string' && /pdf|document|page/i.test(apiMsg)) {
+      code    = 'bad_pdf';
+      message = 'AI could not process the PDF.';
+      hint    = apiMsg;
+    } else if (stopReason === 'max_tokens') {
+      code    = 'truncated';
+      message = 'AI response was truncated before completing extraction.';
+      hint    = 'Please retry — if it happens again on this file, enter fields manually.';
+    } else if (apiMsg) {
+      hint = apiMsg;
+    }
+
+    res.status(status === 429 ? 429 : 502).json({
       error: {
-        code: 'extraction_failed',
-        message: 'AI extraction failed. You can still enter the lease fields manually.',
+        code,
+        message,
+        details: {
+          hint,
+          requestId: reqId,
+          upstreamStatus: status,
+        },
       },
     });
   }

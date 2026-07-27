@@ -14,7 +14,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../config.js';
 import { logger } from '../util/logger.js';
 
-const client = new Anthropic({ apiKey: config.ANTHROPIC_API_KEY });
+// SDK defaults: 10 min timeout, 2 retries. Extend retries to 3 so a single
+// transient 5xx from Anthropic doesn't fail the whole extraction.
+const client = new Anthropic({
+  apiKey:     config.ANTHROPIC_API_KEY,
+  maxRetries: 3,
+});
 
 // Anthropic hard PDF limit (32 MB). Caller should error before reaching this.
 export const PDF_MAX_BYTES = 32 * 1024 * 1024;
@@ -95,9 +100,12 @@ function confidenceProp(valueType: 'string' | 'number', description: string) {
 const MODEL = 'claude-sonnet-4-5-20250929';
 
 export async function extractLease(pdfBase64: string): Promise<LeaseExtraction> {
+  // 4096 gives comfortable headroom for the tool call + any internal chain-of-
+  // thought. At 2048 we were occasionally hitting the ceiling on longer leases
+  // and getting back an empty/partial response with no tool_use block.
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 2048,
+    max_tokens: 4096,
     system: [
       { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
     ],
@@ -124,7 +132,22 @@ export async function extractLease(pdfBase64: string): Promise<LeaseExtraction> 
 
   const toolBlock = response.content.find(b => b.type === 'tool_use');
   if (!toolBlock || toolBlock.type !== 'tool_use') {
-    throw new Error('Claude did not call the extraction tool. Response: ' + JSON.stringify(response.content).slice(0, 500));
+    // Common causes: stop_reason='max_tokens' (bump max_tokens), 'refusal'
+    // (model declined the doc), or 'end_turn' with only text (model prosed
+    // instead of calling tool). We include stop_reason + first text block so
+    // the operator log surfaces the real reason.
+    const firstText = response.content.find(b => b.type === 'text');
+    const textPreview = firstText && firstText.type === 'text' ? firstText.text.slice(0, 300) : '';
+    const err = new Error(
+      `Claude did not call the extraction tool ` +
+      `(stop_reason=${response.stop_reason}, ` +
+      `input_tokens=${response.usage.input_tokens}, ` +
+      `output_tokens=${response.usage.output_tokens})` +
+      (textPreview ? `. Model text: ${textPreview}` : ''),
+    );
+    (err as Error & { stopReason?: string; usage?: unknown }).stopReason = response.stop_reason ?? undefined;
+    (err as Error & { stopReason?: string; usage?: unknown }).usage = response.usage;
+    throw err;
   }
 
   const data = toolBlock.input as Record<string, ExtractedField<unknown> | string>;

@@ -120,7 +120,20 @@ export function LeaseUploadModal({
       setNotes(e.notes);
       setStage('review');
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : 'Extraction failed. You can still enter the lease fields manually below.');
+      // Backend puts a specific `hint` and Anthropic `requestId` under
+      // details when the failure classifies as rate-limited, overloaded,
+      // truncated, or bad-PDF. Fold both into the visible message so ops
+      // can (a) see what actually failed and (b) hand us the requestId if
+      // it needs Anthropic-side triage.
+      if (e instanceof ApiError) {
+        const d = e.details as { hint?: string; requestId?: string; upstreamStatus?: number } | undefined;
+        const parts: string[] = [e.message];
+        if (d?.hint) parts.push(d.hint);
+        if (d?.requestId) parts.push(`(Anthropic request ${d.requestId})`);
+        setErr(parts.join(' — '));
+      } else {
+        setErr('Extraction failed. You can still enter the lease fields manually below.');
+      }
       setStage('review');  // fall back to manual entry with blank fields
     }
   }
