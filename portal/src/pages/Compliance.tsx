@@ -103,7 +103,7 @@ export function Compliance() {
 
       {refreshedLabel && (
         <div style={{ fontSize: '0.85rem', color: 'var(--muted, #6b7280)', marginTop: '-0.5rem', marginBottom: '1rem' }}>
-          Last refreshed {refreshedLabel} · Scope: {total} operating {total === 1 ? 'shop' : 'shops'} pulled live from Pipeline
+          Last refreshed {refreshedLabel} · Scope: {total} {total === 1 ? 'shop' : 'shops'} with a signed Original Lease
         </div>
       )}
 
@@ -232,7 +232,7 @@ export function Compliance() {
       </div>
 
       <p className="muted comp-foot">
-        Scope: every shop in the Open bucket (Pipeline status = Open). PUB Corp shops are exempt from FA checks.
+        Scope: every shop with a signed Original Lease (execution date set). PUB Corp shops are exempt from FA checks.
       </p>
     </div>
   );
@@ -354,8 +354,8 @@ function ExcludedBanner({ shops }: { shops: ExcludedShop[] }) {
         </button>
       </div>
       <div style={{ marginTop: '0.35rem', color: '#1E40AF' }}>
-        Scope is currently "Operating" only. These shops are excluded because their Pipeline status
-        (or stored lifecycle) puts them in another stage.
+        Scope is every shop with a signed Original Lease. These shops are excluded because their
+        Original Lease is missing, unsigned, or unrecorded.
       </div>
       <div style={{ marginTop: '0.35rem', color: '#1E40AF' }}>
         By reason: {groups.map(([reason, list], i) => (

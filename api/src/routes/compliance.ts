@@ -102,53 +102,32 @@ complianceRouter.get('/', async (req: Request, res: Response) => {
     fasByShopNumber.set(shopNum, list);
   }
 
-  // Determine "in scope for compliance" via Pipeline. Records the *reason*
-  // when a shop is excluded so the UI can surface it as a diagnostic rather
-  // than silently dropping the shop.
+  // Scope rule: a Location is IN SCOPE for the compliance report if and only
+  // if it has an Original Lease record (or a lease with null document type,
+  // for backwards-compat with records that predate multi-doc support) that
+  // carries an Execution Date. Any shop without a signed lease is excluded
+  // and surfaced in the info banner with the reason.
   //
-  // Two prior bugs fixed here:
-  //  1. A Pipeline record with a null-mapping status (e.g. 'Hold' or any
-  //     status not covered by lifecycleStageFromPipelineStatus) used to
-  //     short-circuit and skip the stored-lifecycle fallback entirely.
-  //     Now null-mapping falls through to the stored value.
-  //  2. Return value carries the reason so the caller can categorize.
+  // Note: PUB Corp shops still count if they have a signed lease — they're
+  // exempt from FA checks specifically, not from the lease scope.
   function scopeCheck(loc: locations.LocationRecord): { inScope: boolean; reason: string } {
-    const shopId   = (loc.fields[LOCATIONS.SHOP_ID]   as string | undefined) ?? '';
-    const shopName = (loc.fields[LOCATIONS.SHOP_NAME] as string | undefined) ?? '';
-    let pipelineStatus: string | null = null;
-
-    if (shopId) {
-      const candidates = pipelineMap.get(shopId) ?? [];
-      const pick = candidates.length <= 1
-        ? candidates[0]
-        : (candidates.find(c => c.shopName === shopName) ?? candidates[0]);
-      if (pick) {
-        pipelineStatus = pick.status;
-        const stage = lifecycleStageFromPipelineStatus(pick.status);
-        if (stage === 'Operating') return { inScope: true, reason: 'Operating (Pipeline)' };
-        // Only exclude here if we got a CONFIDENT non-Operating mapping. A
-        // null mapping (e.g. 'Hold') should defer to the stored lifecycle.
-        if (stage !== null) {
-          return { inScope: false, reason: `Pipeline status: ${pick.status} → ${stage}` };
-        }
-      }
+    const locLeases = leasesByLocationId.get(loc.id) ?? [];
+    if (locLeases.length === 0) {
+      return { inScope: false, reason: 'No lease record linked' };
     }
-
-    // Fall back to stored Lifecycle Stage. Used both when there's no Pipeline
-    // record AND when the Pipeline status doesn't map cleanly (Hold, unknown).
-    const stored = loc.fields[LOCATIONS.LIFECYCLE_STAGE];
-    if (stored === 'Operating') return { inScope: true, reason: 'Operating (stored)' };
-
-    if (pipelineStatus) {
-      return {
-        inScope: false,
-        reason:  `Pipeline status: ${pipelineStatus} (no clean mapping); stored lifecycle: ${stored ?? '—'}`,
-      };
+    const originalLease = locLeases.find(l => {
+      const dt = l.fields[LEASES.DOCUMENT_TYPE];
+      const name = typeof dt === 'string' ? dt : (dt as { name?: string } | undefined)?.name;
+      return name == null || name === 'Original Lease';
+    });
+    if (!originalLease) {
+      return { inScope: false, reason: 'Only ancillary lease documents; no Original Lease' };
     }
-    return {
-      inScope: false,
-      reason:  `No Pipeline record; stored lifecycle: ${stored ?? '—'}`,
-    };
+    const execDate = originalLease.fields[LEASES.EXECUTION_DATE] as string | undefined;
+    if (!execDate) {
+      return { inScope: false, reason: 'Original Lease present but no Execution Date' };
+    }
+    return { inScope: true, reason: 'Signed Original Lease' };
   }
 
   const excludedFromScope: ExcludedShop[] = [];
