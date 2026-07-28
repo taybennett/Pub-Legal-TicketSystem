@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import type { ChecklistItem, ComplianceResponse, ExcludedShop, ShopComplianceReport } from '../api/types';
 
-type FilterKey = 'all' | 'issues' | 'compliant' | 'franchise' | 'pubcorp';
+type FilterKey = 'all' | 'issues' | 'compliant' | 'franchise' | 'franchiseOperating' | 'pubcorp';
 
 export function Compliance() {
   const [data, setData] = useState<ComplianceResponse | null>(null);
@@ -22,24 +22,26 @@ export function Compliance() {
   useEffect(() => { load(); }, []);
 
   const counts = useMemo(() => {
-    if (!data) return { all: 0, issues: 0, compliant: 0, franchise: 0, pubcorp: 0 };
+    if (!data) return { all: 0, issues: 0, compliant: 0, franchise: 0, franchiseOperating: 0, pubcorp: 0 };
     return {
-      all:        data.reports.length,
-      issues:     data.summary.withGaps,
-      compliant:  data.summary.fullyCompliant,
-      franchise:  data.reports.filter(r => !r.isPubCorp).length,
-      pubcorp:    data.reports.filter(r =>  r.isPubCorp).length,
+      all:                data.reports.length,
+      issues:             data.summary.withGaps,
+      compliant:          data.summary.fullyCompliant,
+      franchise:          data.reports.filter(r => !r.isPubCorp).length,
+      franchiseOperating: data.reports.filter(r => !r.isPubCorp && r.isOperating).length,
+      pubcorp:            data.reports.filter(r =>  r.isPubCorp).length,
     };
   }, [data]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
     switch (filter) {
-      case 'issues':    return data.reports.filter(r => !r.fullyCompliant);
-      case 'compliant': return data.reports.filter(r =>  r.fullyCompliant);
-      case 'franchise': return data.reports.filter(r => !r.isPubCorp);
-      case 'pubcorp':   return data.reports.filter(r =>  r.isPubCorp);
-      default:          return data.reports;
+      case 'issues':             return data.reports.filter(r => !r.fullyCompliant);
+      case 'compliant':          return data.reports.filter(r =>  r.fullyCompliant);
+      case 'franchise':          return data.reports.filter(r => !r.isPubCorp);
+      case 'franchiseOperating': return data.reports.filter(r => !r.isPubCorp && r.isOperating);
+      case 'pubcorp':            return data.reports.filter(r =>  r.isPubCorp);
+      default:                   return data.reports;
     }
   }, [data, filter]);
 
@@ -202,11 +204,12 @@ export function Compliance() {
 
       {/* Filter tabs */}
       <div className="comp-tabs">
-        <FilterTab label="All"        n={counts.all}       active={filter === 'all'}        onClick={() => setFilter('all')} />
-        <FilterTab label="With gaps"  n={counts.issues}    active={filter === 'issues'}     onClick={() => setFilter('issues')}     tone="red" />
-        <FilterTab label="Compliant"  n={counts.compliant} active={filter === 'compliant'}  onClick={() => setFilter('compliant')}  tone="green" />
-        <FilterTab label="Franchise"  n={counts.franchise} active={filter === 'franchise'}  onClick={() => setFilter('franchise')} />
-        <FilterTab label="PUB Corp"   n={counts.pubcorp}   active={filter === 'pubcorp'}    onClick={() => setFilter('pubcorp')} />
+        <FilterTab label="All"                 n={counts.all}                active={filter === 'all'}                onClick={() => setFilter('all')} />
+        <FilterTab label="With gaps"           n={counts.issues}             active={filter === 'issues'}             onClick={() => setFilter('issues')}     tone="red" />
+        <FilterTab label="Compliant"           n={counts.compliant}          active={filter === 'compliant'}          onClick={() => setFilter('compliant')}  tone="green" />
+        <FilterTab label="Franchise"           n={counts.franchise}          active={filter === 'franchise'}          onClick={() => setFilter('franchise')} />
+        <FilterTab label="Franchise-Operating" n={counts.franchiseOperating} active={filter === 'franchiseOperating'} onClick={() => setFilter('franchiseOperating')} />
+        <FilterTab label="PUB Corp"            n={counts.pubcorp}            active={filter === 'pubcorp'}            onClick={() => setFilter('pubcorp')} />
       </div>
 
       {/* Report table */}

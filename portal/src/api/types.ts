@@ -99,6 +99,7 @@ export interface ShopComplianceReport {
   shopName:       string;
   shopId:         string;
   isPubCorp:      boolean;
+  isOperating:    boolean;
   fullyCompliant: boolean;
   gapCount:       number;
   lease: {

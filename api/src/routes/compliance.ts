@@ -30,12 +30,13 @@ interface ChecklistItem {
 }
 
 interface ShopComplianceReport {
-  locationId: string;
-  shopName:   string;
-  shopId:     string;
-  isPubCorp:  boolean;
+  locationId:  string;
+  shopName:    string;
+  shopId:      string;
+  isPubCorp:   boolean;
+  isOperating: boolean;  // Pipeline status maps to Operating OR stored lifecycle = Operating
   fullyCompliant: boolean;
-  gapCount:   number;
+  gapCount:    number;
   lease: {
     present:     ChecklistItem;
     pdfAttached: ChecklistItem;
@@ -154,6 +155,25 @@ complianceRouter.get('/', async (req: Request, res: Response) => {
       const entIds   = (loc.fields[LOCATIONS.FRANCHISEE_ENTITY] as string[] | undefined) ?? [];
       const isPubCorp = entIds.some(eid => entityIsPubCorp.get(eid));
 
+      // Is the shop actually open (not just lease-signed and in buildout)?
+      // Prefer Pipeline (source of truth for construction state); fall back
+      // to the stored Lifecycle Stage on the Locations record. Used by the
+      // "Franchise-Operating" filter tab to distinguish shops we'd expect
+      // a full FA-compliance profile on from shops still in buildout.
+      let isOperating = false;
+      if (shopId) {
+        const candidates = pipelineMap.get(shopId) ?? [];
+        const pick = candidates.length <= 1
+          ? candidates[0]
+          : (candidates.find(c => c.shopName === shopName) ?? candidates[0]);
+        if (pick) {
+          isOperating = lifecycleStageFromPipelineStatus(pick.status) === 'Operating';
+        }
+      }
+      if (!isOperating && loc.fields[LOCATIONS.LIFECYCLE_STAGE] === 'Operating') {
+        isOperating = true;
+      }
+
       // Lease checks. We evaluate against the ORIGINAL LEASE specifically,
       // not just locLeases[0] — otherwise an ancillary doc (Amendment,
       // Guaranty, Possession Letter, etc.) ordered first by Airtable would
@@ -194,6 +214,7 @@ complianceRouter.get('/', async (req: Request, res: Response) => {
         shopName,
         shopId,
         isPubCorp,
+        isOperating,
         fullyCompliant: gapCount === 0,
         gapCount,
         lease: leaseChecks,
