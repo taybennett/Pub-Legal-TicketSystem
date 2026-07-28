@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import type { ChecklistItem, ComplianceResponse, ShopComplianceReport } from '../api/types';
+import type { ChecklistItem, ComplianceResponse, ExcludedShop, ShopComplianceReport } from '../api/types';
 
 type FilterKey = 'all' | 'issues' | 'compliant' | 'franchise' | 'pubcorp';
 
@@ -89,6 +89,7 @@ export function Compliance() {
   const refreshedLabel = data.refreshedAt ? relativeTime(data.refreshedAt) : null;
   const missing        = data.missingFromLocations ?? [];
   const missingShopId  = data.locationsMissingShopId ?? [];
+  const excluded       = data.excludedFromScope ?? [];
 
   return (
     <div className="page">
@@ -145,7 +146,7 @@ export function Compliance() {
             border:       '1px solid #EF4444',
             borderRadius: 4,
             padding:      '0.85rem 1.1rem',
-            marginBottom: '1.5rem',
+            marginBottom: '1rem',
             fontSize:     '0.9rem',
             lineHeight:   1.55,
           }}
@@ -171,6 +172,10 @@ export function Compliance() {
             ))}
           </ul>
         </div>
+      )}
+
+      {excluded.length > 0 && (
+        <ExcludedBanner shops={excluded} />
       )}
 
       {/* Compliance rate bar */}
@@ -292,6 +297,108 @@ function CheckCell({ items }: { items: ChecklistItem[] | null }) {
 
 function b(ok: boolean): string {
   return ok ? '✓' : '✗';
+}
+
+/**
+ * Diagnostic banner: shops that ARE in Locations but got filtered out of the
+ * compliance scope because their Pipeline status doesn't map to Operating.
+ * Grouped by reason so a "Remodel × 4" or "Under Construction × 7" cluster
+ * jumps out. Collapsed by default — the list can get long.
+ */
+function ExcludedBanner({ shops }: { shops: ExcludedShop[] }) {
+  const [open, setOpen] = useState(false);
+
+  // Bucket by the leading reason phrase (before parenthetical detail) so
+  // the summary is scannable even without expanding.
+  const groups = useMemo(() => {
+    const m = new Map<string, ExcludedShop[]>();
+    for (const s of shops) {
+      const key = s.reason.split(';')[0].trim();
+      const list = m.get(key) ?? [];
+      list.push(s);
+      m.set(key, list);
+    }
+    return [...m.entries()].sort((a, b) => b[1].length - a[1].length);
+  }, [shops]);
+
+  return (
+    <div
+      style={{
+        background:   '#EFF6FF',
+        border:       '1px solid #93C5FD',
+        borderRadius: 4,
+        padding:      '0.85rem 1.1rem',
+        marginBottom: '1.5rem',
+        fontSize:     '0.9rem',
+        lineHeight:   1.55,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+        <strong style={{ color: '#1E3A8A' }}>
+          ℹ {shops.length} {shops.length === 1 ? 'shop is' : 'shops are'} in Locations but excluded from the compliance report
+        </strong>
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          style={{
+            background:   'transparent',
+            border:       '1px solid #93C5FD',
+            color:        '#1E3A8A',
+            padding:      '0.15rem 0.7rem',
+            fontSize:     '0.8rem',
+            cursor:       'pointer',
+            borderRadius: 3,
+          }}
+        >
+          {open ? 'Hide' : 'Show'} details
+        </button>
+      </div>
+      <div style={{ marginTop: '0.35rem', color: '#1E40AF' }}>
+        Scope is currently "Operating" only. These shops are excluded because their Pipeline status
+        (or stored lifecycle) puts them in another stage.
+      </div>
+      <div style={{ marginTop: '0.35rem', color: '#1E40AF' }}>
+        By reason: {groups.map(([reason, list], i) => (
+          <span key={reason}>
+            {i > 0 ? ' · ' : ''}
+            <strong>{list.length}</strong> {reason.toLowerCase()}
+          </span>
+        ))}
+      </div>
+      {open && (
+        <div style={{ marginTop: '0.7rem' }}>
+          {groups.map(([reason, list]) => (
+            <div key={reason} style={{ marginTop: '0.6rem' }}>
+              <div style={{
+                fontSize:       '0.75rem',
+                textTransform:  'uppercase',
+                letterSpacing:  '0.05em',
+                color:          '#1E3A8A',
+                marginBottom:   '0.25rem',
+              }}>
+                {reason} ({list.length})
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#1E40AF' }}>
+                {list.map(s => (
+                  <li key={s.locationId} style={{ marginBottom: '0.1rem' }}>
+                    <Link
+                      to={`/locations/${s.locationId}`}
+                      style={{ color: '#1E40AF', textDecoration: 'underline' }}
+                    >
+                      <strong>{s.shopName}</strong>
+                    </Link>
+                    {s.shopId && (
+                      <> <code style={{ fontSize: '0.85em' }}>#{s.shopId}</code></>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function relativeTime(iso: string): string {

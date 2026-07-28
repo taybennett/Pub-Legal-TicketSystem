@@ -124,6 +124,13 @@ export interface LocationMissingShopId {
   shopName:   string;
 }
 
+export interface ExcludedShop {
+  locationId: string;
+  shopName:   string;
+  shopId:     string;
+  reason:     string;
+}
+
 export interface ComplianceResponse {
   summary: {
     totalOpen:      number;
@@ -133,6 +140,7 @@ export interface ComplianceResponse {
   reports:                ShopComplianceReport[];
   missingFromLocations:   MissingShop[];
   locationsMissingShopId: LocationMissingShopId[];
+  excludedFromScope:      ExcludedShop[];
   refreshedAt:            string;
 }
 

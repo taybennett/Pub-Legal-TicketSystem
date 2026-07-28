@@ -54,6 +54,13 @@ interface MissingShop {
   status:   string;  // raw Pipeline development status
 }
 
+interface ExcludedShop {
+  locationId: string;
+  shopName:   string;
+  shopId:     string;
+  reason:     string;  // human-readable explanation of why it's out of scope
+}
+
 complianceRouter.get('/', async (req: Request, res: Response) => {
   const me = req.user!;
   const [locs, pipelineMap, allLeases, allFAs, allEntities] = await Promise.all([
@@ -95,27 +102,73 @@ complianceRouter.get('/', async (req: Request, res: Response) => {
     fasByShopNumber.set(shopNum, list);
   }
 
-  // Determine "Open" via Pipeline (matches the home page filter logic)
-  function isOpen(loc: locations.LocationRecord): boolean {
+  // Determine "in scope for compliance" via Pipeline. Records the *reason*
+  // when a shop is excluded so the UI can surface it as a diagnostic rather
+  // than silently dropping the shop.
+  //
+  // Two prior bugs fixed here:
+  //  1. A Pipeline record with a null-mapping status (e.g. 'Hold' or any
+  //     status not covered by lifecycleStageFromPipelineStatus) used to
+  //     short-circuit and skip the stored-lifecycle fallback entirely.
+  //     Now null-mapping falls through to the stored value.
+  //  2. Return value carries the reason so the caller can categorize.
+  function scopeCheck(loc: locations.LocationRecord): { inScope: boolean; reason: string } {
     const shopId   = (loc.fields[LOCATIONS.SHOP_ID]   as string | undefined) ?? '';
     const shopName = (loc.fields[LOCATIONS.SHOP_NAME] as string | undefined) ?? '';
+    let pipelineStatus: string | null = null;
+
     if (shopId) {
       const candidates = pipelineMap.get(shopId) ?? [];
       const pick = candidates.length <= 1
         ? candidates[0]
         : (candidates.find(c => c.shopName === shopName) ?? candidates[0]);
       if (pick) {
+        pipelineStatus = pick.status;
         const stage = lifecycleStageFromPipelineStatus(pick.status);
-        return stage === 'Operating';
+        if (stage === 'Operating') return { inScope: true, reason: 'Operating (Pipeline)' };
+        // Only exclude here if we got a CONFIDENT non-Operating mapping. A
+        // null mapping (e.g. 'Hold') should defer to the stored lifecycle.
+        if (stage !== null) {
+          return { inScope: false, reason: `Pipeline status: ${pick.status} → ${stage}` };
+        }
       }
     }
-    // Fall back to stored Lifecycle Stage
+
+    // Fall back to stored Lifecycle Stage. Used both when there's no Pipeline
+    // record AND when the Pipeline status doesn't map cleanly (Hold, unknown).
     const stored = loc.fields[LOCATIONS.LIFECYCLE_STAGE];
-    return stored === 'Operating';
+    if (stored === 'Operating') return { inScope: true, reason: 'Operating (stored)' };
+
+    if (pipelineStatus) {
+      return {
+        inScope: false,
+        reason:  `Pipeline status: ${pipelineStatus} (no clean mapping); stored lifecycle: ${stored ?? '—'}`,
+      };
+    }
+    return {
+      inScope: false,
+      reason:  `No Pipeline record; stored lifecycle: ${stored ?? '—'}`,
+    };
   }
 
-  const reports: ShopComplianceReport[] = locs
-    .filter(isOpen)
+  const excludedFromScope: ExcludedShop[] = [];
+  const inScopeLocs: locations.LocationRecord[] = [];
+  for (const loc of locs) {
+    const check = scopeCheck(loc);
+    if (check.inScope) {
+      inScopeLocs.push(loc);
+    } else {
+      const shopName = (loc.fields[LOCATIONS.SHOP_NAME] as string | undefined) ?? '';
+      const shopId   = (loc.fields[LOCATIONS.SHOP_ID]   as string | undefined) ?? '';
+      // Silently skip Closed / Dead — they're not what the user means by
+      // "shops in the system." Everything else surfaces.
+      if (/Closed|Dead/i.test(check.reason)) continue;
+      excludedFromScope.push({ locationId: loc.id, shopName, shopId, reason: check.reason });
+    }
+  }
+  excludedFromScope.sort((a, b) => a.shopName.localeCompare(b.shopName));
+
+  const reports: ShopComplianceReport[] = inScopeLocs
     .map(loc => {
       const shopName = (loc.fields[LOCATIONS.SHOP_NAME] as string | undefined) ?? '';
       const shopId   = (loc.fields[LOCATIONS.SHOP_ID]   as string | undefined) ?? '';
@@ -229,6 +282,7 @@ complianceRouter.get('/', async (req: Request, res: Response) => {
     reports,
     missingFromLocations,
     locationsMissingShopId,
+    excludedFromScope,
     refreshedAt: new Date().toISOString(),
   });
 });
