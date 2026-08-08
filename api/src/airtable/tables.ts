@@ -31,6 +31,7 @@ export const TABLE = {
   DRA_DOCUMENTS:      'tblvQUgkRAvsGsdCT', // child documents to a DRA — Amendments, Addendums, Other
   STANDING_ADDENDUMS: 'tblbq0Z9NQ2TP4SY2', // per-DRA required-with-FA documents (Seeded Capital, Fresh Dining, Silent Investor)
   DOCUSIGN_ENVELOPES: 'tblwFDUF9e9r9VIJf', // tracks every DocuSign envelope sent from the portal
+  SHOP_IDS:           'tblPoBFJDqgayNXVj', // master allocation of Shop IDs to DRAs (2001-2357 + 6969)
   // PUB Development
   PIPELINE:           'tbllofgQwUSIxkMl6',
 } as const;
@@ -368,3 +369,28 @@ export const PIPELINE = {
   PUB_CONSTRUCTION_MGR:  'fldqgCGfbQBSo6vkt',
   FULL_ADDRESS:          'fldHeS8q71pMJlKmd',
 } as const;
+
+// ── SHOP IDs ───────────────────────────────────────────────────────
+// Master allocation of Shop IDs. One row per ID (2001-2357 + 6969).
+// Each block of contiguous IDs is assigned to a DRA when the DRA is signed;
+// individual IDs get shop names as sites are secured. Source of truth for
+// "next available ID" and per-DRA block utilization.
+export const SHOP_IDS = {
+  SHOP_ID:      'fldCNFPNcI55wxQaw', // primary — singleLineText (preserves special values like 6969)
+  DRA:          'fldmISybXI5gjMNID', // multipleRecordLinks → Franchisee Groups
+  BLOCK_OWNER:  'fld8b4ZfBEniOEDtS', // singleLineText — franchisee/brand label from master chart
+  SHOP_NAME:    'fldcCCD991UQke3up', // singleLineText — populated once site is secured
+  ADDRESS:      'flda962lORiPNSqDm', // multilineText
+  LOCATION:     'fldAVfXeEXs4jU80R', // multipleRecordLinks → Locations
+  FA_TRACKER:   'flduY3fqJ9bjG8dHG', // multipleRecordLinks → FA Tracker
+  STATUS:       'fld1KKWKkLHmfNDHu', // singleSelect
+  NOTES:        'fldl3QuGctBZUvwqT', // multilineText
+} as const;
+
+export type ShopIdStatus =
+  | 'Assigned — Site Secured'
+  | 'Assigned — Placeholder'
+  | 'Unassigned'
+  | 'Hold'
+  | 'Reassigned'
+  | 'Retired';

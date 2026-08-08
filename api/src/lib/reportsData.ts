@@ -14,12 +14,14 @@ import * as franchiseeEntities from '../airtable/franchiseeEntities.js';
 import * as leases from '../airtable/leases.js';
 import * as locations from '../airtable/locations.js';
 import * as pipeline from '../airtable/pipeline.js';
+import * as shopIds from '../airtable/shopIds.js';
 import {
   FA_TRACKER,
   FRANCHISEE_ENTITIES,
   FRANCHISEE_GROUPS,
   LEASES,
   LOCATIONS,
+  SHOP_IDS,
 } from '../airtable/tables.js';
 import { lifecycleStageFromPipelineStatus } from './lifecycleFromPipeline.js';
 import { logger } from '../util/logger.js';
@@ -65,6 +67,17 @@ export interface ShopRow {
   faPdf:           boolean;
 }
 
+export interface ShopIdRow {
+  shopId:      string;
+  draId:       string | null;
+  draName:     string | null;
+  blockOwner:  string | null;
+  shopName:    string | null;
+  status:      string | null;
+  hasFA:       boolean;
+  hasLocation: boolean;
+}
+
 export interface ReportBundle {
   shops: ShopRow[];
   dras: Array<{
@@ -78,6 +91,7 @@ export interface ReportBundle {
     yearSchedule: Record<string, number>;
     onSchedule: boolean;
   }>;
+  shopIds: ShopIdRow[];
   generatedAt: string;
 }
 
@@ -93,7 +107,7 @@ function extractSelectName(v: unknown): string | null {
 /** Load everything once. Reports read from this bundle instead of hitting Airtable. */
 export async function loadReportBundle(): Promise<ReportBundle> {
   const [
-    locs, allLeases, allFAs, allDras, allEntities, pipelineMap,
+    locs, allLeases, allFAs, allDras, allEntities, pipelineMap, allShopIds,
   ] = await Promise.all([
     locations.listAll(),
     leases.listAll(),
@@ -103,6 +117,10 @@ export async function loadReportBundle(): Promise<ReportBundle> {
     pipeline.listStatusesByShopNumber().catch(err => {
       logger.warn({ err }, 'reports: pipeline fetch failed, falling back to stored lifecycle stage');
       return new Map<string, pipeline.PipelineCandidate[]>();
+    }),
+    shopIds.listAll().catch(err => {
+      logger.warn({ err }, 'reports: Shop IDs fetch failed, allocation report will be empty');
+      return [] as shopIds.ShopIdRecord[];
     }),
   ]);
 
@@ -266,9 +284,26 @@ export async function loadReportBundle(): Promise<ReportBundle> {
     })
     .filter(d => d.totalObligation > 0);
 
+  // Shop IDs — flatten to a compact row shape for the reports layer.
+  const shopIdRows: ShopIdRow[] = allShopIds.map(r => {
+    const draLinks = (r.fields[SHOP_IDS.DRA] as string[] | undefined) ?? [];
+    const draId    = draLinks[0] ?? null;
+    return {
+      shopId:      (r.fields[SHOP_IDS.SHOP_ID]     as string | undefined) ?? '',
+      draId,
+      draName:     draId ? (groupNameById.get(draId) ?? null) : null,
+      blockOwner:  (r.fields[SHOP_IDS.BLOCK_OWNER] as string | undefined) ?? null,
+      shopName:    (r.fields[SHOP_IDS.SHOP_NAME]   as string | undefined) ?? null,
+      status:      extractSelectName(r.fields[SHOP_IDS.STATUS]),
+      hasFA:       ((r.fields[SHOP_IDS.FA_TRACKER] as string[] | undefined)?.length ?? 0) > 0,
+      hasLocation: ((r.fields[SHOP_IDS.LOCATION]   as string[] | undefined)?.length ?? 0) > 0,
+    };
+  });
+
   return {
     shops,
     dras: draRows,
+    shopIds: shopIdRows,
     generatedAt: new Date().toISOString(),
   };
 }

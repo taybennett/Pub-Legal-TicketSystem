@@ -375,6 +375,150 @@ const REPORTS: ReportTemplate[] = [
       };
     },
   },
+
+  {
+    slug:        'shop-id-allocation',
+    title:       'Shop ID Allocation',
+    description: 'Per-DRA block usage: total block size, allocated to a secured site, still available as placeholder, executed FAs, and next available ID.',
+    run: bundle => {
+      // Group Shop IDs by DRA (record ID). Undrafted rows land in an
+      // "Unassigned pool" bucket so the free-ID inventory is visible.
+      type Group = {
+        draName:      string;
+        blockOwner:   string;
+        blockSize:    number;
+        siteSecured:  number;
+        placeholder:  number;
+        executed:     number;
+        firstId:      string;
+        lastId:       string;
+        nextFreeId:   string | null;
+      };
+      const groups = new Map<string, Group>();
+
+      // Sort a stable order first
+      const sorted = [...bundle.shopIds].sort((a, b) => {
+        const ai = parseInt(a.shopId, 10) || 0;
+        const bi = parseInt(b.shopId, 10) || 0;
+        return ai - bi;
+      });
+
+      for (const s of sorted) {
+        const key = s.draId ?? (s.blockOwner ?? 'Unassigned');
+        const label = s.draName ?? s.blockOwner ?? 'Unassigned';
+        let g = groups.get(key);
+        if (!g) {
+          g = {
+            draName:     label,
+            blockOwner:  s.blockOwner ?? '',
+            blockSize:   0,
+            siteSecured: 0,
+            placeholder: 0,
+            executed:    0,
+            firstId:     s.shopId,
+            lastId:      s.shopId,
+            nextFreeId:  null,
+          };
+          groups.set(key, g);
+        }
+        g.blockSize++;
+        g.lastId = s.shopId;
+        if (s.status === 'Assigned — Site Secured') g.siteSecured++;
+        else if (s.status === 'Assigned — Placeholder') g.placeholder++;
+        if (s.hasFA) g.executed++;
+        // First unfilled placeholder is the next assignable slot
+        if (!g.nextFreeId && s.status === 'Assigned — Placeholder' && !s.shopName) {
+          g.nextFreeId = s.shopId;
+        }
+      }
+
+      const rows = [...groups.values()]
+        .sort((a, b) => a.draName.localeCompare(b.draName))
+        .map(g => ({
+          draName:     g.draName,
+          blockOwner:  g.blockOwner,
+          blockRange:  g.firstId === g.lastId ? g.firstId : `${g.firstId}–${g.lastId}`,
+          blockSize:   g.blockSize,
+          siteSecured: g.siteSecured,
+          placeholder: g.placeholder,
+          executed:    g.executed,
+          nextFreeId:  g.nextFreeId ?? '—',
+        }));
+
+      // Portfolio total row
+      const totals = rows.reduce(
+        (acc, r) => ({
+          blockSize:   acc.blockSize   + (r.blockSize   as number),
+          siteSecured: acc.siteSecured + (r.siteSecured as number),
+          placeholder: acc.placeholder + (r.placeholder as number),
+          executed:    acc.executed    + (r.executed    as number),
+        }),
+        { blockSize: 0, siteSecured: 0, placeholder: 0, executed: 0 },
+      );
+      rows.push({
+        draName:     'ALL (total)',
+        blockOwner:  '',
+        blockRange:  '',
+        blockSize:   totals.blockSize,
+        siteSecured: totals.siteSecured,
+        placeholder: totals.placeholder,
+        executed:    totals.executed,
+        nextFreeId:  '',
+      });
+
+      return {
+        slug:        'shop-id-allocation',
+        title:       'Shop ID Allocation',
+        description: 'Per-DRA block usage: total block size, allocated to a secured site, still available as placeholder, executed FAs, and next available ID.',
+        columns: [
+          { key: 'draName',     label: 'DRA / Block Owner' },
+          { key: 'blockRange',  label: 'Block Range' },
+          { key: 'blockSize',   label: 'Block Size',   type: 'number', align: 'right' },
+          { key: 'siteSecured', label: 'Site Secured', type: 'number', align: 'right' },
+          { key: 'placeholder', label: 'Placeholder',  type: 'number', align: 'right' },
+          { key: 'executed',    label: 'Executed FA',  type: 'number', align: 'right' },
+          { key: 'nextFreeId',  label: 'Next Free ID' },
+        ],
+        rows,
+      };
+    },
+  },
+
+  {
+    slug:        'shop-id-directory',
+    title:       'Shop ID Directory',
+    description: 'Flat directory of every Shop ID (2001-2357 + 6969) with its DRA, block owner, shop name, and current status. Useful for lookups and CSV export.',
+    run: bundle => {
+      const rows = [...bundle.shopIds]
+        .sort((a, b) => {
+          const ai = parseInt(a.shopId, 10) || 0;
+          const bi = parseInt(b.shopId, 10) || 0;
+          return ai - bi;
+        })
+        .map(s => ({
+          shopId:     s.shopId,
+          draName:    s.draName ?? '',
+          blockOwner: s.blockOwner ?? '',
+          shopName:   s.shopName ?? '',
+          status:     s.status ?? '',
+          hasFA:      s.hasFA ? 'Yes' : '',
+        }));
+      return {
+        slug:        'shop-id-directory',
+        title:       'Shop ID Directory',
+        description: 'Every Shop ID with its allocation, shop name, status, and whether an FA has been executed against it.',
+        columns: [
+          { key: 'shopId',     label: 'Shop ID' },
+          { key: 'draName',    label: 'DRA' },
+          { key: 'blockOwner', label: 'Block Owner' },
+          { key: 'shopName',   label: 'Shop Name' },
+          { key: 'status',     label: 'Status' },
+          { key: 'hasFA',      label: 'FA?' },
+        ],
+        rows,
+      };
+    },
+  },
 ];
 
 /* ────────── routes ────────── */
