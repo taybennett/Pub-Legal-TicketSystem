@@ -5,7 +5,7 @@ import { AttachPdfButton } from '../components/AttachPdfButton';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DraDocumentUploadModal } from '../components/DraDocumentUploadModal';
 import { useOpenPdf } from '../components/PdfViewerProvider';
-import type { DraDetail, DraDocument, DraDocumentType, DraFa, DraSummary } from '../api/types';
+import type { DraDetail, DraDocument, DraDocumentType, DraFa, DraShopId, DraSummary } from '../api/types';
 
 interface UploadIntent {
   docType:          DraDocumentType;
@@ -145,6 +145,11 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
         </div>
       )}
 
+      {/* ── Shop IDs allocated to this DRA ── */}
+      {detail.shopIds && detail.shopIds.length > 0 && (
+        <ShopIdsPanel shopIds={detail.shopIds} />
+      )}
+
       {/* ── DRA Documents (Amendments + Addendums) ── */}
       <DraDocumentsSection
         documents={detail.documents}
@@ -224,6 +229,80 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
           }
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * Grid of every Shop ID allocated to this DRA. Each cell shows the Shop ID
+ * on top and either the shop name or "TBD" underneath. Cells with an executed
+ * FA get a subtle green accent. Placeholder cells are muted to make it easy
+ * to eyeball how much inventory is left.
+ */
+function ShopIdsPanel({ shopIds }: { shopIds: DraShopId[] }) {
+  const assignedCount = shopIds.filter(s => !!s.shopName).length;
+  const tbdCount      = shopIds.length - assignedCount;
+
+  return (
+    <div style={{ marginTop: '2rem' }}>
+      <div className="dra-schedule-label" style={{ marginBottom: '0.6rem' }}>
+        Shop IDs — {assignedCount} assigned · {tbdCount} TBD
+      </div>
+      <div
+        style={{
+          display:             'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+          gap:                 '0.6rem',
+        }}
+      >
+        {shopIds.map(s => {
+          const assigned = !!s.shopName;
+          const executed = s.hasFa;
+          return (
+            <div
+              key={s.shopId}
+              style={{
+                background:      executed ? '#EAF7EE'
+                                : assigned ? '#F7F5F0'
+                                : '#FAFAFA',
+                border:          `1px solid ${executed ? '#8FBF9B' : '#E0DDD5'}`,
+                borderRadius:    3,
+                padding:         '0.55rem 0.75rem',
+                minHeight:       50,
+                display:         'flex',
+                flexDirection:   'column',
+                justifyContent:  'center',
+              }}
+              title={s.status ?? undefined}
+            >
+              <div
+                style={{
+                  fontSize:      '0.72rem',
+                  color:         executed ? '#2F6A3E' : 'var(--muted, #7A8391)',
+                  letterSpacing: '0.04em',
+                  fontWeight:    600,
+                }}
+              >
+                #{s.shopId}
+                {executed && <span style={{ marginLeft: 6 }}>·  FA executed</span>}
+              </div>
+              <div
+                style={{
+                  fontSize:   '0.95rem',
+                  fontWeight: assigned ? 600 : 400,
+                  color:      assigned ? 'var(--black, #0F1B2D)' : '#B0B0B0',
+                  fontStyle:  assigned ? 'normal' : 'italic',
+                  marginTop:  2,
+                  lineHeight: 1.25,
+                  wordBreak:  'break-word',
+                }}
+              >
+                {s.shopName ?? 'TBD'}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

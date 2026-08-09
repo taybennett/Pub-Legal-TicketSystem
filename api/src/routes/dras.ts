@@ -6,8 +6,9 @@ import * as dras from '../airtable/dras.js';
 import * as draDocuments from '../airtable/draDocuments.js';
 import * as faTracker from '../airtable/faTracker.js';
 import * as pipeline from '../airtable/pipeline.js';
+import * as shopIds from '../airtable/shopIds.js';
 import * as standingAddendums from '../airtable/standingAddendums.js';
-import { DRA_DOCUMENTS, FA_TRACKER, FRANCHISEE_GROUPS, STANDING_ADDENDUMS, type DraDocumentType } from '../airtable/tables.js';
+import { DRA_DOCUMENTS, FA_TRACKER, FRANCHISEE_GROUPS, SHOP_IDS, STANDING_ADDENDUMS, type DraDocumentType } from '../airtable/tables.js';
 import { requireAdmin, requireAuth } from '../auth/middleware.js';
 import { lifecycleStageFromPipelineStatus } from '../lib/lifecycleFromPipeline.js';
 import { logger } from '../util/logger.js';
@@ -128,7 +129,7 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
   if (!d) throw new NotFoundError('DRA not found');
 
   const name = (d.fields[FRANCHISEE_GROUPS.GROUP_NAME] as string | undefined) ?? '';
-  const [fas, pipelineStatuses, docs] = await Promise.all([
+  const [fas, pipelineStatuses, docs, allShopIds] = await Promise.all([
     faTracker.listByDraId(d.id),
     pipeline.listStatusesByShopNumber().catch(err => {
       logger.warn({ err, draName: name }, 'Pipeline status fetch failed; isOpen will be false');
@@ -137,6 +138,10 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
     draDocuments.listForDra(d.id).catch(err => {
       logger.warn({ err, draName: name }, 'DRA Documents fetch failed');
       return [] as draDocuments.DraDocumentRecord[];
+    }),
+    shopIds.listAll().catch(err => {
+      logger.warn({ err, draName: name }, 'Shop IDs fetch failed; allocation panel will be empty');
+      return [] as shopIds.ShopIdRecord[];
     }),
   ]);
 
@@ -173,6 +178,27 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
 
   const totalObligation = (d.fields[FRANCHISEE_GROUPS.TOTAL_OBLIGATION] as number | undefined) ?? 0;
 
+  // Shop IDs allocated to this DRA — sorted numerically. Assigned rows show
+  // their shop name; unassigned placeholders return null so the frontend can
+  // render "TBD". Blocks that span multiple DRAs (Fresh Dining, Lonestar,
+  // Bagel Bros IL/WI) only surface the IDs actually linked to THIS DRA.
+  const shopIdsForDra = allShopIds
+    .filter(r => ((r.fields[SHOP_IDS.DRA] as string[] | undefined) ?? []).includes(d.id))
+    .map(r => {
+      const shopIdStr = (r.fields[SHOP_IDS.SHOP_ID] as string | undefined) ?? '';
+      const shopName  = (r.fields[SHOP_IDS.SHOP_NAME] as string | undefined) ?? null;
+      const faLinks   = (r.fields[SHOP_IDS.FA_TRACKER] as string[] | undefined) ?? [];
+      const statusRaw = r.fields[SHOP_IDS.STATUS];
+      const status = typeof statusRaw === 'string' ? statusRaw : (statusRaw as { name?: string } | undefined)?.name ?? null;
+      return {
+        shopId:   shopIdStr,
+        shopName: shopName && shopName.trim() ? shopName : null,
+        status,
+        hasFa:    faLinks.length > 0,
+      };
+    })
+    .sort((a, b) => (parseInt(a.shopId, 10) || 0) - (parseInt(b.shopId, 10) || 0));
+
   res.json({
     dra: {
       id: d.id,
@@ -186,6 +212,7 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
       outstanding:  Math.max(0, totalObligation - fas.length),
       fas: faList,
       documents: docs.map(shapeDocument),
+      shopIds:   shopIdsForDra,
     },
   });
 });

@@ -237,6 +237,13 @@ export interface DraDocument {
   file:            { url: string; filename: string }[];
 }
 
+export interface DraShopId {
+  shopId:   string;
+  shopName: string | null;  // null = "TBD" (placeholder)
+  status:   string | null;
+  hasFa:    boolean;
+}
+
 export interface DraDetail {
   id: string;
   name: string;
@@ -249,6 +256,7 @@ export interface DraDetail {
   outstanding:     number;
   fas:             DraFa[];
   documents:       DraDocument[];
+  shopIds:         DraShopId[];
 }
 
 export interface Message {
