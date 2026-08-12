@@ -5,7 +5,7 @@ import { AttachPdfButton } from '../components/AttachPdfButton';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DraDocumentUploadModal } from '../components/DraDocumentUploadModal';
 import { useOpenPdf } from '../components/PdfViewerProvider';
-import type { DraDetail, DraDocument, DraDocumentType, DraFa, DraShopId, DraSummary } from '../api/types';
+import type { DraDetail, DraDocument, DraDocumentType, DraFa, DraShopId, DraSignatory, DraSummary } from '../api/types';
 
 interface UploadIntent {
   docType:          DraDocumentType;
@@ -149,6 +149,14 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
       {detail.shopIds && detail.shopIds.length > 0 && (
         <ShopIdsPanel shopIds={detail.shopIds} />
       )}
+
+      {/* ── Signatories & Contacts ── */}
+      <SignatoriesPanel
+        draId={detail.id}
+        signatories={detail.signatories ?? []}
+        onChanged={onChanged}
+      />
+
 
       {/* ── DRA Documents (Amendments + Addendums) ── */}
       <DraDocumentsSection
@@ -499,4 +507,306 @@ function ordinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+// ── Signatories panel ────────────────────────────────────────────
+
+interface SigForm {
+  name:      string;
+  email:     string;
+  ownership: string;  // percent as a string for input control (e.g. "40")
+  title:     string;
+  phone:     string;
+  notes:     string;
+}
+
+const emptySigForm: SigForm = { name: '', email: '', ownership: '', title: '', phone: '', notes: '' };
+
+function toForm(s: DraSignatory): SigForm {
+  return {
+    name:      s.name,
+    email:     s.email ?? '',
+    ownership: s.ownership != null ? String(Math.round(s.ownership * 10000) / 100) : '',
+    title:     s.title ?? '',
+    phone:     s.phone ?? '',
+    notes:     s.notes ?? '',
+  };
+}
+
+function SignatoriesPanel({
+  draId,
+  signatories,
+  onChanged,
+}: {
+  draId: string;
+  signatories: DraSignatory[];
+  onChanged: () => void;
+}) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing]     = useState<DraSignatory | null>(null);
+  const [form, setForm]           = useState<SigForm>(emptySigForm);
+  const [saving, setSaving]       = useState(false);
+  const [err, setErr]             = useState<string | null>(null);
+
+  const totalOwnership = signatories
+    .map(s => s.ownership ?? 0)
+    .reduce((sum, v) => sum + v, 0);
+  const totalPct = Math.round(totalOwnership * 10000) / 100;
+  const ownershipOk = signatories.some(s => s.ownership != null) ? Math.abs(totalPct - 100) < 0.01 : true;
+
+  function openAdd() {
+    setEditing(null);
+    setForm(emptySigForm);
+    setErr(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(s: DraSignatory) {
+    setEditing(s);
+    setForm(toForm(s));
+    setErr(null);
+    setModalOpen(true);
+  }
+
+  async function handleSave() {
+    if (!form.name.trim()) { setErr('Name is required'); return; }
+    const ownership = form.ownership.trim() === '' ? null : parseFloat(form.ownership);
+    if (ownership !== null && (isNaN(ownership) || ownership < 0 || ownership > 100)) {
+      setErr('Ownership must be a number between 0 and 100'); return;
+    }
+    const body = {
+      name:      form.name.trim(),
+      email:     form.email.trim() || null,
+      ownership: ownership,
+      title:     form.title.trim() || null,
+      phone:     form.phone.trim() || null,
+      notes:     form.notes.trim() || null,
+    };
+    setSaving(true);
+    setErr(null);
+    try {
+      if (editing) {
+        await api.patch(`/dras/${draId}/signatories/${editing.id}`, body);
+      } else {
+        await api.post(`/dras/${draId}/signatories`, body);
+      }
+      setModalOpen(false);
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(s: DraSignatory) {
+    if (!confirm(`Remove ${s.name} from this DRA's signatories?`)) return;
+    try {
+      await api.delete(`/dras/${draId}/signatories/${s.id}`);
+      onChanged();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  return (
+    <div style={{ marginTop: '2rem' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+        <div className="dra-schedule-label">
+          Signatories & Contacts
+          {signatories.length > 0 && (
+            <span className="muted" style={{ marginLeft: '0.75rem', fontWeight: 400 }}>
+              {signatories.length} {signatories.length === 1 ? 'person' : 'people'}
+              {signatories.some(s => s.ownership != null) && (
+                <> · <span style={{ color: ownershipOk ? 'inherit' : '#B94E23', fontWeight: ownershipOk ? 400 : 600 }}>
+                  {totalPct}% total ownership{!ownershipOk && ' (should be 100%)'}
+                </span></>
+              )}
+            </span>
+          )}
+        </div>
+        <button className="btn-secondary" onClick={openAdd}>+ Add Signatory</button>
+      </div>
+
+      {signatories.length === 0 ? (
+        <div style={{
+          padding:      '1rem 1.25rem',
+          border:       '1px dashed #E0DDD5',
+          borderRadius: 3,
+          background:   '#FAFAFA',
+          color:        'var(--muted, #7A8391)',
+          fontSize:     '0.9rem',
+        }}>
+          No signatories or contacts recorded for this DRA. Click <strong>+ Add Signatory</strong> to record the owners (from Exhibit C) and/or corporate signatories from the LLC bylaws.
+        </div>
+      ) : (
+        <div style={{ border: '1px solid #E0DDD5', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{
+            display:              'grid',
+            gridTemplateColumns:  'minmax(140px, 1.4fr) 80px minmax(180px, 1.6fr) minmax(120px, 1fr) 90px',
+            columnGap:            '0.75rem',
+            padding:              '0.5rem 0.9rem',
+            background:           '#F7F5F0',
+            fontSize:             '0.7rem',
+            textTransform:        'uppercase',
+            letterSpacing:        '0.05em',
+            color:                'var(--muted, #7A8391)',
+            fontWeight:           600,
+            borderBottom:         '1px solid #E0DDD5',
+          }}>
+            <div>Name</div>
+            <div style={{ textAlign: 'right' }}>Ownership</div>
+            <div>Email</div>
+            <div>Title</div>
+            <div />
+          </div>
+          {signatories.map((s, i) => (
+            <div
+              key={s.id}
+              style={{
+                display:              'grid',
+                gridTemplateColumns:  'minmax(140px, 1.4fr) 80px minmax(180px, 1.6fr) minmax(120px, 1fr) 90px',
+                columnGap:            '0.75rem',
+                padding:              '0.65rem 0.9rem',
+                borderBottom:         i < signatories.length - 1 ? '1px solid #EFEDE7' : 'none',
+                fontSize:             '0.92rem',
+                alignItems:           'center',
+              }}
+            >
+              <div style={{ fontWeight: 500 }}>{s.name}</div>
+              <div style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                {s.ownership != null ? `${Math.round(s.ownership * 10000) / 100}%` : <span className="muted">—</span>}
+              </div>
+              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {s.email
+                  ? <a href={`mailto:${s.email}`} style={{ color: 'inherit' }}>{s.email}</a>
+                  : <span className="muted">—</span>}
+              </div>
+              <div className="muted">{s.title || '—'}</div>
+              <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => openEdit(s)}
+                  title="Edit"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.9rem', padding: '0.15rem 0.4rem' }}
+                >✎</button>
+                <button
+                  onClick={() => handleDelete(s)}
+                  title="Remove"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.9rem', padding: '0.15rem 0.4rem', color: '#B94E23' }}
+                >🗑</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {modalOpen && (
+        <div
+          onClick={() => !saving && setModalOpen(false)}
+          style={{
+            position:  'fixed',
+            inset:     0,
+            background: 'rgba(15,27,45,0.35)',
+            display:   'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex:    100,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background:   '#FFF',
+              borderRadius: 4,
+              padding:      '1.5rem 1.75rem',
+              width:        '480px',
+              maxWidth:     '92vw',
+              boxShadow:    '0 8px 30px rgba(15,27,45,0.2)',
+            }}
+          >
+            <h2 style={{ margin: '0 0 1rem', fontSize: '1.15rem' }}>
+              {editing ? 'Edit Signatory' : 'Add Signatory'}
+            </h2>
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
+              <label style={{ fontSize: '0.85rem' }}>
+                Name*
+                <input
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+                  autoFocus
+                />
+              </label>
+              <label style={{ fontSize: '0.85rem' }}>
+                Email
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+                />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <label style={{ fontSize: '0.85rem' }}>
+                  Ownership %
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    placeholder="e.g. 40"
+                    value={form.ownership}
+                    onChange={e => setForm(f => ({ ...f, ownership: e.target.value }))}
+                    style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+                  />
+                  <div className="muted" style={{ fontSize: '0.72rem', marginTop: '0.2rem' }}>
+                    Blank if signatory-only (no equity)
+                  </div>
+                </label>
+                <label style={{ fontSize: '0.85rem' }}>
+                  Title
+                  <input
+                    placeholder="President, Managing Member…"
+                    value={form.title}
+                    onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                    style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+                  />
+                </label>
+              </div>
+              <label style={{ fontSize: '0.85rem' }}>
+                Phone
+                <input
+                  value={form.phone}
+                  onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                  style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+                />
+              </label>
+              <label style={{ fontSize: '0.85rem' }}>
+                Notes
+                <textarea
+                  value={form.notes}
+                  onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                  rows={2}
+                  style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3, resize: 'vertical' }}
+                />
+              </label>
+              {err && <div style={{ color: '#B94E23', fontSize: '0.85rem' }}>{err}</div>}
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+              <button
+                onClick={() => setModalOpen(false)}
+                disabled={saving}
+                className="btn-secondary"
+              >Cancel</button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="btn-primary"
+              >{saving ? 'Saving…' : editing ? 'Save Changes' : 'Add Signatory'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

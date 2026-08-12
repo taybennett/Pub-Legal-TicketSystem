@@ -32,6 +32,7 @@ export const TABLE = {
   STANDING_ADDENDUMS: 'tblbq0Z9NQ2TP4SY2', // per-DRA required-with-FA documents (Seeded Capital, Fresh Dining, Silent Investor)
   DOCUSIGN_ENVELOPES: 'tblwFDUF9e9r9VIJf', // tracks every DocuSign envelope sent from the portal
   SHOP_IDS:           'tblPoBFJDqgayNXVj', // master allocation of Shop IDs to DRAs (2001-2357 + 6969)
+  DRA_SIGNATORIES:    'tblreroidFJiRPHt5', // owners + corporate signatories per DRA
   // PUB Development
   PIPELINE:           'tbllofgQwUSIxkMl6',
 } as const;
@@ -394,3 +395,16 @@ export type ShopIdStatus =
   | 'Hold'
   | 'Reassigned'
   | 'Retired';
+
+// ── DRA SIGNATORIES ─────────────────────────────────────────────────
+// One row per person tied to a DRA. Owners (Exhibit C) carry Ownership%;
+// signatory-only rows leave it blank. Percentages should sum to 100% per DRA.
+export const DRA_SIGNATORIES = {
+  NAME:        'fldWhfkuUbhiqntga', // primary — singleLineText
+  DRA:         'fldFn9UzBv9xxutsA', // multipleRecordLinks → Franchisee Groups
+  EMAIL:       'fldmFCBqyTVbRaLyt', // email
+  OWNERSHIP:   'fld2WkluzAINaORyM', // percent (Airtable stores as 0.0-1.0)
+  TITLE:       'fldNdExY38PQZdVj0', // singleLineText — e.g. President, Managing Member
+  PHONE:       'fld3oZPWXxegT8Qho', // phoneNumber
+  NOTES:       'fldNbphua9P3BBV5j', // multilineText
+} as const;

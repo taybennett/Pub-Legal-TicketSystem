@@ -7,8 +7,9 @@ import * as draDocuments from '../airtable/draDocuments.js';
 import * as faTracker from '../airtable/faTracker.js';
 import * as pipeline from '../airtable/pipeline.js';
 import * as shopIds from '../airtable/shopIds.js';
+import * as signatories from '../airtable/signatories.js';
 import * as standingAddendums from '../airtable/standingAddendums.js';
-import { DRA_DOCUMENTS, FA_TRACKER, FRANCHISEE_GROUPS, SHOP_IDS, STANDING_ADDENDUMS, type DraDocumentType } from '../airtable/tables.js';
+import { DRA_DOCUMENTS, DRA_SIGNATORIES, FA_TRACKER, FRANCHISEE_GROUPS, SHOP_IDS, STANDING_ADDENDUMS, type DraDocumentType } from '../airtable/tables.js';
 import { requireAdmin, requireAuth } from '../auth/middleware.js';
 import { lifecycleStageFromPipelineStatus } from '../lib/lifecycleFromPipeline.js';
 import { logger } from '../util/logger.js';
@@ -129,7 +130,7 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
   if (!d) throw new NotFoundError('DRA not found');
 
   const name = (d.fields[FRANCHISEE_GROUPS.GROUP_NAME] as string | undefined) ?? '';
-  const [fas, pipelineStatuses, docs, allShopIds] = await Promise.all([
+  const [fas, pipelineStatuses, docs, allShopIds, sigs] = await Promise.all([
     faTracker.listByDraId(d.id),
     pipeline.listStatusesByShopNumber().catch(err => {
       logger.warn({ err, draName: name }, 'Pipeline status fetch failed; isOpen will be false');
@@ -142,6 +143,10 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
     shopIds.listAll().catch(err => {
       logger.warn({ err, draName: name }, 'Shop IDs fetch failed; allocation panel will be empty');
       return [] as shopIds.ShopIdRecord[];
+    }),
+    signatories.listForDra(d.id).catch(err => {
+      logger.warn({ err, draName: name }, 'DRA Signatories fetch failed; signatories panel will be empty');
+      return [] as signatories.SignatoryRecord[];
     }),
   ]);
 
@@ -199,6 +204,18 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
     })
     .sort((a, b) => (parseInt(a.shopId, 10) || 0) - (parseInt(b.shopId, 10) || 0));
 
+  // Signatories — owners (Exhibit C) + corporate signatories (bylaws) for
+  // this DRA. Ownership stored 0.0-1.0; frontend renders as percentage.
+  const signatoriesForDra = sigs.map(s => ({
+    id:        s.id,
+    name:      (s.fields[DRA_SIGNATORIES.NAME]      as string | undefined) ?? '',
+    email:     (s.fields[DRA_SIGNATORIES.EMAIL]     as string | undefined) ?? null,
+    ownership: (s.fields[DRA_SIGNATORIES.OWNERSHIP] as number | undefined) ?? null,
+    title:     (s.fields[DRA_SIGNATORIES.TITLE]     as string | undefined) ?? null,
+    phone:     (s.fields[DRA_SIGNATORIES.PHONE]     as string | undefined) ?? null,
+    notes:     (s.fields[DRA_SIGNATORIES.NOTES]     as string | undefined) ?? null,
+  }));
+
   res.json({
     dra: {
       id: d.id,
@@ -213,6 +230,7 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
       fas: faList,
       documents: docs.map(shapeDocument),
       shopIds:   shopIdsForDra,
+      signatories: signatoriesForDra,
     },
   });
 });
@@ -343,6 +361,75 @@ drasRouter.delete('/:id/documents/:docId', async (req: Request, res: Response) =
   }
   await draDocuments.remove(docId);
   logger.info({ docId, draId: id, userId: req.user!.sub }, 'DRA document deleted');
+  res.json({ ok: true });
+});
+
+// ── DRA Signatories CRUD ─────────────────────────────────────────
+
+const signatorySchema = z.object({
+  name:      z.string().min(1, 'Name is required').max(200),
+  email:     z.string().email().optional().nullable().or(z.literal('')),
+  ownership: z.number().min(0).max(100).optional().nullable(),  // UI sends 0-100, we store as 0-1
+  title:     z.string().max(120).optional().nullable().or(z.literal('')),
+  phone:     z.string().max(60).optional().nullable().or(z.literal('')),
+  notes:     z.string().max(2000).optional().nullable().or(z.literal('')),
+});
+
+function shapeSignatoryFields(p: z.infer<typeof signatorySchema>, draId: string) {
+  const fields: Record<string, unknown> = {
+    [DRA_SIGNATORIES.NAME]: p.name,
+    [DRA_SIGNATORIES.DRA]:  [draId],
+  };
+  if (p.email  !== undefined) fields[DRA_SIGNATORIES.EMAIL] = p.email || null;
+  if (p.title  !== undefined) fields[DRA_SIGNATORIES.TITLE] = p.title || null;
+  if (p.phone  !== undefined) fields[DRA_SIGNATORIES.PHONE] = p.phone || null;
+  if (p.notes  !== undefined) fields[DRA_SIGNATORIES.NOTES] = p.notes || null;
+  // Airtable stores percent as 0.0-1.0; UI sends 0-100.
+  if (p.ownership !== undefined && p.ownership !== null) {
+    fields[DRA_SIGNATORIES.OWNERSHIP] = p.ownership / 100;
+  } else if (p.ownership === null) {
+    fields[DRA_SIGNATORIES.OWNERSHIP] = null;
+  }
+  return fields;
+}
+
+drasRouter.post('/:id/signatories', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const parsed = signatorySchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new BadRequestError(parsed.error.issues.map(i => i.message).join('; '));
+  }
+  const dra = await dras.getById(id).catch(() => null);
+  if (!dra) throw new NotFoundError('DRA not found');
+  const created = await signatories.create(shapeSignatoryFields(parsed.data, id));
+  logger.info({ signatoryId: created.id, draId: id, userId: req.user!.sub }, 'DRA signatory created');
+  res.status(201).json({ signatory: { id: created.id } });
+});
+
+drasRouter.patch('/:id/signatories/:sigId', async (req: Request, res: Response) => {
+  const { id, sigId } = req.params;
+  const parsed = signatorySchema.partial({ name: true }).safeParse(req.body);
+  if (!parsed.success) {
+    throw new BadRequestError(parsed.error.issues.map(i => i.message).join('; '));
+  }
+  // Verify signatory belongs to this DRA (prevents cross-DRA tampering)
+  const sig = (await signatories.listForDra(id)).find(s => s.id === sigId);
+  if (!sig) throw new NotFoundError('Signatory not found on this DRA');
+  const fullPayload = signatorySchema.parse({
+    name: parsed.data.name ?? (sig.fields[DRA_SIGNATORIES.NAME] as string) ?? '',
+    ...parsed.data,
+  });
+  await signatories.update(sigId, shapeSignatoryFields(fullPayload, id));
+  logger.info({ signatoryId: sigId, draId: id, userId: req.user!.sub }, 'DRA signatory updated');
+  res.json({ ok: true });
+});
+
+drasRouter.delete('/:id/signatories/:sigId', async (req: Request, res: Response) => {
+  const { id, sigId } = req.params;
+  const sig = (await signatories.listForDra(id)).find(s => s.id === sigId);
+  if (!sig) throw new NotFoundError('Signatory not found on this DRA');
+  await signatories.remove(sigId);
+  logger.info({ signatoryId: sigId, draId: id, userId: req.user!.sub }, 'DRA signatory deleted');
   res.json({ ok: true });
 });
 

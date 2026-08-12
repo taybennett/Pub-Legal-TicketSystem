@@ -244,6 +244,16 @@ export interface DraShopId {
   hasFa:    boolean;
 }
 
+export interface DraSignatory {
+  id:        string;
+  name:      string;
+  email:     string | null;
+  ownership: number | null;   // 0.0-1.0 (Airtable percent format)
+  title:     string | null;
+  phone:     string | null;
+  notes:     string | null;
+}
+
 export interface DraDetail {
   id: string;
   name: string;
@@ -257,6 +267,7 @@ export interface DraDetail {
   fas:             DraFa[];
   documents:       DraDocument[];
   shopIds:         DraShopId[];
+  signatories:     DraSignatory[];
 }
 
 export interface Message {
