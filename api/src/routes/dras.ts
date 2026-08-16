@@ -9,7 +9,9 @@ import * as pipeline from '../airtable/pipeline.js';
 import * as shopIds from '../airtable/shopIds.js';
 import * as signatories from '../airtable/signatories.js';
 import * as standingAddendums from '../airtable/standingAddendums.js';
-import { DRA_DOCUMENTS, DRA_SIGNATORIES, FA_TRACKER, FRANCHISEE_GROUPS, SHOP_IDS, STANDING_ADDENDUMS, type DraDocumentType } from '../airtable/tables.js';
+import * as franchiseeEntities from '../airtable/franchiseeEntities.js';
+import * as entityDocuments from '../airtable/entityDocuments.js';
+import { DRA_DOCUMENTS, DRA_SIGNATORIES, ENTITY_DOCUMENTS, FA_TRACKER, FRANCHISEE_ENTITIES, FRANCHISEE_GROUPS, SHOP_IDS, STANDING_ADDENDUMS, type DraDocumentType, type EntityLevel } from '../airtable/tables.js';
 import { requireAdmin, requireAuth } from '../auth/middleware.js';
 import { lifecycleStageFromPipelineStatus } from '../lib/lifecycleFromPipeline.js';
 import { logger } from '../util/logger.js';
@@ -130,7 +132,7 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
   if (!d) throw new NotFoundError('DRA not found');
 
   const name = (d.fields[FRANCHISEE_GROUPS.GROUP_NAME] as string | undefined) ?? '';
-  const [fas, pipelineStatuses, docs, allShopIds, sigs] = await Promise.all([
+  const [fas, pipelineStatuses, docs, allShopIds, sigs, entities, allEntityDocs] = await Promise.all([
     faTracker.listByDraId(d.id),
     pipeline.listStatusesByShopNumber().catch(err => {
       logger.warn({ err, draName: name }, 'Pipeline status fetch failed; isOpen will be false');
@@ -147,6 +149,14 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
     signatories.listForDra(d.id).catch(err => {
       logger.warn({ err, draName: name }, 'DRA Signatories fetch failed; signatories panel will be empty');
       return [] as signatories.SignatoryRecord[];
+    }),
+    franchiseeEntities.listForDra(d.id).catch(err => {
+      logger.warn({ err, draName: name }, 'Franchisee Entities fetch failed; entity docs panel will be empty');
+      return [] as franchiseeEntities.FranchiseeEntityRecord[];
+    }),
+    entityDocuments.listAll().catch(err => {
+      logger.warn({ err, draName: name }, 'Entity Documents fetch failed');
+      return [] as entityDocuments.EntityDocumentRecord[];
     }),
   ]);
 
@@ -216,6 +226,44 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
     notes:     (s.fields[DRA_SIGNATORIES.NOTES]     as string | undefined) ?? null,
   }));
 
+  // Franchisee Entities linked to this DRA, each with their corporate docs.
+  const entityIds = new Set(entities.map(e => e.id));
+  const entitiesForDra = entities.map(e => {
+    const entityDocs = allEntityDocs
+      .filter(doc => {
+        const links = (doc.fields[ENTITY_DOCUMENTS.FRANCHISEE_ENTITY] as string[] | undefined) ?? [];
+        return links.some(id => id === e.id);
+      })
+      .map(doc => ({
+        id:            doc.id,
+        title:         (doc.fields[ENTITY_DOCUMENTS.TITLE]          as string | undefined) ?? '',
+        documentType:  extractName(doc.fields[ENTITY_DOCUMENTS.DOCUMENT_TYPE]),
+        effectiveDate: (doc.fields[ENTITY_DOCUMENTS.EFFECTIVE_DATE] as string | undefined) ?? null,
+        notes:         (doc.fields[ENTITY_DOCUMENTS.NOTES]          as string | undefined) ?? null,
+        file:          (doc.fields[ENTITY_DOCUMENTS.FILE] as { url: string; filename: string }[] | undefined) ?? [],
+      }))
+      .sort((a, b) => (a.documentType ?? '').localeCompare(b.documentType ?? ''));
+    return {
+      id:              e.id,
+      name:            (e.fields[FRANCHISEE_ENTITIES.ENTITY_NAME]     as string | undefined) ?? '',
+      entityLevel:     extractName(e.fields[FRANCHISEE_ENTITIES.ENTITY_LEVEL]) as EntityLevel | null,
+      jurisdiction:    (e.fields[FRANCHISEE_ENTITIES.JURISDICTION]    as string | undefined) ?? null,
+      formationDate:   (e.fields[FRANCHISEE_ENTITIES.FORMATION_DATE]  as string | undefined) ?? null,
+      signatoryName:   (e.fields[FRANCHISEE_ENTITIES.SIGNATORY_NAME]  as string | undefined) ?? null,
+      signatoryTitle:  (e.fields[FRANCHISEE_ENTITIES.SIGNATORY_TITLE] as string | undefined) ?? null,
+      notes:           (e.fields[FRANCHISEE_ENTITIES.NOTES]           as string | undefined) ?? null,
+      documents:       entityDocs,
+    };
+  })
+    .sort((a, b) => {
+      // Parents first, then shop-level, then alpha within
+      const rank = (lvl: string | null) => lvl === 'Parent (DRA Signatory)' ? 0 : lvl === 'Shop-Level (FA Signatory)' ? 1 : 2;
+      const rd = rank(a.entityLevel) - rank(b.entityLevel);
+      if (rd !== 0) return rd;
+      return a.name.localeCompare(b.name);
+    });
+  void entityIds;
+
   res.json({
     dra: {
       id: d.id,
@@ -231,6 +279,7 @@ drasRouter.get('/:id', async (req: Request, res: Response) => {
       documents: docs.map(shapeDocument),
       shopIds:   shopIdsForDra,
       signatories: signatoriesForDra,
+      entities:  entitiesForDra,
     },
   });
 });
@@ -430,6 +479,146 @@ drasRouter.delete('/:id/signatories/:sigId', async (req: Request, res: Response)
   if (!sig) throw new NotFoundError('Signatory not found on this DRA');
   await signatories.remove(sigId);
   logger.info({ signatoryId: sigId, draId: id, userId: req.user!.sub }, 'DRA signatory deleted');
+  res.json({ ok: true });
+});
+
+// ── Franchisee Entities CRUD (scoped to a DRA) ───────────────────
+
+const entityCreateSchema = z.object({
+  name:            z.string().min(1).max(200),
+  entityLevel:     z.enum(['Parent (DRA Signatory)', 'Shop-Level (FA Signatory)']).optional(),
+  jurisdiction:    z.string().max(60).optional().or(z.literal('')),
+  formationDate:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
+  signatoryName:   z.string().max(200).optional().or(z.literal('')),
+  signatoryTitle:  z.string().max(120).optional().or(z.literal('')),
+  notes:           z.string().max(2000).optional().or(z.literal('')),
+});
+
+drasRouter.post('/:id/entities', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const parsed = entityCreateSchema.safeParse(req.body);
+  if (!parsed.success) throw new BadRequestError(parsed.error.issues.map(i => i.message).join('; '));
+  const dra = await dras.getById(id).catch(() => null);
+  if (!dra) throw new NotFoundError('DRA not found');
+  const p = parsed.data;
+  const fields: franchiseeEntities.FranchiseeEntityFields = {
+    [FRANCHISEE_ENTITIES.ENTITY_NAME]:  p.name,
+    [FRANCHISEE_ENTITIES.PARENT_GROUP]: [id],
+  };
+  if (p.entityLevel)                       fields[FRANCHISEE_ENTITIES.ENTITY_LEVEL]    = p.entityLevel;
+  if (p.jurisdiction)                      fields[FRANCHISEE_ENTITIES.JURISDICTION]    = p.jurisdiction;
+  if (p.formationDate)                     fields[FRANCHISEE_ENTITIES.FORMATION_DATE]  = p.formationDate;
+  if (p.signatoryName)                     fields[FRANCHISEE_ENTITIES.SIGNATORY_NAME]  = p.signatoryName;
+  if (p.signatoryTitle)                    fields[FRANCHISEE_ENTITIES.SIGNATORY_TITLE] = p.signatoryTitle;
+  if (p.notes)                             fields[FRANCHISEE_ENTITIES.NOTES]           = p.notes;
+  const created = await franchiseeEntities.create(fields);
+  logger.info({ entityId: created.id, draId: id, userId: req.user!.sub }, 'Franchisee Entity created');
+  res.status(201).json({ entity: { id: created.id } });
+});
+
+drasRouter.patch('/:id/entities/:entityId', async (req: Request, res: Response) => {
+  const { id, entityId } = req.params;
+  const parsed = entityCreateSchema.partial({ name: true }).safeParse(req.body);
+  if (!parsed.success) throw new BadRequestError(parsed.error.issues.map(i => i.message).join('; '));
+  const entity = await franchiseeEntities.getById(entityId);
+  if (!entity) throw new NotFoundError('Entity not found');
+  const parents = (entity.fields[FRANCHISEE_ENTITIES.PARENT_GROUP] as string[] | undefined) ?? [];
+  if (!parents.includes(id)) throw new ForbiddenError('Entity is not linked to this DRA');
+  const p = parsed.data;
+  const fields: franchiseeEntities.FranchiseeEntityFields = {};
+  if (p.name !== undefined)                fields[FRANCHISEE_ENTITIES.ENTITY_NAME]     = p.name;
+  if (p.entityLevel !== undefined)         fields[FRANCHISEE_ENTITIES.ENTITY_LEVEL]    = p.entityLevel;
+  if (p.jurisdiction !== undefined)        fields[FRANCHISEE_ENTITIES.JURISDICTION]    = p.jurisdiction || undefined;
+  if (p.formationDate !== undefined)       fields[FRANCHISEE_ENTITIES.FORMATION_DATE]  = p.formationDate || undefined;
+  if (p.signatoryName !== undefined)       fields[FRANCHISEE_ENTITIES.SIGNATORY_NAME]  = p.signatoryName || undefined;
+  if (p.signatoryTitle !== undefined)      fields[FRANCHISEE_ENTITIES.SIGNATORY_TITLE] = p.signatoryTitle || undefined;
+  if (p.notes !== undefined)               fields[FRANCHISEE_ENTITIES.NOTES]           = p.notes || undefined;
+  await franchiseeEntities.update(entityId, fields);
+  logger.info({ entityId, draId: id, userId: req.user!.sub }, 'Franchisee Entity updated');
+  res.json({ ok: true });
+});
+
+drasRouter.delete('/:id/entities/:entityId', async (req: Request, res: Response) => {
+  const { id, entityId } = req.params;
+  const entity = await franchiseeEntities.getById(entityId);
+  if (!entity) throw new NotFoundError('Entity not found');
+  const parents = (entity.fields[FRANCHISEE_ENTITIES.PARENT_GROUP] as string[] | undefined) ?? [];
+  if (!parents.includes(id)) throw new ForbiddenError('Entity is not linked to this DRA');
+  await franchiseeEntities.remove(entityId);
+  logger.info({ entityId, draId: id, userId: req.user!.sub }, 'Franchisee Entity deleted');
+  res.json({ ok: true });
+});
+
+// ── Entity Documents (corporate docs) upload/delete ──────────────
+
+const entityDocTypes = [
+  'Operating Agreement', 'SS-4 Letter',
+  'Articles of Formation', 'Articles of Incorporation',
+  'Bylaws', 'Amendment to Operating Agreement',
+  'Certificate of Good Standing', 'EIN Verification', 'Other',
+] as const;
+
+const entityDocSaveSchema = z.object({
+  documentType:  z.enum(entityDocTypes),
+  title:         z.string().max(200).optional().or(z.literal('')),
+  effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
+  notes:         z.string().max(2000).optional().or(z.literal('')),
+});
+
+drasRouter.post('/:id/entities/:entityId/documents', upload.single('file'), async (req: Request, res: Response) => {
+  const parsed = entityDocSaveSchema.safeParse(req.body);
+  if (!parsed.success) throw new BadRequestError('Invalid entity doc payload', parsed.error.flatten());
+  if (!req.file) throw new BadRequestError('Missing PDF file');
+  if (req.file.mimetype !== 'application/pdf') {
+    throw new BadRequestError('Only PDF files are supported');
+  }
+  if (req.file.size > DRA_DOC_MAX_BYTES) {
+    throw new BadRequestError(`PDF exceeds ${(DRA_DOC_MAX_BYTES / 1024 / 1024).toFixed(0)} MB limit.`);
+  }
+
+  const { id, entityId } = req.params;
+  const entity = await franchiseeEntities.getById(entityId);
+  if (!entity) throw new NotFoundError('Entity not found');
+  const parents = (entity.fields[FRANCHISEE_ENTITIES.PARENT_GROUP] as string[] | undefined) ?? [];
+  if (!parents.includes(id)) throw new ForbiddenError('Entity is not linked to this DRA');
+
+  const p = parsed.data;
+  const entityName = (entity.fields[FRANCHISEE_ENTITIES.ENTITY_NAME] as string | undefined) ?? 'Unknown Entity';
+  const title = p.title?.trim() || `${p.documentType} — ${entityName}`;
+
+  const fields: entityDocuments.EntityDocumentFields = {
+    [ENTITY_DOCUMENTS.TITLE]:             title,
+    [ENTITY_DOCUMENTS.DOCUMENT_TYPE]:     p.documentType,
+    [ENTITY_DOCUMENTS.FRANCHISEE_ENTITY]: [entityId],
+  };
+  if (p.effectiveDate) fields[ENTITY_DOCUMENTS.EFFECTIVE_DATE] = p.effectiveDate;
+  if (p.notes)         fields[ENTITY_DOCUMENTS.NOTES]          = p.notes;
+
+  const created = await entityDocuments.create(fields);
+
+  const filename = req.file.originalname.replace(/[\/\\]/g, '_').slice(0, 255);
+  await entityDocuments.attachFile(created.id, {
+    filename,
+    contentType: req.file.mimetype,
+    base64: req.file.buffer.toString('base64'),
+  });
+
+  logger.info({ docId: created.id, entityId, draId: id, type: p.documentType, userId: req.user!.sub }, 'Entity document created');
+  res.status(201).json({ document: { id: created.id, filename } });
+});
+
+drasRouter.delete('/:id/entities/:entityId/documents/:docId', async (req: Request, res: Response) => {
+  const { id, entityId, docId } = req.params;
+  const entity = await franchiseeEntities.getById(entityId);
+  if (!entity) throw new NotFoundError('Entity not found');
+  const parents = (entity.fields[FRANCHISEE_ENTITIES.PARENT_GROUP] as string[] | undefined) ?? [];
+  if (!parents.includes(id)) throw new ForbiddenError('Entity is not linked to this DRA');
+  const doc = await entityDocuments.getById(docId);
+  if (!doc) throw new NotFoundError('Entity document not found');
+  const docEntities = (doc.fields[ENTITY_DOCUMENTS.FRANCHISEE_ENTITY] as string[] | undefined) ?? [];
+  if (!docEntities.includes(entityId)) throw new ForbiddenError('Document is not linked to this entity');
+  await entityDocuments.remove(docId);
+  logger.info({ docId, entityId, draId: id, userId: req.user!.sub }, 'Entity document deleted');
   res.json({ ok: true });
 });
 

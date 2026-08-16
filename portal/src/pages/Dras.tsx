@@ -5,7 +5,7 @@ import { AttachPdfButton } from '../components/AttachPdfButton';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DraDocumentUploadModal } from '../components/DraDocumentUploadModal';
 import { useOpenPdf } from '../components/PdfViewerProvider';
-import type { DraDetail, DraDocument, DraDocumentType, DraFa, DraShopId, DraSignatory, DraSummary } from '../api/types';
+import type { DraDetail, DraDocument, DraDocumentType, DraEntity, DraFa, DraShopId, DraSignatory, DraSummary, EntityDocumentType, EntityLevel } from '../api/types';
 
 interface UploadIntent {
   docType:          DraDocumentType;
@@ -84,6 +84,7 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
 
   const [upload, setUpload]     = useState<UploadIntent | null>(null);
   const [toDelete, setToDelete] = useState<DraDocument | null>(null);
+  const [entityDocsOpen, setEntityDocsOpen] = useState(false);
   const openPdf                 = useOpenPdf();
 
   async function handleDelete(doc: DraDocument) {
@@ -107,7 +108,7 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
         <Metric label="Outstanding"           value={detail.outstanding} highlight={detail.outstanding > 0 ? 'red' : 'green'} />
       </div>
 
-      <div className="dra-actions">
+      <div className="dra-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
         {detail.draFile[0]
           ? <button
               type="button"
@@ -128,6 +129,18 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
                 onAttached={onChanged}
               />
             : <span className="muted">No original DRA PDF on file</span>}
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => setEntityDocsOpen(true)}
+        >
+          🗂 Entity Documents
+          {(detail.entities?.length ?? 0) > 0 && (
+            <span style={{ marginLeft: '0.4rem', opacity: 0.7 }}>
+              ({detail.entities.length} {detail.entities.length === 1 ? 'entity' : 'entities'})
+            </span>
+          )}
+        </button>
       </div>
 
       {scheduleYears.length > 0 && (
@@ -156,6 +169,23 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
         signatories={detail.signatories ?? []}
         onChanged={onChanged}
       />
+
+      {/* ── Entity Documents modal ── */}
+      {entityDocsOpen && (
+        <EntityDocumentsModal
+          draId={detail.id}
+          draName={detail.name}
+          entities={detail.entities ?? []}
+          onClose={() => setEntityDocsOpen(false)}
+          onChanged={onChanged}
+          onOpenPdf={(file, title) => openPdf({
+            url:      file.url,
+            filename: file.filename,
+            title,
+            subtitle: detail.name,
+          })}
+        />
+      )}
 
 
       {/* ── DRA Documents (Amendments + Addendums) ── */}
@@ -807,6 +837,477 @@ function SignatoriesPanel({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Entity Documents modal ─────────────────────────────────────────
+
+const ENTITY_DOC_TYPES: EntityDocumentType[] = [
+  'Operating Agreement', 'SS-4 Letter',
+  'Articles of Formation', 'Articles of Incorporation',
+  'Bylaws', 'Amendment to Operating Agreement',
+  'Certificate of Good Standing', 'EIN Verification', 'Other',
+];
+
+const ENTITY_LEVELS: EntityLevel[] = ['Parent (DRA Signatory)', 'Shop-Level (FA Signatory)'];
+
+function EntityDocumentsModal({
+  draId,
+  draName,
+  entities,
+  onClose,
+  onChanged,
+  onOpenPdf,
+}: {
+  draId:      string;
+  draName:    string;
+  entities:   DraEntity[];
+  onClose:    () => void;
+  onChanged:  () => void;
+  onOpenPdf:  (file: { url: string; filename: string }, title: string) => void;
+}) {
+  const [addEntityOpen, setAddEntityOpen] = useState(false);
+  const [uploadFor, setUploadFor] = useState<DraEntity | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const parents    = entities.filter(e => e.entityLevel === 'Parent (DRA Signatory)');
+  const shopLevels = entities.filter(e => e.entityLevel === 'Shop-Level (FA Signatory)');
+  const unclassified = entities.filter(e => !e.entityLevel);
+
+  async function handleDeleteDoc(entity: DraEntity, docId: string, docTitle: string) {
+    if (!confirm(`Remove "${docTitle}" from ${entity.name}?`)) return;
+    setBusyId(docId);
+    try {
+      await api.delete(`/dras/${draId}/entities/${entity.id}/documents/${docId}`);
+      onChanged();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDeleteEntity(entity: DraEntity) {
+    if (entity.documents.length > 0) {
+      alert(`Can't delete ${entity.name} while it still has ${entity.documents.length} document(s). Remove the documents first.`);
+      return;
+    }
+    if (!confirm(`Remove entity ${entity.name} from this DRA?`)) return;
+    setBusyId(entity.id);
+    try {
+      await api.delete(`/dras/${draId}/entities/${entity.id}`);
+      onChanged();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(15,27,45,0.35)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        zIndex: 100, overflowY: 'auto', padding: '2rem 1rem',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#FFF', borderRadius: 4, padding: '1.5rem 1.75rem',
+          width: '760px', maxWidth: '95vw', boxShadow: '0 8px 30px rgba(15,27,45,0.2)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.35rem' }}>
+          <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Entity Documents</h2>
+          <button
+            onClick={onClose}
+            style={{ background: 'transparent', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#7A8391' }}
+            title="Close"
+          >×</button>
+        </div>
+        <div className="muted" style={{ fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+          {draName} · Operating agreements, SS-4 letters, formation docs and bylaws for the parent entity and every shop-level entity signing under this DRA.
+        </div>
+
+        {err && <div style={{ color: '#B94E23', fontSize: '0.85rem', marginBottom: '1rem' }}>{err}</div>}
+
+        {entities.length === 0 ? (
+          <div style={{
+            padding: '1.25rem 1.5rem', border: '1px dashed #E0DDD5', borderRadius: 3, background: '#FAFAFA',
+            color: 'var(--muted, #7A8391)', fontSize: '0.9rem', textAlign: 'center', marginBottom: '1rem',
+          }}>
+            No entities have been recorded for this DRA yet.<br />
+            <span style={{ opacity: 0.8 }}>Add the parent entity (the LLC/Inc. that signed the DRA) or a shop-level entity (LLC that signed a specific FA) to start uploading corporate documents.</span>
+          </div>
+        ) : (
+          <>
+            <EntityGroup
+              title="Parent Entity (DRA Signatory)"
+              subtitle="The LLC/Inc. that signed the DRA."
+              entities={parents}
+              busyId={busyId}
+              onUpload={ent => setUploadFor(ent)}
+              onOpenPdf={onOpenPdf}
+              onDeleteDoc={handleDeleteDoc}
+              onDeleteEntity={handleDeleteEntity}
+            />
+            <EntityGroup
+              title="Shop-Level Entities (FA Signatories)"
+              subtitle="Per-shop LLCs used to sign individual Franchise Agreements under this DRA."
+              entities={shopLevels}
+              busyId={busyId}
+              onUpload={ent => setUploadFor(ent)}
+              onOpenPdf={onOpenPdf}
+              onDeleteDoc={handleDeleteDoc}
+              onDeleteEntity={handleDeleteEntity}
+            />
+            {unclassified.length > 0 && (
+              <EntityGroup
+                title="Unclassified"
+                subtitle="Entities without a level set. Edit them to mark Parent or Shop-Level."
+                entities={unclassified}
+                busyId={busyId}
+                onUpload={ent => setUploadFor(ent)}
+                onOpenPdf={onOpenPdf}
+                onDeleteDoc={handleDeleteDoc}
+                onDeleteEntity={handleDeleteEntity}
+              />
+            )}
+          </>
+        )}
+
+        <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button
+            className="btn-secondary"
+            onClick={() => setAddEntityOpen(true)}
+          >+ Add Entity</button>
+          <button className="btn-secondary" onClick={onClose}>Close</button>
+        </div>
+      </div>
+
+      {addEntityOpen && (
+        <AddEntityModal
+          draId={draId}
+          onClose={() => setAddEntityOpen(false)}
+          onCreated={() => { setAddEntityOpen(false); onChanged(); }}
+          onError={setErr}
+        />
+      )}
+
+      {uploadFor && (
+        <UploadEntityDocModal
+          draId={draId}
+          entity={uploadFor}
+          onClose={() => setUploadFor(null)}
+          onUploaded={() => { setUploadFor(null); onChanged(); }}
+          onError={setErr}
+        />
+      )}
+    </div>
+  );
+}
+
+function EntityGroup({
+  title, subtitle, entities, busyId, onUpload, onOpenPdf, onDeleteDoc, onDeleteEntity,
+}: {
+  title:    string;
+  subtitle: string;
+  entities: DraEntity[];
+  busyId:   string | null;
+  onUpload: (entity: DraEntity) => void;
+  onOpenPdf: (file: { url: string; filename: string }, title: string) => void;
+  onDeleteDoc: (entity: DraEntity, docId: string, title: string) => void;
+  onDeleteEntity: (entity: DraEntity) => void;
+}) {
+  if (entities.length === 0) return null;
+  return (
+    <div style={{ marginBottom: '1.75rem' }}>
+      <div style={{
+        fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em',
+        fontWeight: 700, color: 'var(--muted, #7A8391)', marginBottom: '0.15rem',
+      }}>{title}</div>
+      <div className="muted" style={{ fontSize: '0.78rem', marginBottom: '0.6rem' }}>{subtitle}</div>
+      <div style={{ display: 'grid', gap: '0.75rem' }}>
+        {entities.map(entity => (
+          <div key={entity.id} style={{ border: '1px solid #E0DDD5', borderRadius: 3, background: '#FFF' }}>
+            <div style={{
+              padding: '0.6rem 0.9rem', background: '#F7F5F0', borderBottom: '1px solid #E0DDD5',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{entity.name}</div>
+                <div className="muted" style={{ fontSize: '0.75rem' }}>
+                  {entity.documents.length} {entity.documents.length === 1 ? 'document' : 'documents'}
+                  {entity.jurisdiction && <> · {entity.jurisdiction}</>}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.35rem' }}>
+                <button
+                  onClick={() => onUpload(entity)}
+                  className="btn-secondary"
+                  style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }}
+                >+ Upload</button>
+                <button
+                  onClick={() => onDeleteEntity(entity)}
+                  disabled={busyId === entity.id}
+                  title="Remove entity"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.9rem', padding: '0.3rem 0.5rem', color: '#B94E23' }}
+                >🗑</button>
+              </div>
+            </div>
+            {entity.documents.length > 0 && (
+              <div>
+                {entity.documents.map((doc, i) => (
+                  <div key={doc.id} style={{
+                    padding: '0.55rem 0.9rem', borderBottom: i < entity.documents.length - 1 ? '1px solid #EFEDE7' : 'none',
+                    display: 'grid', gridTemplateColumns: '1.4fr 1fr 90px 90px', columnGap: '0.75rem',
+                    alignItems: 'center', fontSize: '0.9rem',
+                  }}>
+                    <div>{doc.title}</div>
+                    <div className="muted" style={{ fontSize: '0.85rem' }}>{doc.documentType ?? '—'}</div>
+                    <div className="muted" style={{ fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums' }}>
+                      {doc.effectiveDate || ''}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.3rem', justifyContent: 'flex-end' }}>
+                      {doc.file[0] && (
+                        <button
+                          onClick={() => onOpenPdf(doc.file[0], doc.title)}
+                          className="btn-secondary"
+                          style={{ fontSize: '0.75rem', padding: '0.2rem 0.55rem' }}
+                        >Open</button>
+                      )}
+                      <button
+                        onClick={() => onDeleteDoc(entity, doc.id, doc.title)}
+                        disabled={busyId === doc.id}
+                        title="Remove"
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem 0.4rem', color: '#B94E23' }}
+                      >🗑</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AddEntityModal({
+  draId, onClose, onCreated, onError,
+}: {
+  draId:     string;
+  onClose:   () => void;
+  onCreated: () => void;
+  onError:   (msg: string | null) => void;
+}) {
+  const [name, setName]                 = useState('');
+  const [entityLevel, setEntityLevel]   = useState<EntityLevel | ''>('');
+  const [jurisdiction, setJurisdiction] = useState('');
+  const [saving, setSaving]             = useState(false);
+  const [localErr, setLocalErr]         = useState<string | null>(null);
+
+  async function handleCreate() {
+    if (!name.trim()) { setLocalErr('Entity name is required'); return; }
+    setSaving(true);
+    setLocalErr(null);
+    onError(null);
+    try {
+      await api.post(`/dras/${draId}/entities`, {
+        name:         name.trim(),
+        entityLevel:  entityLevel || undefined,
+        jurisdiction: jurisdiction.trim() || undefined,
+      });
+      onCreated();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setLocalErr(msg);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      onClick={() => !saving && onClose()}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(15,27,45,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#FFF', borderRadius: 4, padding: '1.5rem 1.75rem',
+          width: '480px', maxWidth: '92vw', boxShadow: '0 8px 30px rgba(15,27,45,0.2)',
+        }}
+      >
+        <h3 style={{ margin: '0 0 1rem', fontSize: '1.1rem' }}>Add Entity</h3>
+        <div style={{ display: 'grid', gap: '0.75rem' }}>
+          <label style={{ fontSize: '0.85rem' }}>
+            Entity Name*
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. Jip Dip BH, Inc."
+              autoFocus
+              style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+            />
+          </label>
+          <label style={{ fontSize: '0.85rem' }}>
+            Entity Level
+            <select
+              value={entityLevel}
+              onChange={e => setEntityLevel(e.target.value as EntityLevel | '')}
+              style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3, background: '#FFF' }}
+            >
+              <option value="">— select —</option>
+              {ENTITY_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </label>
+          <label style={{ fontSize: '0.85rem' }}>
+            Jurisdiction (State of formation)
+            <input
+              value={jurisdiction}
+              onChange={e => setJurisdiction(e.target.value)}
+              placeholder="e.g. DE, NY, GA"
+              style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+            />
+          </label>
+          {localErr && <div style={{ color: '#B94E23', fontSize: '0.85rem' }}>{localErr}</div>}
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+          <button className="btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="btn-primary" onClick={handleCreate} disabled={saving}>
+            {saving ? 'Adding…' : 'Add Entity'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UploadEntityDocModal({
+  draId, entity, onClose, onUploaded, onError,
+}: {
+  draId:      string;
+  entity:     DraEntity;
+  onClose:    () => void;
+  onUploaded: () => void;
+  onError:    (msg: string | null) => void;
+}) {
+  const [file, setFile]                   = useState<File | null>(null);
+  const [documentType, setDocumentType]   = useState<EntityDocumentType>('Operating Agreement');
+  const [title, setTitle]                 = useState('');
+  const [effectiveDate, setEffectiveDate] = useState('');
+  const [notes, setNotes]                 = useState('');
+  const [saving, setSaving]               = useState(false);
+  const [localErr, setLocalErr]           = useState<string | null>(null);
+
+  async function handleUpload() {
+    if (!file) { setLocalErr('Select a PDF file'); return; }
+    if (file.type !== 'application/pdf') { setLocalErr('Only PDF files are supported'); return; }
+    setSaving(true);
+    setLocalErr(null);
+    onError(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('documentType', documentType);
+      if (title.trim())         fd.append('title', title.trim());
+      if (effectiveDate)        fd.append('effectiveDate', effectiveDate);
+      if (notes.trim())         fd.append('notes', notes.trim());
+      await api.upload(`/dras/${draId}/entities/${entity.id}/documents`, fd);
+      onUploaded();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setLocalErr(msg);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      onClick={() => !saving && onClose()}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(15,27,45,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#FFF', borderRadius: 4, padding: '1.5rem 1.75rem',
+          width: '520px', maxWidth: '92vw', boxShadow: '0 8px 30px rgba(15,27,45,0.2)',
+        }}
+      >
+        <h3 style={{ margin: '0 0 0.35rem', fontSize: '1.1rem' }}>Upload Document</h3>
+        <div className="muted" style={{ fontSize: '0.82rem', marginBottom: '1rem' }}>
+          For {entity.name}
+        </div>
+        <div style={{ display: 'grid', gap: '0.75rem' }}>
+          <label style={{ fontSize: '0.85rem' }}>
+            Document Type*
+            <select
+              value={documentType}
+              onChange={e => setDocumentType(e.target.value as EntityDocumentType)}
+              style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3, background: '#FFF' }}
+            >
+              {ENTITY_DOC_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </label>
+          <label style={{ fontSize: '0.85rem' }}>
+            Title (optional)
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder={`Defaults to "${documentType} — ${entity.name}"`}
+              style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+            />
+          </label>
+          <label style={{ fontSize: '0.85rem' }}>
+            Effective Date (optional)
+            <input
+              type="date"
+              value={effectiveDate}
+              onChange={e => setEffectiveDate(e.target.value)}
+              style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+            />
+          </label>
+          <label style={{ fontSize: '0.85rem' }}>
+            PDF File*
+            <input
+              type="file"
+              accept="application/pdf"
+              onChange={e => setFile(e.target.files?.[0] ?? null)}
+              style={{ width: '100%', marginTop: '0.2rem', fontSize: '0.85rem' }}
+            />
+          </label>
+          <label style={{ fontSize: '0.85rem' }}>
+            Notes (optional)
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows={2}
+              style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3, resize: 'vertical' }}
+            />
+          </label>
+          {localErr && <div style={{ color: '#B94E23', fontSize: '0.85rem' }}>{localErr}</div>}
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+          <button className="btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="btn-primary" onClick={handleUpload} disabled={saving || !file}>
+            {saving ? 'Uploading…' : 'Upload'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -254,6 +254,35 @@ export interface DraSignatory {
   notes:     string | null;
 }
 
+export type EntityLevel = 'Parent (DRA Signatory)' | 'Shop-Level (FA Signatory)';
+
+export type EntityDocumentType =
+  | 'Operating Agreement' | 'SS-4 Letter'
+  | 'Articles of Formation' | 'Articles of Incorporation'
+  | 'Bylaws' | 'Amendment to Operating Agreement'
+  | 'Certificate of Good Standing' | 'EIN Verification' | 'Other';
+
+export interface EntityDocument {
+  id:            string;
+  title:         string;
+  documentType:  EntityDocumentType | null;
+  effectiveDate: string | null;
+  notes:         string | null;
+  file:          { url: string; filename: string }[];
+}
+
+export interface DraEntity {
+  id:              string;
+  name:            string;
+  entityLevel:     EntityLevel | null;
+  jurisdiction:    string | null;
+  formationDate:   string | null;
+  signatoryName:   string | null;
+  signatoryTitle:  string | null;
+  notes:           string | null;
+  documents:       EntityDocument[];
+}
+
 export interface DraDetail {
   id: string;
   name: string;
@@ -268,6 +297,7 @@ export interface DraDetail {
   documents:       DraDocument[];
   shopIds:         DraShopId[];
   signatories:     DraSignatory[];
+  entities:        DraEntity[];
 }
 
 export interface Message {

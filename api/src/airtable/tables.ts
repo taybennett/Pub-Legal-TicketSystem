@@ -33,6 +33,7 @@ export const TABLE = {
   DOCUSIGN_ENVELOPES: 'tblwFDUF9e9r9VIJf', // tracks every DocuSign envelope sent from the portal
   SHOP_IDS:           'tblPoBFJDqgayNXVj', // master allocation of Shop IDs to DRAs (2001-2357 + 6969)
   DRA_SIGNATORIES:    'tblreroidFJiRPHt5', // owners + corporate signatories per DRA
+  ENTITY_DOCUMENTS:   'tblqeuP7i0ZO6U7OD', // corporate governance docs (OA, SS-4, etc.) per Franchisee Entity
   // PUB Development
   PIPELINE:           'tbllofgQwUSIxkMl6',
 } as const;
@@ -347,7 +348,29 @@ export const FRANCHISEE_ENTITIES = {
   NOTES:                'fld0YnjN3o6WQPNrV',
   LOCATIONS:            'fldAL756ZvSncgTBH',
   FA_TRACKER:           'fld3Xvc7MydcI7Hjl',
+  ENTITY_LEVEL:         'fldfjtVr76ajXNZfp', // singleSelect: Parent (DRA Signatory) | Shop-Level (FA Signatory)
 } as const;
+
+export type EntityLevel = 'Parent (DRA Signatory)' | 'Shop-Level (FA Signatory)';
+
+// ── ENTITY DOCUMENTS ────────────────────────────────────────────────
+// Corporate governance docs (Operating Agreement, SS-4, Articles, Bylaws)
+// attached to any Franchisee Entity — both parent (DRA-signing) and
+// shop-level (FA-signing).
+export const ENTITY_DOCUMENTS = {
+  TITLE:            'fldZ3YZ04jFW1ZL4t',
+  DOCUMENT_TYPE:    'fldAEF9Jx7Xm2umPH', // singleSelect
+  FRANCHISEE_ENTITY:'fldzLBMg6DaEvfkWh', // multipleRecordLinks → Franchisee Entities
+  FILE:             'fldefRTp9qiFfN1z6', // multipleAttachments
+  EFFECTIVE_DATE:   'fld6SnyaI1rwTxjhA',
+  NOTES:            'fld2S39sIKI7KkxPF',
+} as const;
+
+export type EntityDocumentType =
+  | 'Operating Agreement' | 'SS-4 Letter'
+  | 'Articles of Formation' | 'Articles of Incorporation'
+  | 'Bylaws' | 'Amendment to Operating Agreement'
+  | 'Certificate of Good Standing' | 'EIN Verification' | 'Other';
 
 // ── PIPELINE (PUB Development, read-only for portal) ────────────────
 // Only includes fields the portal Construction tab actually reads.
