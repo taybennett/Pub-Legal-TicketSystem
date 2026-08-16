@@ -852,6 +852,16 @@ const ENTITY_DOC_TYPES: EntityDocumentType[] = [
 
 const ENTITY_LEVELS: EntityLevel[] = ['Parent (DRA Signatory)', 'Shop-Level (FA Signatory)'];
 
+/**
+ * Two-pane view of Franchisee Entities for a DRA:
+ *   TOP    — visual hierarchy chart. Parent entity centered, shop-level
+ *            entities below in a horizontal row with connecting lines.
+ *            Each card is a clickable node; the currently-selected card
+ *            gets a highlight ring. Click switches the detail pane.
+ *   BOTTOM — detail pane for the selected entity: metadata, documents
+ *            list with open/delete, and an upload button.
+ * A separate "Add Entity" mini-modal creates new entities.
+ */
 function EntityDocumentsModal({
   draId,
   draName,
@@ -867,20 +877,28 @@ function EntityDocumentsModal({
   onChanged:  () => void;
   onOpenPdf:  (file: { url: string; filename: string }, title: string) => void;
 }) {
+  const parents      = entities.filter(e => e.entityLevel === 'Parent (DRA Signatory)');
+  const shopLevels   = entities.filter(e => e.entityLevel === 'Shop-Level (FA Signatory)');
+  const unclassified = entities.filter(e => !e.entityLevel);
+
+  // Default selection: first parent → first shop-level → first unclassified → null
+  const defaultSelected =
+    parents[0]?.id ?? shopLevels[0]?.id ?? unclassified[0]?.id ?? null;
+  const [selectedId, setSelectedId] = useState<string | null>(defaultSelected);
   const [addEntityOpen, setAddEntityOpen] = useState(false);
-  const [uploadFor, setUploadFor] = useState<DraEntity | null>(null);
+  const [uploadOpen, setUploadOpen]       = useState(false);
+  const [editEntityOpen, setEditEntityOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const parents    = entities.filter(e => e.entityLevel === 'Parent (DRA Signatory)');
-  const shopLevels = entities.filter(e => e.entityLevel === 'Shop-Level (FA Signatory)');
-  const unclassified = entities.filter(e => !e.entityLevel);
+  const selected = entities.find(e => e.id === selectedId) ?? null;
 
-  async function handleDeleteDoc(entity: DraEntity, docId: string, docTitle: string) {
-    if (!confirm(`Remove "${docTitle}" from ${entity.name}?`)) return;
+  async function handleDeleteDoc(docId: string, docTitle: string) {
+    if (!selected) return;
+    if (!confirm(`Remove "${docTitle}" from ${selected.name}?`)) return;
     setBusyId(docId);
     try {
-      await api.delete(`/dras/${draId}/entities/${entity.id}/documents/${docId}`);
+      await api.delete(`/dras/${draId}/entities/${selected.id}/documents/${docId}`);
       onChanged();
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e));
@@ -889,15 +907,17 @@ function EntityDocumentsModal({
     }
   }
 
-  async function handleDeleteEntity(entity: DraEntity) {
-    if (entity.documents.length > 0) {
-      alert(`Can't delete ${entity.name} while it still has ${entity.documents.length} document(s). Remove the documents first.`);
+  async function handleDeleteEntity() {
+    if (!selected) return;
+    if (selected.documents.length > 0) {
+      alert(`Can't delete ${selected.name} while it still has ${selected.documents.length} document(s). Remove the documents first.`);
       return;
     }
-    if (!confirm(`Remove entity ${entity.name} from this DRA?`)) return;
-    setBusyId(entity.id);
+    if (!confirm(`Remove entity ${selected.name} from this DRA?`)) return;
+    setBusyId(selected.id);
     try {
-      await api.delete(`/dras/${draId}/entities/${entity.id}`);
+      await api.delete(`/dras/${draId}/entities/${selected.id}`);
+      setSelectedId(null);
       onChanged();
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e));
@@ -918,8 +938,9 @@ function EntityDocumentsModal({
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#FFF', borderRadius: 4, padding: '1.5rem 1.75rem',
-          width: '760px', maxWidth: '95vw', boxShadow: '0 8px 30px rgba(15,27,45,0.2)',
+          background: '#FFF', borderRadius: 4, padding: '1.25rem 1.5rem',
+          width: '960px', maxWidth: '96vw',
+          boxShadow: '0 8px 30px rgba(15,27,45,0.2)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.35rem' }}>
@@ -930,15 +951,15 @@ function EntityDocumentsModal({
             title="Close"
           >×</button>
         </div>
-        <div className="muted" style={{ fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-          {draName} · Operating agreements, SS-4 letters, formation docs and bylaws for the parent entity and every shop-level entity signing under this DRA.
+        <div className="muted" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>
+          {draName} · Click any entity to see its corporate documents.
         </div>
 
         {err && <div style={{ color: '#B94E23', fontSize: '0.85rem', marginBottom: '1rem' }}>{err}</div>}
 
         {entities.length === 0 ? (
           <div style={{
-            padding: '1.25rem 1.5rem', border: '1px dashed #E0DDD5', borderRadius: 3, background: '#FAFAFA',
+            padding: '2rem 1.5rem', border: '1px dashed #E0DDD5', borderRadius: 3, background: '#FAFAFA',
             color: 'var(--muted, #7A8391)', fontSize: '0.9rem', textAlign: 'center', marginBottom: '1rem',
           }}>
             No entities have been recorded for this DRA yet.<br />
@@ -946,36 +967,24 @@ function EntityDocumentsModal({
           </div>
         ) : (
           <>
-            <EntityGroup
-              title="Parent Entity (DRA Signatory)"
-              subtitle="The LLC/Inc. that signed the DRA."
-              entities={parents}
-              busyId={busyId}
-              onUpload={ent => setUploadFor(ent)}
-              onOpenPdf={onOpenPdf}
-              onDeleteDoc={handleDeleteDoc}
-              onDeleteEntity={handleDeleteEntity}
+            <EntityHierarchyChart
+              draName={draName}
+              parents={parents}
+              shopLevels={shopLevels}
+              unclassified={unclassified}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
             />
-            <EntityGroup
-              title="Shop-Level Entities (FA Signatories)"
-              subtitle="Per-shop LLCs used to sign individual Franchise Agreements under this DRA."
-              entities={shopLevels}
-              busyId={busyId}
-              onUpload={ent => setUploadFor(ent)}
-              onOpenPdf={onOpenPdf}
-              onDeleteDoc={handleDeleteDoc}
-              onDeleteEntity={handleDeleteEntity}
-            />
-            {unclassified.length > 0 && (
-              <EntityGroup
-                title="Unclassified"
-                subtitle="Entities without a level set. Edit them to mark Parent or Shop-Level."
-                entities={unclassified}
+
+            {selected && (
+              <EntityDetailPane
+                entity={selected}
                 busyId={busyId}
-                onUpload={ent => setUploadFor(ent)}
                 onOpenPdf={onOpenPdf}
                 onDeleteDoc={handleDeleteDoc}
                 onDeleteEntity={handleDeleteEntity}
+                onUpload={() => setUploadOpen(true)}
+                onEdit={() => setEditEntityOpen(true)}
               />
             )}
           </>
@@ -994,17 +1003,27 @@ function EntityDocumentsModal({
         <AddEntityModal
           draId={draId}
           onClose={() => setAddEntityOpen(false)}
-          onCreated={() => { setAddEntityOpen(false); onChanged(); }}
+          onCreated={id => { setAddEntityOpen(false); setSelectedId(id); onChanged(); }}
           onError={setErr}
         />
       )}
 
-      {uploadFor && (
+      {editEntityOpen && selected && (
+        <EditEntityModal
+          draId={draId}
+          entity={selected}
+          onClose={() => setEditEntityOpen(false)}
+          onSaved={() => { setEditEntityOpen(false); onChanged(); }}
+          onError={setErr}
+        />
+      )}
+
+      {uploadOpen && selected && (
         <UploadEntityDocModal
           draId={draId}
-          entity={uploadFor}
-          onClose={() => setUploadFor(null)}
-          onUploaded={() => { setUploadFor(null); onChanged(); }}
+          entity={selected}
+          onClose={() => setUploadOpen(false)}
+          onUploaded={() => { setUploadOpen(false); onChanged(); }}
           onError={setErr}
         />
       )}
@@ -1012,89 +1031,415 @@ function EntityDocumentsModal({
   );
 }
 
-function EntityGroup({
-  title, subtitle, entities, busyId, onUpload, onOpenPdf, onDeleteDoc, onDeleteEntity,
+/**
+ * Visual org-chart of entities under a DRA. Parent(s) sit on top, then a
+ * bracket-style connector to the row of shop-level entities beneath.
+ * Unclassified entities appear in a third row with no bracket to signal
+ * they need to be tagged. The whole chart scrolls horizontally on narrow
+ * viewports so we don't clip cards.
+ */
+function EntityHierarchyChart({
+  draName,
+  parents,
+  shopLevels,
+  unclassified,
+  selectedId,
+  onSelect,
 }: {
-  title:    string;
-  subtitle: string;
-  entities: DraEntity[];
-  busyId:   string | null;
-  onUpload: (entity: DraEntity) => void;
-  onOpenPdf: (file: { url: string; filename: string }, title: string) => void;
-  onDeleteDoc: (entity: DraEntity, docId: string, title: string) => void;
-  onDeleteEntity: (entity: DraEntity) => void;
+  draName:      string;
+  parents:      DraEntity[];
+  shopLevels:   DraEntity[];
+  unclassified: DraEntity[];
+  selectedId:   string | null;
+  onSelect:     (id: string) => void;
 }) {
-  if (entities.length === 0) return null;
+  const hasBracket = parents.length > 0 && shopLevels.length > 0;
   return (
-    <div style={{ marginBottom: '1.75rem' }}>
+    <div style={{
+      border: '1px solid #E0DDD5', borderRadius: 3, background: '#FAFAFA',
+      padding: '1.25rem 1rem 1rem', overflowX: 'auto',
+    }}>
+      {/* DRA context label */}
       <div style={{
-        fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em',
-        fontWeight: 700, color: 'var(--muted, #7A8391)', marginBottom: '0.15rem',
-      }}>{title}</div>
-      <div className="muted" style={{ fontSize: '0.78rem', marginBottom: '0.6rem' }}>{subtitle}</div>
-      <div style={{ display: 'grid', gap: '0.75rem' }}>
-        {entities.map(entity => (
-          <div key={entity.id} style={{ border: '1px solid #E0DDD5', borderRadius: 3, background: '#FFF' }}>
+        textAlign: 'center', fontSize: '0.72rem', textTransform: 'uppercase',
+        letterSpacing: '0.06em', color: 'var(--muted, #7A8391)', marginBottom: '0.75rem',
+      }}>
+        Development Rights Agreement
+      </div>
+      <div style={{
+        textAlign: 'center', fontSize: '0.95rem', fontWeight: 600,
+        color: 'var(--body, #0F1B2D)', marginBottom: '1.5rem',
+      }}>
+        {draName}
+      </div>
+
+      {/* Parent row */}
+      {parents.length > 0 ? (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {parents.map(p => (
+            <EntityCard
+              key={p.id}
+              entity={p}
+              level="parent"
+              selected={selectedId === p.id}
+              onClick={() => onSelect(p.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div style={{
+          margin: '0 auto', maxWidth: 320, padding: '0.75rem 1rem',
+          border: '1px dashed #D0CDBF', borderRadius: 3, background: '#FFFEF9',
+          color: 'var(--muted, #7A8391)', fontSize: '0.82rem', textAlign: 'center',
+        }}>
+          No parent entity yet · click <strong>+ Add Entity</strong> below with level "Parent"
+        </div>
+      )}
+
+      {/* Bracket connector (only when there's both a parent and children) */}
+      {hasBracket && (
+        <div style={{ position: 'relative', height: 24, margin: '0.25rem 0' }}>
+          {/* vertical drop from parent */}
+          <div style={{
+            position: 'absolute', top: 0, left: '50%', width: 1, height: 12,
+            background: '#B7B0A1', transform: 'translateX(-0.5px)',
+          }} />
+          {/* horizontal bracket spanning children */}
+          {shopLevels.length > 1 && (
             <div style={{
-              padding: '0.6rem 0.9rem', background: '#F7F5F0', borderBottom: '1px solid #E0DDD5',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{entity.name}</div>
-                <div className="muted" style={{ fontSize: '0.75rem' }}>
-                  {entity.documents.length} {entity.documents.length === 1 ? 'document' : 'documents'}
-                  {entity.jurisdiction && <> · {entity.jurisdiction}</>}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '0.35rem' }}>
-                <button
-                  onClick={() => onUpload(entity)}
-                  className="btn-secondary"
-                  style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }}
-                >+ Upload</button>
-                <button
-                  onClick={() => onDeleteEntity(entity)}
-                  disabled={busyId === entity.id}
-                  title="Remove entity"
-                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.9rem', padding: '0.3rem 0.5rem', color: '#B94E23' }}
-                >🗑</button>
-              </div>
+              position: 'absolute', top: 11, left: '10%', right: '10%', height: 1,
+              background: '#B7B0A1',
+            }} />
+          )}
+          {/* vertical drops to each child (only visually meaningful for 1 child; the row below has its own top edges) */}
+        </div>
+      )}
+
+      {/* Shop-level row */}
+      {shopLevels.length > 0 && (
+        <div>
+          <div style={{
+            textAlign: 'center', fontSize: '0.68rem', textTransform: 'uppercase',
+            letterSpacing: '0.06em', color: 'var(--muted, #7A8391)', marginBottom: '0.5rem',
+          }}>
+            Shop-Level Entities · {shopLevels.length}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {shopLevels.map(s => (
+              <EntityCard
+                key={s.id}
+                entity={s}
+                level="shop"
+                selected={selectedId === s.id}
+                onClick={() => onSelect(s.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Unclassified row (needs tagging) */}
+      {unclassified.length > 0 && (
+        <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px dashed #D0CDBF' }}>
+          <div style={{
+            textAlign: 'center', fontSize: '0.68rem', textTransform: 'uppercase',
+            letterSpacing: '0.06em', color: '#B94E23', marginBottom: '0.5rem',
+          }}>
+            Unclassified · needs level set
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {unclassified.map(u => (
+              <EntityCard
+                key={u.id}
+                entity={u}
+                level="unclassified"
+                selected={selectedId === u.id}
+                onClick={() => onSelect(u.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EntityCard({
+  entity, level, selected, onClick,
+}: {
+  entity:   DraEntity;
+  level:    'parent' | 'shop' | 'unclassified';
+  selected: boolean;
+  onClick:  () => void;
+}) {
+  const width = level === 'parent' ? 260 : 200;
+  const accent =
+    level === 'parent'       ? '#7C4DB5' :
+    level === 'shop'         ? '#3B7BD1' :
+                               '#B94E23';
+  const bg = selected ? '#FFF' : (level === 'parent' ? '#F3EDFA' : level === 'shop' ? '#EEF4FC' : '#FDECE3');
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        width, textAlign: 'left', cursor: 'pointer',
+        background: bg,
+        border: `1px solid ${selected ? accent : '#D0CDBF'}`,
+        boxShadow: selected ? `0 0 0 2px ${accent}33` : 'none',
+        borderRadius: 3, padding: '0.55rem 0.7rem',
+        transition: 'box-shadow 0.15s, background 0.15s',
+        fontFamily: 'inherit',
+      }}
+    >
+      <div style={{
+        fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.06em',
+        color: accent, fontWeight: 700, marginBottom: '0.2rem',
+      }}>
+        {level === 'parent' ? 'Parent · DRA Signatory' : level === 'shop' ? 'Shop-Level · FA Signatory' : 'Unclassified'}
+      </div>
+      <div style={{
+        fontSize: '0.95rem', fontWeight: 600, color: 'var(--body, #0F1B2D)',
+        lineHeight: 1.25, marginBottom: '0.2rem',
+      }}>
+        {entity.name}
+      </div>
+      <div className="muted" style={{ fontSize: '0.75rem' }}>
+        {entity.documents.length} {entity.documents.length === 1 ? 'doc' : 'docs'}
+        {entity.jurisdiction ? ` · ${entity.jurisdiction}` : ''}
+      </div>
+    </button>
+  );
+}
+
+/**
+ * Right-hand detail for the selected entity. Metadata block + documents
+ * list + action buttons.
+ */
+function EntityDetailPane({
+  entity, busyId, onOpenPdf, onDeleteDoc, onDeleteEntity, onUpload, onEdit,
+}: {
+  entity:         DraEntity;
+  busyId:         string | null;
+  onOpenPdf:      (file: { url: string; filename: string }, title: string) => void;
+  onDeleteDoc:    (docId: string, title: string) => void;
+  onDeleteEntity: () => void;
+  onUpload:       () => void;
+  onEdit:         () => void;
+}) {
+  return (
+    <div style={{
+      marginTop: '1rem', border: '1px solid #E0DDD5', borderRadius: 3, background: '#FFF',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '0.75rem 1rem', borderBottom: '1px solid #E0DDD5', background: '#F7F5F0',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+          <div>
+            <div style={{ fontSize: '1rem', fontWeight: 600 }}>{entity.name}</div>
+            <div className="muted" style={{ fontSize: '0.78rem', marginTop: '0.1rem' }}>
+              {entity.entityLevel ?? 'No level set'}
+              {entity.jurisdiction && ` · ${entity.jurisdiction}`}
+              {entity.formationDate && ` · Formed ${entity.formationDate}`}
             </div>
-            {entity.documents.length > 0 && (
-              <div>
-                {entity.documents.map((doc, i) => (
-                  <div key={doc.id} style={{
-                    padding: '0.55rem 0.9rem', borderBottom: i < entity.documents.length - 1 ? '1px solid #EFEDE7' : 'none',
-                    display: 'grid', gridTemplateColumns: '1.4fr 1fr 90px 90px', columnGap: '0.75rem',
-                    alignItems: 'center', fontSize: '0.9rem',
-                  }}>
-                    <div>{doc.title}</div>
-                    <div className="muted" style={{ fontSize: '0.85rem' }}>{doc.documentType ?? '—'}</div>
-                    <div className="muted" style={{ fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums' }}>
-                      {doc.effectiveDate || ''}
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.3rem', justifyContent: 'flex-end' }}>
-                      {doc.file[0] && (
-                        <button
-                          onClick={() => onOpenPdf(doc.file[0], doc.title)}
-                          className="btn-secondary"
-                          style={{ fontSize: '0.75rem', padding: '0.2rem 0.55rem' }}
-                        >Open</button>
-                      )}
-                      <button
-                        onClick={() => onDeleteDoc(entity, doc.id, doc.title)}
-                        disabled={busyId === doc.id}
-                        title="Remove"
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem 0.4rem', color: '#B94E23' }}
-                      >🗑</button>
-                    </div>
-                  </div>
-                ))}
+            {(entity.signatoryName || entity.signatoryTitle) && (
+              <div className="muted" style={{ fontSize: '0.78rem', marginTop: '0.15rem' }}>
+                Signatory: {entity.signatoryName ?? '—'}{entity.signatoryTitle ? ` (${entity.signatoryTitle})` : ''}
               </div>
             )}
           </div>
-        ))}
+          <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
+            <button
+              onClick={onEdit}
+              className="btn-secondary"
+              style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }}
+            >Edit</button>
+            <button
+              onClick={onDeleteEntity}
+              disabled={busyId === entity.id}
+              title="Remove this entity from the DRA"
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.9rem', padding: '0.3rem 0.5rem', color: '#B94E23' }}
+            >🗑</button>
+          </div>
+        </div>
       </div>
+
+      {/* Docs */}
+      <div style={{ padding: '0.75rem 1rem' }}>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.55rem',
+        }}>
+          <div style={{
+            fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em',
+            fontWeight: 700, color: 'var(--muted, #7A8391)',
+          }}>
+            Corporate Documents · {entity.documents.length}
+          </div>
+          <button
+            onClick={onUpload}
+            className="btn-secondary"
+            style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }}
+          >+ Upload Document</button>
+        </div>
+
+        {entity.documents.length === 0 ? (
+          <div style={{
+            padding: '1rem', border: '1px dashed #E0DDD5', borderRadius: 3, background: '#FAFAFA',
+            color: 'var(--muted, #7A8391)', fontSize: '0.85rem', textAlign: 'center',
+          }}>
+            No documents yet. Upload an Operating Agreement, SS-4, Bylaws, or other corporate document to get started.
+          </div>
+        ) : (
+          <div style={{ border: '1px solid #EFEDE7', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1.4fr 1fr 100px 110px',
+              columnGap: '0.75rem', padding: '0.45rem 0.75rem', background: '#F7F5F0',
+              fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.05em',
+              fontWeight: 600, color: 'var(--muted, #7A8391)', borderBottom: '1px solid #EFEDE7',
+            }}>
+              <div>Title</div>
+              <div>Type</div>
+              <div>Effective</div>
+              <div />
+            </div>
+            {entity.documents.map((doc, i) => (
+              <div key={doc.id} style={{
+                display: 'grid', gridTemplateColumns: '1.4fr 1fr 100px 110px',
+                columnGap: '0.75rem', padding: '0.55rem 0.75rem',
+                borderBottom: i < entity.documents.length - 1 ? '1px solid #EFEDE7' : 'none',
+                fontSize: '0.9rem', alignItems: 'center',
+              }}>
+                <div>{doc.title}</div>
+                <div className="muted" style={{ fontSize: '0.85rem' }}>{doc.documentType ?? '—'}</div>
+                <div className="muted" style={{ fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums' }}>
+                  {doc.effectiveDate || ''}
+                </div>
+                <div style={{ display: 'flex', gap: '0.3rem', justifyContent: 'flex-end' }}>
+                  {doc.file[0] && (
+                    <button
+                      onClick={() => onOpenPdf(doc.file[0], doc.title)}
+                      className="btn-secondary"
+                      style={{ fontSize: '0.75rem', padding: '0.2rem 0.55rem' }}
+                    >Open</button>
+                  )}
+                  <button
+                    onClick={() => onDeleteDoc(doc.id, doc.title)}
+                    disabled={busyId === doc.id}
+                    title="Remove"
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem 0.4rem', color: '#B94E23' }}
+                  >🗑</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Shared entity form used by both Add and Edit modals.
+interface EntityFormState {
+  name:           string;
+  entityLevel:    EntityLevel | '';
+  jurisdiction:   string;
+  formationDate:  string;
+  signatoryName:  string;
+  signatoryTitle: string;
+  notes:          string;
+}
+const emptyEntityForm: EntityFormState = {
+  name: '', entityLevel: '', jurisdiction: '',
+  formationDate: '', signatoryName: '', signatoryTitle: '', notes: '',
+};
+
+function EntityForm({
+  form, setForm, disabled,
+}: {
+  form:     EntityFormState;
+  setForm:  (updater: (prev: EntityFormState) => EntityFormState) => void;
+  disabled: boolean;
+}) {
+  const upd = (k: keyof EntityFormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    setForm(prev => ({ ...prev, [k]: e.target.value }));
+  return (
+    <div style={{ display: 'grid', gap: '0.75rem' }}>
+      <label style={{ fontSize: '0.85rem' }}>
+        Entity Name*
+        <input
+          value={form.name}
+          onChange={upd('name')}
+          placeholder="e.g. Jip Dip BH, Inc."
+          disabled={disabled}
+          autoFocus
+          style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+        />
+      </label>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+        <label style={{ fontSize: '0.85rem' }}>
+          Entity Level
+          <select
+            value={form.entityLevel}
+            onChange={upd('entityLevel')}
+            disabled={disabled}
+            style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3, background: '#FFF' }}
+          >
+            <option value="">— select —</option>
+            {ENTITY_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </label>
+        <label style={{ fontSize: '0.85rem' }}>
+          Jurisdiction (State)
+          <input
+            value={form.jurisdiction}
+            onChange={upd('jurisdiction')}
+            placeholder="DE, NY, GA…"
+            disabled={disabled}
+            style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+          />
+        </label>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+        <label style={{ fontSize: '0.85rem' }}>
+          Formation Date
+          <input
+            type="date"
+            value={form.formationDate}
+            onChange={upd('formationDate')}
+            disabled={disabled}
+            style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+          />
+        </label>
+        <label style={{ fontSize: '0.85rem' }}>
+          Signatory Name
+          <input
+            value={form.signatoryName}
+            onChange={upd('signatoryName')}
+            disabled={disabled}
+            style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+          />
+        </label>
+        <label style={{ fontSize: '0.85rem' }}>
+          Signatory Title
+          <input
+            value={form.signatoryTitle}
+            onChange={upd('signatoryTitle')}
+            disabled={disabled}
+            style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
+          />
+        </label>
+      </div>
+      <label style={{ fontSize: '0.85rem' }}>
+        Notes
+        <textarea
+          value={form.notes}
+          onChange={upd('notes')}
+          rows={2}
+          disabled={disabled}
+          style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3, resize: 'vertical' }}
+        />
+      </label>
     </div>
   );
 }
@@ -1104,30 +1449,31 @@ function AddEntityModal({
 }: {
   draId:     string;
   onClose:   () => void;
-  onCreated: () => void;
+  onCreated: (newId: string) => void;
   onError:   (msg: string | null) => void;
 }) {
-  const [name, setName]                 = useState('');
-  const [entityLevel, setEntityLevel]   = useState<EntityLevel | ''>('');
-  const [jurisdiction, setJurisdiction] = useState('');
-  const [saving, setSaving]             = useState(false);
-  const [localErr, setLocalErr]         = useState<string | null>(null);
+  const [form, setForm] = useState<EntityFormState>(emptyEntityForm);
+  const [saving, setSaving] = useState(false);
+  const [localErr, setLocalErr] = useState<string | null>(null);
 
   async function handleCreate() {
-    if (!name.trim()) { setLocalErr('Entity name is required'); return; }
+    if (!form.name.trim()) { setLocalErr('Entity name is required'); return; }
     setSaving(true);
     setLocalErr(null);
     onError(null);
     try {
-      await api.post(`/dras/${draId}/entities`, {
-        name:         name.trim(),
-        entityLevel:  entityLevel || undefined,
-        jurisdiction: jurisdiction.trim() || undefined,
+      const res = await api.post<{ entity: { id: string } }>(`/dras/${draId}/entities`, {
+        name:           form.name.trim(),
+        entityLevel:    form.entityLevel || undefined,
+        jurisdiction:   form.jurisdiction.trim() || undefined,
+        formationDate:  form.formationDate || undefined,
+        signatoryName:  form.signatoryName.trim() || undefined,
+        signatoryTitle: form.signatoryTitle.trim() || undefined,
+        notes:          form.notes.trim() || undefined,
       });
-      onCreated();
+      onCreated(res.entity.id);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setLocalErr(msg);
+      setLocalErr(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }
@@ -1145,47 +1491,89 @@ function AddEntityModal({
         onClick={e => e.stopPropagation()}
         style={{
           background: '#FFF', borderRadius: 4, padding: '1.5rem 1.75rem',
-          width: '480px', maxWidth: '92vw', boxShadow: '0 8px 30px rgba(15,27,45,0.2)',
+          width: '560px', maxWidth: '92vw', boxShadow: '0 8px 30px rgba(15,27,45,0.2)',
         }}
       >
         <h3 style={{ margin: '0 0 1rem', fontSize: '1.1rem' }}>Add Entity</h3>
-        <div style={{ display: 'grid', gap: '0.75rem' }}>
-          <label style={{ fontSize: '0.85rem' }}>
-            Entity Name*
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="e.g. Jip Dip BH, Inc."
-              autoFocus
-              style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
-            />
-          </label>
-          <label style={{ fontSize: '0.85rem' }}>
-            Entity Level
-            <select
-              value={entityLevel}
-              onChange={e => setEntityLevel(e.target.value as EntityLevel | '')}
-              style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3, background: '#FFF' }}
-            >
-              <option value="">— select —</option>
-              {ENTITY_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
-            </select>
-          </label>
-          <label style={{ fontSize: '0.85rem' }}>
-            Jurisdiction (State of formation)
-            <input
-              value={jurisdiction}
-              onChange={e => setJurisdiction(e.target.value)}
-              placeholder="e.g. DE, NY, GA"
-              style={{ width: '100%', padding: '0.4rem 0.6rem', marginTop: '0.15rem', border: '1px solid #DAD3C4', borderRadius: 3 }}
-            />
-          </label>
-          {localErr && <div style={{ color: '#B94E23', fontSize: '0.85rem' }}>{localErr}</div>}
-        </div>
+        <EntityForm form={form} setForm={setForm} disabled={saving} />
+        {localErr && <div style={{ color: '#B94E23', fontSize: '0.85rem', marginTop: '0.75rem' }}>{localErr}</div>}
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
           <button className="btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
           <button className="btn-primary" onClick={handleCreate} disabled={saving}>
             {saving ? 'Adding…' : 'Add Entity'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditEntityModal({
+  draId, entity, onClose, onSaved, onError,
+}: {
+  draId:    string;
+  entity:   DraEntity;
+  onClose:  () => void;
+  onSaved:  () => void;
+  onError:  (msg: string | null) => void;
+}) {
+  const [form, setForm] = useState<EntityFormState>({
+    name:           entity.name,
+    entityLevel:    entity.entityLevel ?? '',
+    jurisdiction:   entity.jurisdiction ?? '',
+    formationDate:  entity.formationDate ?? '',
+    signatoryName:  entity.signatoryName ?? '',
+    signatoryTitle: entity.signatoryTitle ?? '',
+    notes:          entity.notes ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [localErr, setLocalErr] = useState<string | null>(null);
+
+  async function handleSave() {
+    if (!form.name.trim()) { setLocalErr('Entity name is required'); return; }
+    setSaving(true);
+    setLocalErr(null);
+    onError(null);
+    try {
+      await api.patch(`/dras/${draId}/entities/${entity.id}`, {
+        name:           form.name.trim(),
+        entityLevel:    form.entityLevel || undefined,
+        jurisdiction:   form.jurisdiction.trim(),
+        formationDate:  form.formationDate,
+        signatoryName:  form.signatoryName.trim(),
+        signatoryTitle: form.signatoryTitle.trim(),
+        notes:          form.notes.trim(),
+      });
+      onSaved();
+    } catch (e) {
+      setLocalErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      onClick={() => !saving && onClose()}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(15,27,45,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#FFF', borderRadius: 4, padding: '1.5rem 1.75rem',
+          width: '560px', maxWidth: '92vw', boxShadow: '0 8px 30px rgba(15,27,45,0.2)',
+        }}
+      >
+        <h3 style={{ margin: '0 0 1rem', fontSize: '1.1rem' }}>Edit Entity</h3>
+        <EntityForm form={form} setForm={setForm} disabled={saving} />
+        {localErr && <div style={{ color: '#B94E23', fontSize: '0.85rem', marginTop: '0.75rem' }}>{localErr}</div>}
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+          <button className="btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -1226,8 +1614,7 @@ function UploadEntityDocModal({
       await api.upload(`/dras/${draId}/entities/${entity.id}/documents`, fd);
       onUploaded();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setLocalErr(msg);
+      setLocalErr(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }
