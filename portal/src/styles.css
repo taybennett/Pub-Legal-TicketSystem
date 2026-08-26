@@ -733,3 +733,87 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .btn-secondary { background: var(--white); color: var(--black); border: 1px solid var(--border);
   padding: 0.6rem 1rem; font-family: inherit; font-size: 0.85rem; letter-spacing: 0.05em; }
 .btn-secondary:hover:not(:disabled) { border-color: var(--black); }
+
+/* ── DRA Analysis modal ────────────────────────────────── */
+.dra-analysis-backdrop { position: fixed; inset: 0; background: rgba(17,17,17,0.55);
+  display: flex; align-items: center; justify-content: center; padding: 1.5rem; z-index: 100; }
+.dra-analysis-card { background: var(--white); border: 1px solid var(--border);
+  width: min(1080px, 100%); max-height: 92vh; display: flex; flex-direction: column; }
+.dra-analysis-head { display: flex; align-items: baseline; justify-content: space-between;
+  gap: 1rem; padding: 1.1rem 1.4rem; border-bottom: 1px solid var(--border); }
+.dra-analysis-eyebrow { color: var(--mid); font-size: 0.65rem; letter-spacing: 0.12em;
+  text-transform: uppercase; font-weight: 600; }
+.dra-analysis-title { margin: 0.2rem 0 0; font-size: 1.2rem; font-weight: 700; }
+.dra-analysis-body { overflow: auto; padding: 1.4rem;
+  display: flex; flex-direction: column; gap: 2rem; }
+.dra-analysis-section { display: flex; flex-direction: column; gap: 0.9rem; }
+.dra-analysis-section-label { color: var(--mid); font-size: 0.7rem; letter-spacing: 0.12em;
+  text-transform: uppercase; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border);
+  font-weight: 600; }
+
+/* Territory pills — bordered rectangles, no radius */
+.dra-analysis-territory-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.dra-analysis-territory-pill { display: inline-flex; align-items: baseline; gap: 0.5rem;
+  padding: 0.35rem 0.7rem; border: 1px solid var(--border); background: var(--bg);
+  font-size: 0.8rem; }
+.dra-analysis-territory-pill strong { font-weight: 700; }
+.dra-analysis-territory-pill span { color: var(--mid); font-size: 0.7rem; letter-spacing: 0.06em; }
+
+/* Deployment tiles — reuse dra-schedule-cell look */
+.dra-analysis-tile-row { display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.6rem; }
+.dra-analysis-tile { border: 1px solid var(--border); background: var(--white);
+  padding: 0.6rem 0.8rem; }
+.dra-analysis-tile-label { color: var(--mid); font-size: 0.6rem; letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 0.25rem; }
+.dra-analysis-tile-value { font-size: 1.4rem; font-weight: 700; }
+
+/* Assigned-shops mini grid */
+.dra-analysis-shops { margin-top: 0.6rem; display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.3rem; }
+.dra-analysis-shop { border: 1px solid var(--border); background: var(--white);
+  padding: 0.4rem 0.6rem; font-size: 0.78rem; }
+.dra-analysis-shop-id { font-weight: 700; }
+.dra-analysis-shop-name { color: var(--mid); }
+.dra-analysis-shop-fa { color: #2d7a2d; font-size: 0.7rem; margin-top: 0.15rem; letter-spacing: 0.05em; }
+.dra-analysis-shop--has-fa { border-color: #2d7a2d; }
+
+/* Timeline */
+.dra-analysis-timeline { position: relative; list-style: none; margin: 0; padding: 0; }
+.dra-analysis-timeline::before { content: ''; position: absolute; left: 5px; top: 6px; bottom: 6px;
+  width: 1px; background: var(--border); }
+.dra-analysis-timeline > li { position: relative; padding-left: 1.6rem; padding-bottom: 0.8rem; }
+.dra-analysis-timeline > li:last-child { padding-bottom: 0; }
+.dra-analysis-timeline-dot { position: absolute; left: 0; top: 6px; width: 11px; height: 11px;
+  background: var(--white); border: 2px solid var(--black); }
+.dra-analysis-timeline-dot--original { background: var(--black); }
+.dra-analysis-timeline-item { border: 1px solid var(--border); background: var(--white);
+  padding: 0.7rem 0.9rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.dra-analysis-timeline-row { display: flex; align-items: baseline; justify-content: space-between;
+  gap: 0.75rem; flex-wrap: wrap; }
+.dra-analysis-timeline-title { font-weight: 600; font-size: 0.95rem; display: flex;
+  align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+.dra-analysis-badge { display: inline-block; padding: 0.1rem 0.45rem; border: 1px solid var(--black);
+  color: var(--black); background: var(--white); font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; }
+.dra-analysis-badge--original { background: var(--black); color: var(--white); }
+.dra-analysis-timeline-date { color: var(--mid); font-size: 0.78rem; letter-spacing: 0.03em; }
+.dra-analysis-timeline-sub { color: var(--mid); font-size: 0.78rem; }
+.dra-analysis-timeline-notes { color: var(--black); font-size: 0.82rem;
+  padding: 0.45rem 0.6rem; background: var(--bg); border-left: 2px solid var(--black);
+  white-space: pre-wrap; }
+.dra-analysis-timeline-actions { margin-top: 0.1rem; }
+.dra-analysis-missing { color: #b03030; font-size: 0.75rem; letter-spacing: 0.06em;
+  text-transform: uppercase; font-weight: 600; }
+
+/* Progress bars */
+.dra-analysis-progress { display: flex; flex-direction: column; gap: 0.4rem; }
+.dra-analysis-progress-row { display: flex; flex-direction: column; gap: 0.3rem; }
+.dra-analysis-progress-head { display: flex; justify-content: space-between;
+  font-size: 0.78rem; }
+.dra-analysis-progress-label { color: var(--mid); letter-spacing: 0.08em;
+  text-transform: uppercase; font-size: 0.65rem; font-weight: 600; }
+.dra-analysis-progress-nums strong { font-weight: 700; }
+.dra-analysis-progress-nums span { color: var(--mid); margin-left: 0.35rem; }
+.dra-analysis-progress-track { height: 8px; background: var(--bg); border: 1px solid var(--border); }
+.dra-analysis-progress-fill { height: 100%; background: var(--black); }

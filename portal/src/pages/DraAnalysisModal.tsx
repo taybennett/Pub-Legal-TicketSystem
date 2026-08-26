@@ -2,14 +2,18 @@
  * DRA Analysis Modal
  *
  * Comprehensive read-only view of a single Development Rights Agreement:
- *   1. Overview card — key facts (executed, term end, obligation, signatory entity)
- *   2. Document Timeline — every DRA-level doc (Original, Amendments, Addendums,
- *      Guaranties, etc.) sorted chronologically. Click to open PDF.
- *   3. Territory — states/regions inferred from DRA name + shop deployment breakdown
- *   4. Development Progress — obligation vs executed vs open bars + year schedule
+ *   1. Overview — key facts (reuses .dra-metrics)
+ *   2. Territory & Deployment — states/regions inferred from DRA name +
+ *      shop-ID breakdown (.dra-analysis-territory-*, .dra-analysis-tile-*)
+ *   3. Document Timeline — Original DRA + every Amendment/Addendum/etc.
+ *      chronologically, click to open PDF (.dra-analysis-timeline-*)
+ *   4. Development Progress — bars + year schedule
+ *      (.dra-analysis-progress-*, reuses .dra-schedule)
  *
- * Uploads still happen from the existing DRA Documents section on the page.
- * This modal is analysis-only; no writes.
+ * All styling lives in styles.css so the modal inherits DM Mono, --black /
+ * --mid / --border tokens, and the flat / no-radius aesthetic of the rest
+ * of the app. Uploads still happen from the DRA Documents section on the
+ * page — this modal is analysis-only.
  */
 import { useMemo } from 'react';
 import type { DraDetail, DraDocument } from '../api/types';
@@ -23,12 +27,9 @@ interface Props {
 }
 
 // ─── Territory inference ──────────────────────────────────────────────
-// Parse states/regions from the DRA name. Order matters — longest / most
-// specific patterns first so "Long Island" wins over "New York", "DMV" wins
-// over "MD", etc.
 interface TerritoryHit {
-  label:  string;   // human-friendly ("DMV", "Long Island", "Alabama")
-  states: string[]; // 2-letter codes
+  label:  string;
+  states: string[];
 }
 
 const TERRITORY_PATTERNS: Array<[RegExp, TerritoryHit]> = [
@@ -82,45 +83,29 @@ const TERRITORY_PATTERNS: Array<[RegExp, TerritoryHit]> = [
 
 function inferTerritory(draName: string): TerritoryHit[] {
   const hits: TerritoryHit[] = [];
-  const seenStates = new Set<string>();
+  const seen = new Set<string>();
   for (const [rx, hit] of TERRITORY_PATTERNS) {
     if (rx.test(draName)) {
-      const fresh = hit.states.filter(s => !seenStates.has(s));
+      const fresh = hit.states.filter(s => !seen.has(s));
       if (fresh.length > 0) {
         hits.push(hit);
-        fresh.forEach(s => seenStates.add(s));
+        fresh.forEach(s => seen.add(s));
       }
     }
   }
   return hits;
 }
 
-// ─── Document timeline helpers ────────────────────────────────────────
+// ─── Timeline helpers ─────────────────────────────────────────────────
 function docSortKey(d: DraDocument): number {
-  // Newest first: return negative timestamp for descending sort.
   if (d.effectiveDate) {
     const t = Date.parse(d.effectiveDate);
     if (!Number.isNaN(t)) return -t;
   }
-  // Fallback: put amendments by number descending (newer amendments = higher #)
   if (d.documentType === 'Amendment' && d.amendmentNumber != null) {
     return -d.amendmentNumber;
   }
   return 0;
-}
-
-function docBadgeColor(type: string | null): string {
-  switch (type) {
-    case 'Amendment':          return '#7c3aed'; // purple
-    case 'Addendum':           return '#0891b2'; // cyan
-    case 'Guaranty':           return '#dc2626'; // red
-    case 'Assignment':         return '#ea580c'; // orange
-    case 'Termination Agreement': return '#991b1b'; // dark red
-    case 'Exhibit':            return '#059669'; // green
-    case 'Side Letter':        return '#6366f1'; // indigo
-    case 'Memorandum':         return '#64748b'; // slate
-    default:                   return '#6b7280'; // gray
-  }
 }
 
 function ordinal(n: number): string {
@@ -144,46 +129,43 @@ function docTitle(d: DraDocument): string {
 export function DraAnalysisModal({ detail, onClose, onOpenPdf }: Props) {
   const territory = useMemo(() => inferTerritory(detail.name), [detail.name]);
 
-  // Build the full timeline: Original DRA + every DRA-level document.
   const timeline = useMemo(() => {
-    const items: Array<{
+    interface Item {
       key:      string;
       title:    string;
       subtitle: string | null;
       date:     string | null;
-      type:     string | null;
-      color:    string;
+      type:     string;
+      isOriginal: boolean;
       notes:    string | null;
       file:     { url: string; filename: string } | null;
       sortKey:  number;
-    }> = [];
+    }
+    const items: Item[] = [];
 
-    // Original DRA anchor
     items.push({
-      key:      'original',
-      title:    'Original Development Rights Agreement',
-      subtitle: null,
-      // Original DRA has no execution-date field on the group itself; we key it
-      // at -Infinity so it always sorts to the bottom (oldest in the story).
-      date:     null,
-      type:     'Original',
-      color:    '#0f766e',
-      notes:    null,
-      file:     detail.draFile[0] ?? null,
-      sortKey:  Number.POSITIVE_INFINITY, // pushes to bottom in newest-first sort
+      key:        'original',
+      title:      'Original Development Rights Agreement',
+      subtitle:   null,
+      date:       null,
+      type:       'Original',
+      isOriginal: true,
+      notes:      null,
+      file:       detail.draFile[0] ?? null,
+      sortKey:    Number.POSITIVE_INFINITY, // anchors to bottom (newest-first sort)
     });
 
     for (const doc of detail.documents) {
       items.push({
-        key:      doc.id,
-        title:    docTitle(doc),
-        subtitle: doc.signatories,
-        date:     doc.effectiveDate,
-        type:     doc.documentType,
-        color:    docBadgeColor(doc.documentType),
-        notes:    doc.notes,
-        file:     doc.file[0] ?? null,
-        sortKey:  docSortKey(doc),
+        key:        doc.id,
+        title:      docTitle(doc),
+        subtitle:   doc.signatories,
+        date:       doc.effectiveDate,
+        type:       doc.documentType ?? 'Document',
+        isOriginal: false,
+        notes:      doc.notes,
+        file:       doc.file[0] ?? null,
+        sortKey:    docSortKey(doc),
       });
     }
 
@@ -191,24 +173,21 @@ export function DraAnalysisModal({ detail, onClose, onOpenPdf }: Props) {
     return items;
   }, [detail.documents, detail.draFile]);
 
-  // Aggregate shop deployment: assigned vs placeholder, executed FAs, etc.
   const deployment = useMemo(() => {
-    const shops = detail.shopIds ?? [];
+    const shops       = detail.shopIds ?? [];
     const assigned    = shops.filter(s => s.shopName && s.shopName.trim());
     const placeholder = shops.filter(s => !s.shopName || !s.shopName.trim());
     const withFa      = shops.filter(s => s.hasFa);
     return { total: shops.length, assigned, placeholder, withFa };
   }, [detail.shopIds]);
 
-  // Progress: obligation totals + year schedule
   const progress = useMemo(() => {
-    const obligation = detail.totalObligation || 0;
-    const executed   = detail.fasExecuted || 0;
-    const open       = detail.currentlyOpen || 0;
-    const outstanding = detail.outstanding || 0;
+    const obligation  = detail.totalObligation || 0;
+    const executed    = detail.fasExecuted || 0;
+    const open        = detail.currentlyOpen || 0;
     const pctExecuted = obligation > 0 ? (executed / obligation) * 100 : 0;
     const pctOpen     = obligation > 0 ? (open / obligation) * 100 : 0;
-    return { obligation, executed, open, outstanding, pctExecuted, pctOpen };
+    return { obligation, executed, open, pctExecuted, pctOpen };
   }, [detail]);
 
   const scheduleYears = useMemo(
@@ -216,424 +195,233 @@ export function DraAnalysisModal({ detail, onClose, onOpenPdf }: Props) {
     [detail.schedule],
   );
 
-  // Amendment/addendum counts for header chip
   const amendmentCount = detail.documents.filter(d => d.documentType === 'Amendment').length;
   const addendumCount  = detail.documents.filter(d => d.documentType === 'Addendum').length;
   const otherDocCount  = detail.documents.length - amendmentCount - addendumCount;
 
   return (
     <div
+      className="dra-analysis-backdrop"
       role="dialog"
       aria-modal="true"
       aria-label={`Analysis: ${detail.name}`}
       onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(15, 23, 42, 0.55)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 100, padding: '1.5rem',
-      }}
     >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          background: '#fff', borderRadius: 12,
-          width: 'min(1080px, 100%)', maxHeight: '92vh',
-          display: 'flex', flexDirection: 'column',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.25)',
-          overflow: 'hidden',
-        }}
-      >
+      <div className="dra-analysis-card" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div style={{
-          padding: '1.1rem 1.4rem',
-          borderBottom: '1px solid #e5e7eb',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: '1rem',
-        }}>
+        <div className="dra-analysis-head">
           <div>
-            <div style={{ fontSize: '0.78rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-              DRA Analysis
-            </div>
-            <h2 style={{ margin: '0.15rem 0 0', fontSize: '1.2rem' }}>{detail.name}</h2>
+            <div className="dra-analysis-eyebrow">DRA Analysis</div>
+            <h2 className="dra-analysis-title">{detail.name}</h2>
           </div>
           <button
             type="button"
+            className="modal-close"
             onClick={onClose}
             aria-label="Close"
-            style={{
-              background: 'none', border: 'none',
-              fontSize: '1.4rem', cursor: 'pointer', color: '#64748b',
-              lineHeight: 1, padding: '0.25rem 0.5rem',
-            }}
           >
             ✕
           </button>
         </div>
 
-        {/* Body — scrollable */}
-        <div style={{ overflow: 'auto', padding: '1.4rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="dra-analysis-body">
 
-          {/* ── Section 1: Overview ────────────────────────────── */}
-          <section>
-            <SectionHeader icon="📋" title="Overview" />
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: '0.75rem',
-              marginTop: '0.75rem',
-            }}>
-              <OverviewCard label="Total obligation" value={String(detail.totalObligation)} />
-              <OverviewCard label="Term ends" value={detail.termEndDate || '—'} />
-              <OverviewCard label="Amendments on file" value={String(amendmentCount)} accent={amendmentCount > 0 ? '#7c3aed' : undefined} />
-              <OverviewCard label="Addendums on file" value={String(addendumCount)} accent={addendumCount > 0 ? '#0891b2' : undefined} />
-              <OverviewCard label="Other DRA docs" value={String(otherDocCount)} />
-              <OverviewCard label="Original DRA PDF" value={detail.draFile[0] ? 'On file' : 'Missing'} accent={detail.draFile[0] ? '#059669' : '#dc2626'} />
+          {/* ── Overview ─────────────────────────────────────── */}
+          <section className="dra-analysis-section">
+            <div className="dra-analysis-section-label">Overview</div>
+            <div className="dra-metrics">
+              <div>
+                <div className="dra-metric-label">Total obligation</div>
+                <div className="dra-metric-value">{detail.totalObligation}</div>
+              </div>
+              <div>
+                <div className="dra-metric-label">Term ends</div>
+                <div className="dra-metric-value" style={{ fontSize: detail.termEndDate ? '1rem' : '1.6rem' }}>
+                  {detail.termEndDate || '—'}
+                </div>
+              </div>
+              <div>
+                <div className="dra-metric-label">Amendments</div>
+                <div className="dra-metric-value">{amendmentCount}</div>
+              </div>
+              <div>
+                <div className="dra-metric-label">Addendums</div>
+                <div className="dra-metric-value">{addendumCount}</div>
+              </div>
+              <div>
+                <div className="dra-metric-label">Other docs</div>
+                <div className="dra-metric-value">{otherDocCount}</div>
+              </div>
+              <div>
+                <div className="dra-metric-label">Original PDF</div>
+                <div className="dra-metric-value" style={{ fontSize: '1rem' }}>
+                  {detail.draFile[0] ? 'On file' : <span className="dra-analysis-missing">Missing</span>}
+                </div>
+              </div>
             </div>
           </section>
 
-          {/* ── Section 2: Territory ───────────────────────────── */}
-          <section>
-            <SectionHeader icon="📍" title="Territory & Deployment" />
-            <div style={{ marginTop: '0.75rem' }}>
-              {territory.length === 0 ? (
-                <div style={{ color: '#64748b', fontSize: '0.9rem' }}>
-                  Could not infer territory from the DRA name. Territory patterns can be added in
-                  <code style={{ marginLeft: 4, padding: '1px 5px', background: '#f1f5f9', borderRadius: 4 }}>
-                    DraAnalysisModal.tsx
-                  </code>
-                  .
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-                  {territory.map(t => (
+          {/* ── Territory & Deployment ───────────────────────── */}
+          <section className="dra-analysis-section">
+            <div className="dra-analysis-section-label">Territory & Deployment</div>
+
+            {territory.length === 0 ? (
+              <div className="muted" style={{ fontSize: '0.82rem' }}>
+                Could not infer territory from the DRA name.
+              </div>
+            ) : (
+              <div className="dra-analysis-territory-list">
+                {territory.map(t => (
+                  <div key={t.label} className="dra-analysis-territory-pill">
+                    <strong>{t.label}</strong>
+                    <span>{t.states.join(' · ')}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="dra-analysis-tile-row">
+              <div className="dra-analysis-tile">
+                <div className="dra-analysis-tile-label">Shop IDs allocated</div>
+                <div className="dra-analysis-tile-value">{deployment.total}</div>
+              </div>
+              <div className="dra-analysis-tile">
+                <div className="dra-analysis-tile-label">Sites secured</div>
+                <div className="dra-analysis-tile-value">{deployment.assigned.length}</div>
+              </div>
+              <div className="dra-analysis-tile">
+                <div className="dra-analysis-tile-label">Placeholders</div>
+                <div className="dra-analysis-tile-value">{deployment.placeholder.length}</div>
+              </div>
+              <div className="dra-analysis-tile">
+                <div className="dra-analysis-tile-label">FAs executed</div>
+                <div className="dra-analysis-tile-value">{deployment.withFa.length}</div>
+              </div>
+            </div>
+
+            {deployment.assigned.length > 0 && (
+              <details>
+                <summary style={{ cursor: 'pointer', fontSize: '0.78rem', color: 'var(--mid)',
+                                  letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Show {deployment.assigned.length} assigned {deployment.assigned.length === 1 ? 'site' : 'sites'}
+                </summary>
+                <div className="dra-analysis-shops">
+                  {deployment.assigned.map(s => (
                     <div
-                      key={t.label}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                        padding: '0.35rem 0.75rem',
-                        background: '#eff6ff', color: '#1d4ed8',
-                        border: '1px solid #bfdbfe',
-                        borderRadius: 999, fontSize: '0.85rem', fontWeight: 500,
-                      }}
+                      key={s.shopId}
+                      className={`dra-analysis-shop${s.hasFa ? ' dra-analysis-shop--has-fa' : ''}`}
                     >
-                      <span>{t.label}</span>
-                      <span style={{ opacity: 0.7, fontSize: '0.75rem' }}>
-                        {t.states.join(' · ')}
-                      </span>
+                      <div className="dra-analysis-shop-id">#{s.shopId}</div>
+                      <div className="dra-analysis-shop-name">{s.shopName}</div>
+                      {s.hasFa && <div className="dra-analysis-shop-fa">✓ FA executed</div>}
                     </div>
                   ))}
                 </div>
-              )}
+              </details>
+            )}
+          </section>
 
-              {/* Deployment breakdown */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                gap: '0.5rem',
-              }}>
-                <DeploymentTile label="Shop IDs allocated" value={deployment.total} />
-                <DeploymentTile label="Sites secured" value={deployment.assigned.length} accent="#0891b2" />
-                <DeploymentTile label="Placeholders" value={deployment.placeholder.length} accent="#64748b" />
-                <DeploymentTile label="FAs executed" value={deployment.withFa.length} accent="#059669" />
-              </div>
-
-              {deployment.assigned.length > 0 && (
-                <details style={{ marginTop: '0.75rem' }}>
-                  <summary style={{ cursor: 'pointer', fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>
-                    Show {deployment.assigned.length} assigned {deployment.assigned.length === 1 ? 'site' : 'sites'}
-                  </summary>
-                  <div style={{
-                    marginTop: '0.5rem',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                    gap: '0.35rem',
-                  }}>
-                    {deployment.assigned.map(s => (
-                      <div
-                        key={s.shopId}
-                        style={{
-                          padding: '0.4rem 0.6rem',
-                          background: s.hasFa ? '#ecfdf5' : '#f8fafc',
-                          border: `1px solid ${s.hasFa ? '#a7f3d0' : '#e2e8f0'}`,
-                          borderRadius: 6,
-                          fontSize: '0.82rem',
-                        }}
-                      >
-                        <div style={{ fontWeight: 600, color: '#0f172a' }}>#{s.shopId}</div>
-                        <div style={{ color: '#475569' }}>{s.shopName}</div>
-                        {s.hasFa && (
-                          <div style={{ fontSize: '0.72rem', color: '#059669', marginTop: 2 }}>✓ FA executed</div>
+          {/* ── Document Timeline ───────────────────────────── */}
+          <section className="dra-analysis-section">
+            <div className="dra-analysis-section-label">
+              Document Timeline · {timeline.length}
+            </div>
+            {timeline.length === 0 ? (
+              <div className="muted" style={{ fontSize: '0.82rem' }}>No documents on file.</div>
+            ) : (
+              <ol className="dra-analysis-timeline">
+                {timeline.map(item => (
+                  <li key={item.key}>
+                    <div className={`dra-analysis-timeline-dot${item.isOriginal ? ' dra-analysis-timeline-dot--original' : ''}`} />
+                    <div className="dra-analysis-timeline-item">
+                      <div className="dra-analysis-timeline-row">
+                        <div className="dra-analysis-timeline-title">
+                          <span className={`dra-analysis-badge${item.isOriginal ? ' dra-analysis-badge--original' : ''}`}>
+                            {item.type}
+                          </span>
+                          <span>{item.title}</span>
+                        </div>
+                        <span className="dra-analysis-timeline-date">
+                          {item.date ?? (item.isOriginal ? 'Baseline' : '(no date)')}
+                        </span>
+                      </div>
+                      {item.subtitle && (
+                        <div className="dra-analysis-timeline-sub">
+                          Signatories: {item.subtitle}
+                        </div>
+                      )}
+                      {item.notes && (
+                        <div className="dra-analysis-timeline-notes">{item.notes}</div>
+                      )}
+                      <div className="dra-analysis-timeline-actions">
+                        {item.file ? (
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            onClick={() => onOpenPdf(item.file!, item.title)}
+                          >
+                            📎 Open PDF
+                          </button>
+                        ) : (
+                          <span className="dra-analysis-missing">⚠ No PDF attached</span>
                         )}
                       </div>
-                    ))}
-                  </div>
-                </details>
-              )}
-            </div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
           </section>
 
-          {/* ── Section 3: Document Timeline ───────────────────── */}
-          <section>
-            <SectionHeader icon="🕒" title={`Document Timeline (${timeline.length})`} />
-            <div style={{ marginTop: '0.75rem' }}>
-              {timeline.length === 0 ? (
-                <div style={{ color: '#64748b', fontSize: '0.9rem' }}>No documents on file.</div>
-              ) : (
-                <ol style={{ listStyle: 'none', margin: 0, padding: 0, position: 'relative' }}>
-                  {/* Vertical rail */}
-                  <div style={{
-                    position: 'absolute', left: 8, top: 6, bottom: 6,
-                    width: 2, background: '#e2e8f0',
-                  }} />
-                  {timeline.map((item, idx) => (
-                    <li
-                      key={item.key}
-                      style={{
-                        position: 'relative',
-                        paddingLeft: '2rem',
-                        paddingBottom: idx === timeline.length - 1 ? 0 : '1rem',
-                      }}
-                    >
-                      {/* Dot */}
-                      <div style={{
-                        position: 'absolute', left: 2, top: 6,
-                        width: 14, height: 14, borderRadius: '50%',
-                        background: item.color,
-                        border: '2px solid #fff',
-                        boxShadow: '0 0 0 1px #e2e8f0',
-                      }} />
-                      <TimelineCard item={item} onOpenPdf={onOpenPdf} />
-                    </li>
-                  ))}
-                </ol>
-              )}
+          {/* ── Development Progress ────────────────────────── */}
+          <section className="dra-analysis-section">
+            <div className="dra-analysis-section-label">Development Progress</div>
+
+            <div className="dra-analysis-progress">
+              <ProgressBar label="FAs executed" current={progress.executed} total={progress.obligation} pct={progress.pctExecuted} />
+              <ProgressBar label="Currently open" current={progress.open} total={progress.obligation} pct={progress.pctOpen} />
             </div>
-          </section>
 
-          {/* ── Section 4: Development Progress ────────────────── */}
-          <section>
-            <SectionHeader icon="📈" title="Development Progress" />
-            <div style={{ marginTop: '0.75rem' }}>
-              {/* Executed bar */}
-              <ProgressBar
-                label="FAs executed"
-                current={progress.executed}
-                total={progress.obligation}
-                pct={progress.pctExecuted}
-                color="#7c3aed"
-              />
-              <div style={{ height: '0.5rem' }} />
-              {/* Open bar */}
-              <ProgressBar
-                label="Currently open"
-                current={progress.open}
-                total={progress.obligation}
-                pct={progress.pctOpen}
-                color="#059669"
-              />
-
-              {/* Year-by-year schedule */}
-              {scheduleYears.length > 0 && (
-                <div style={{ marginTop: '1rem' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
-                    Scheduled openings by year
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                    {scheduleYears.map(y => {
-                      const count = detail.schedule[y] || 0;
-                      return (
-                        <div
-                          key={y}
-                          style={{
-                            padding: '0.5rem 0.75rem',
-                            background: count > 0 ? '#f8fafc' : '#f1f5f9',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: 6,
-                            minWidth: 60,
-                            textAlign: 'center',
-                          }}
-                        >
-                          <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>{y}</div>
-                          <div style={{ fontSize: '1.05rem', fontWeight: 700, color: count > 0 ? '#0f172a' : '#94a3b8' }}>
-                            {count}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+            {scheduleYears.length > 0 && (
+              <div>
+                <div className="dra-schedule-label" style={{ marginBottom: '0.4rem' }}>
+                  Scheduled openings by year
                 </div>
-              )}
-            </div>
+                <div className="dra-schedule-row">
+                  {scheduleYears.map(y => (
+                    <div key={y} className="dra-schedule-cell">
+                      <div className="dra-schedule-year">{y}</div>
+                      <div className="dra-schedule-count">{detail.schedule[y]}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
 
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Small helpers ────────────────────────────────────────────────────
-function SectionHeader({ icon, title }: { icon: string; title: string }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '0.5rem',
-      paddingBottom: '0.4rem',
-      borderBottom: '1px solid #e2e8f0',
-    }}>
-      <span style={{ fontSize: '1.05rem' }}>{icon}</span>
-      <h3 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a' }}>{title}</h3>
-    </div>
-  );
-}
-
-function OverviewCard({ label, value, accent }: { label: string; value: string; accent?: string }) {
-  return (
-    <div style={{
-      padding: '0.7rem 0.85rem',
-      background: '#f8fafc',
-      border: '1px solid #e2e8f0',
-      borderRadius: 8,
-    }}>
-      <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
-        {label}
-      </div>
-      <div style={{
-        fontSize: '1.15rem',
-        fontWeight: 700,
-        color: accent ?? '#0f172a',
-        marginTop: 2,
-      }}>
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function DeploymentTile({ label, value, accent }: { label: string; value: number; accent?: string }) {
-  return (
-    <div style={{
-      padding: '0.55rem 0.75rem',
-      background: '#fff',
-      border: '1px solid #e2e8f0',
-      borderRadius: 6,
-      display: 'flex', flexDirection: 'column',
-    }}>
-      <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: '1.35rem', fontWeight: 700, color: accent ?? '#0f172a' }}>{value}</span>
-    </div>
-  );
-}
-
-function TimelineCard({
-  item,
-  onOpenPdf,
-}: {
-  item: {
-    title: string; subtitle: string | null; date: string | null;
-    type: string | null; color: string; notes: string | null;
-    file: { url: string; filename: string } | null;
-  };
-  onOpenPdf: OnOpenPdf;
-}) {
-  return (
-    <div style={{
-      padding: '0.75rem 0.9rem',
-      background: '#fff',
-      border: '1px solid #e2e8f0',
-      borderRadius: 8,
-      boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <span style={{
-            display: 'inline-block',
-            padding: '0.15rem 0.5rem',
-            background: item.color,
-            color: '#fff',
-            borderRadius: 4,
-            fontSize: '0.7rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-          }}>
-            {item.type ?? 'Doc'}
-          </span>
-          <span style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.95rem' }}>{item.title}</span>
-        </div>
-        <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 500 }}>
-          {item.date ?? (item.type === 'Original' ? 'Baseline' : '(no date)')}
-        </span>
-      </div>
-      {item.subtitle && (
-        <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '0.35rem' }}>
-          Signatories: {item.subtitle}
-        </div>
-      )}
-      {item.notes && (
-        <div style={{
-          fontSize: '0.82rem', color: '#475569',
-          marginTop: '0.4rem',
-          padding: '0.4rem 0.6rem',
-          background: '#f8fafc',
-          borderLeft: `3px solid ${item.color}`,
-          borderRadius: 3,
-          whiteSpace: 'pre-wrap',
-        }}>
-          {item.notes}
-        </div>
-      )}
-      <div style={{ marginTop: '0.5rem' }}>
-        {item.file ? (
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => onOpenPdf(item.file!, item.title)}
-            style={{ fontSize: '0.82rem', padding: '0.3rem 0.7rem' }}
-          >
-            📎 Open PDF
-          </button>
-        ) : (
-          <span style={{ fontSize: '0.78rem', color: '#dc2626', fontStyle: 'italic' }}>
-            ⚠ No PDF attached
-          </span>
-        )}
       </div>
     </div>
   );
 }
 
 function ProgressBar({
-  label, current, total, pct, color,
+  label, current, total, pct,
 }: {
-  label: string; current: number; total: number; pct: number; color: string;
+  label: string; current: number; total: number; pct: number;
 }) {
   const width = Math.min(100, Math.max(0, pct));
   return (
-    <div>
-      <div style={{
-        display: 'flex', justifyContent: 'space-between',
-        fontSize: '0.82rem', color: '#334155', marginBottom: '0.25rem',
-      }}>
-        <span style={{ fontWeight: 500 }}>{label}</span>
-        <span>
-          <strong style={{ color: '#0f172a' }}>{current}</strong>
-          <span style={{ color: '#94a3b8' }}> / {total}</span>
-          <span style={{ marginLeft: '0.4rem', color: '#64748b' }}>({pct.toFixed(0)}%)</span>
+    <div className="dra-analysis-progress-row">
+      <div className="dra-analysis-progress-head">
+        <span className="dra-analysis-progress-label">{label}</span>
+        <span className="dra-analysis-progress-nums">
+          <strong>{current}</strong>
+          <span>/ {total} ({pct.toFixed(0)}%)</span>
         </span>
       </div>
-      <div style={{
-        height: 10,
-        background: '#f1f5f9',
-        borderRadius: 999,
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          width: `${width}%`,
-          height: '100%',
-          background: color,
-          transition: 'width 0.3s ease',
-        }} />
+      <div className="dra-analysis-progress-track">
+        <div className="dra-analysis-progress-fill" style={{ width: `${width}%` }} />
       </div>
     </div>
   );
