@@ -5,6 +5,7 @@ import { AttachPdfButton } from '../components/AttachPdfButton';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DraDocumentUploadModal } from '../components/DraDocumentUploadModal';
 import { useOpenPdf } from '../components/PdfViewerProvider';
+import { DraAnalysisModal } from './DraAnalysisModal';
 import type { DraDetail, DraDocument, DraDocumentType, DraEntity, DraFa, DraShopId, DraSignatory, DraSummary, EntityDocumentType, EntityLevel } from '../api/types';
 
 interface UploadIntent {
@@ -85,6 +86,7 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
   const [upload, setUpload]     = useState<UploadIntent | null>(null);
   const [toDelete, setToDelete] = useState<DraDocument | null>(null);
   const [entityDocsOpen, setEntityDocsOpen] = useState(false);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
   const openPdf                 = useOpenPdf();
 
   async function handleDelete(doc: DraDocument) {
@@ -141,6 +143,19 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
             </span>
           )}
         </button>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => setAnalysisOpen(true)}
+          title="Full DRA analysis: document timeline, territory, progress"
+        >
+          🔍 DRA Analysis
+          {detail.documents.length > 0 && (
+            <span style={{ marginLeft: '0.4rem', opacity: 0.7 }}>
+              ({detail.documents.length + 1} {detail.documents.length + 1 === 1 ? 'doc' : 'docs'})
+            </span>
+          )}
+        </button>
       </div>
 
       {scheduleYears.length > 0 && (
@@ -178,6 +193,20 @@ function DraDetailView({ detail, onChanged }: { detail: DraDetail; onChanged: ()
           entities={detail.entities ?? []}
           onClose={() => setEntityDocsOpen(false)}
           onChanged={onChanged}
+          onOpenPdf={(file, title) => openPdf({
+            url:      file.url,
+            filename: file.filename,
+            title,
+            subtitle: detail.name,
+          })}
+        />
+      )}
+
+      {/* ── DRA Analysis modal ── */}
+      {analysisOpen && (
+        <DraAnalysisModal
+          detail={detail}
+          onClose={() => setAnalysisOpen(false)}
           onOpenPdf={(file, title) => openPdf({
             url:      file.url,
             filename: file.filename,
