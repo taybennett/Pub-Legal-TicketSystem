@@ -1,13 +1,29 @@
 :root {
-  --black: #111;
+  color-scheme: light;
+  /* --- app tokens, remapped to the PUB Market Planning palette --- */
+  --black: #1b1b1b;        /* ink: text + dark fills (never pure black) */
   --white: #fff;
-  --mid: #888;
-  --border: #e5e5e5;
-  --bg: #fafafa;
-  --accent: #111;
-  font-family: 'DM Mono', ui-monospace, monospace;
+  --mid: #5f5b58;          /* warm muted grey */
+  --border: #e6e1dd;       /* hairline */
+  --bg: #f6f4f2;           /* warm band / page fill */
+  --accent: #d93a45;       /* was black; the single accent is now PUB red */
+  /* --- brand + guide tokens --- */
+  --red: #d93a45;
+  --red-dark: #b52a35;
+  --red-dk: #b52a35;
+  --band: #f6f4f2;
+  --panel: #fff;
+  --ink: #1b1b1b;
+  --muted: #5f5b58;
+  --line: #e6e1dd;
+  --line-strong: #cfc7c1;
+  --shadow: 0 2px 10px rgba(27, 27, 27, 0.05);
+  --shadow-lg: 0 14px 36px rgba(27, 27, 27, 0.2);
+  --focus: 0 0 0 3px rgba(217, 58, 69, 0.4);
+  font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 14px;
   color: var(--black);
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
 * { box-sizing: border-box; }
@@ -817,3 +833,70 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .dra-analysis-progress-nums span { color: var(--mid); margin-left: 0.35rem; }
 .dra-analysis-progress-track { height: 8px; background: var(--bg); border: 1px solid var(--border); }
 .dra-analysis-progress-fill { height: 100%; background: var(--black); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PUB MARKET PLANNING SKIN  —  override layer (loads last)
+   Figtree · one red accent (#d93a45) · warm greys · pills · rounded cards
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Figtree on the two explicit DM Mono spots */
+.page-title { font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 800; letter-spacing: -0.01em; }
+
+/* red focus ring, no default outline */
+a:focus-visible, button:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* one red accent: primary button + active nav/tabs */
+.btn-primary { background: var(--red); }
+.btn-primary:hover:not(:disabled) { background: var(--red-dark); }
+.nav-link--active { color: var(--red); border-bottom-color: var(--red); }
+.tab--active { color: var(--red); border-bottom-color: var(--red); }
+
+/* selected chips/filters: red outline + inset ring (not a dark fill) */
+.filter-btn--active, .comp-tab--active {
+  background: var(--white); color: var(--red);
+  border-color: var(--red); box-shadow: inset 0 0 0 1px var(--red);
+}
+.filter-btn--active .filter-btn-count,
+.comp-tab--active .comp-tab-num { color: var(--red); opacity: 0.75; }
+/* keep the semantic critical/ok filter fills (red = critical, green = ok) */
+.comp-tab--red.comp-tab--active   { background: #721c24; color: #fff; border-color: #721c24; box-shadow: none; }
+.comp-tab--green.comp-tab--active { background: #1b5e20; color: #fff; border-color: #1b5e20; box-shadow: none; }
+.comp-tab--red.comp-tab--active .comp-tab-num,
+.comp-tab--green.comp-tab--active .comp-tab-num { color: rgba(255,255,255,0.75); }
+
+/* rounded surfaces: cards 18px */
+.loc-card, .overview-grid, .dra-panel, .fa-form, .reports-main, .reports-sidebar-item,
+.comp-hero, .ticket-description, .ticket-docs, .msg, .composer, .lease-panel, .modal,
+.login-card, .dra-analysis-card, .dra-fa, .fa-dra-picker, .fa-addendums-callout,
+.reports-nlq { border-radius: 18px; }
+/* inner panels / tables / wells: 14px */
+.comp-table, .envelopes-table-wrap, .reports-table-wrap, .ticket-list, .doc-list,
+.dra-metrics, .slot-warning, .lease-modal-warning, .lease-modal-notes, .reports-notes,
+.confirm-detail, .dra-schedule-cell, .dra-analysis-tile, .dra-analysis-shop,
+.dra-analysis-timeline-item { border-radius: 14px; }
+
+/* pill controls */
+button, .filter-btn, .comp-tab, .signout, .btn-primary, .btn-secondary, .btn-destructive,
+.btn-sm, .slot-add-btn, .doc-row-open, .composer-attach-label, .composer-doctype,
+.search-input, .form-input, .fa-field input, .fa-field select, .fa-owner-row input,
+.dra-select, .fa-dra-picker-select, .reports-nlq-input, .lease-modal-field input,
+.lease-modal-field select, input[type='text'], input[type='email'], input[type='date'],
+input[type='search'], input[type='password'], input[type='number'], select,
+.pill, .loc-brand, .comp-type-tag, .conf-pill, .msg-role, .msg-internal-pill,
+.envelope-status-pill, .dra-analysis-badge, .dra-analysis-territory-pill,
+.btn-trash { border-radius: 999px; }
+/* textareas stay soft-rounded, not pills */
+.composer-textarea, textarea { border-radius: 14px; }
+
+/* link cards/rows: soft shadow + red border on hover */
+.loc-card { box-shadow: var(--shadow); }
+.loc-card:hover { border-color: var(--red); box-shadow: 0 6px 18px rgba(217, 58, 69, 0.12); }
+.comp-row:hover { background: #fbf4f4; }
+.reports-sidebar-item:hover { border-color: var(--red); }
+.reports-sidebar-item--active { border-color: var(--red); box-shadow: -3px 0 0 0 var(--red); }
+
+/* headings & big numbers: tight tracking */
+.reports-title, .dra-panel-title, .dra-analysis-title, .modal-title, .loc-card-title,
+.comp-hero-num, .dra-metric-value, .dra-analysis-tile-value { letter-spacing: -0.01em; }
